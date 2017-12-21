@@ -31,16 +31,16 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c99" />
-			<Add directory="libraries" />
+			<Add directory="libraries/GLEW_2.1.0/include" />
+			<Add directory="libraries/GLFW_3.2.1/include" />
 		</Compiler>
 		<Linker>
-			<Add library="glfw3" />
+			<Add library="glew32s" />
+			<Add library="libglfw3.a" />
 			<Add library="opengl32" />
 			<Add library="gdi32" />
-			<Add library="libglfw3.a" />
-			<Add directory="libraries" />
-			<Add directory="libraries/GLFW_3.2.1/lib_mingw_32" />
 			<Add directory="libraries/GLEW_2.1.0/lib_mingw_32" />
+			<Add directory="libraries/GLFW_3.2.1/lib_mingw_32" />
 		</Linker>
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
