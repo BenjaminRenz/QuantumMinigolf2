@@ -1,6 +1,7 @@
 # depslib dependency file v1.0
-1513794829 source:j:\qmg2\qmg2\main.c
+1513803922 source:j:\qmg2\qmg2\main.c
 	"GLFW/glfw3.h"
+	<stdio.h>
 
 1471517560 j:\qmg2\qmg2\include\glfw\glfw3.h
 	<stddef.h>

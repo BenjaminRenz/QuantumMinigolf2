@@ -13,14 +13,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add directory="include" />
 				</Compiler>
-				<Linker>
-					<Add library="glfw3" />
-					<Add library="gdi32" />
-					<Add library="opengl32" />
-					<Add directory="lib-mingw" />
-				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/QMG2" prefix_auto="1" extension_auto="1" />
@@ -38,7 +31,15 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c99" />
+			<Add directory="libraries" />
 		</Compiler>
+		<Linker>
+			<Add library="libraries/GLEW_2.1.0/lib_mingw_32/glew32s.lib" />
+			<Add library="opengl32" />
+			<Add library="gdi32" />
+			<Add library="libraries/GLFW_3.2.1/lib_mingw_32/libglfw3dll.a" />
+			<Add directory="libraries" />
+		</Linker>
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
