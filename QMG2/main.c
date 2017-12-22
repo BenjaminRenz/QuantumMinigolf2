@@ -7,24 +7,28 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void mouse_button_callback();
 int main(int argc, char* argv[]){
+    //GLFW init
     if (!glfwInit()){
         return -1;
     }
-    GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    GLFWwindow* MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
     //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(MainWindow);
+    //GLEW init
     GLenum err = glewInit();
     if(GLEW_OK != err){
         printf("Error: glewInit() failed.");
     }
+
+    printf("OpenGl Version: %s",glGetString(GL_VERSION));
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
-
+    void createPlane();
     while (!glfwWindowShouldClose(MainWindow)){
         glClear(GL_COLOR_BUFFER_BIT);
         /* Swap front and back buffers */
@@ -36,11 +40,14 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-void createPlane(GLuint* vertexbuffer, GLuint* indexbuffer){
+void createPlane(){//GLuint* vertexbuffer, GLuint* indexbuffer){
     #define Resolution 256
     #define VertBufSize Resolution*Resolution
     #define IndexBufSize VertBufSize*6
-    #define ScaleFact 100
+    #define ScaleFact 1000
+    //
+    GLuint* vertexbuffer=0;
+    GLuint* indexbuffer=0;
     //Generate Vertex Positions
     float plane_vertices[VertBufSize];
     long vert_index=0;
@@ -55,6 +62,7 @@ void createPlane(GLuint* vertexbuffer, GLuint* indexbuffer){
     glBindBuffer(GL_ARRAY_BUFFER, *vertexbuffer);                                            //Link buffer
     glBufferData(GL_ARRAY_BUFFER, VertBufSize*sizeof(plane_vertices),plane_vertices,GL_STATIC_DRAW);    //Upload data to Buffer
     //Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+    glEnableVertexAttribArray(*vertexbuffer);
     //Generate Triangles
     long plane_indices[IndexBufSize];
     for(int z=0;z<(Resolution-1);z++){
@@ -73,7 +81,7 @@ void createPlane(GLuint* vertexbuffer, GLuint* indexbuffer){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *indexbuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndexBufSize*sizeof(plane_indices),plane_indices,GL_STATIC_DRAW);
     //t
-    glDrawElements(GL_TRIANGLES,VertBufSize,GL_UNSIGNED_INT,);      //TODO !!
+    glDrawElements(GL_TRIANGLES,VertBufSize,GL_UNSIGNED_INT,indexbuffer);      //TODO !!
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
