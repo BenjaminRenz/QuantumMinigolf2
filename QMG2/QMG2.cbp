@@ -31,6 +31,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c99" />
+			<Add option="-g" />
 			<Add directory="libraries/GLEW_2.1.0/include" />
 			<Add directory="libraries/GLFW_3.2.1/include" />
 		</Compiler>
