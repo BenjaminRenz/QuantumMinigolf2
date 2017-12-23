@@ -45,6 +45,8 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="res/shaders/fragment.glsl" />
+		<Unit filename="res/shaders/vertex.glsl" />
 		<Extensions>
 			<code_completion />
 			<envvars />

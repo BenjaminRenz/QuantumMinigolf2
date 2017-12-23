@@ -7,7 +7,8 @@
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void mouse_button_callback();
-void CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
+void createPlane();
+GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 int main(int argc, char* argv[]){
     //GLFW init
     if (!glfwInit()){
@@ -30,9 +31,17 @@ int main(int argc, char* argv[]){
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
-    CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
+    //Initialize shaders
+    GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
+    GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
+    GLuint ProgrammID = glCreateProgram();              //create program to run on GPU
+    glAttachShader(ProgrammID, vertexShaderId);         //attach vertex shader to new program
+    glAttachShader(ProgrammID, fragmentShaderId);       //attach fragment shader to new program
+    glLinkProgram(ProgrammID);                          //create execuatble
+    createPlane();
     while (!glfwWindowShouldClose(MainWindow)){
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        glUseProgram(ProgrammID);
         /* Swap front and back buffers */
         glfwSwapBuffers(MainWindow);
         /* Poll for and process events */
@@ -110,12 +119,12 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods){
  * \return
  *
  */
-void CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
+GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     //read from file into heap memory
     FILE* filepointer=fopen(FilePath,"rb");                  //open specified file in read only mode
     if(filepointer==NULL){
         printf("Error: Filepointer to shaderfile at %s could not be loaded.",FilePath);
-        return;
+        //return;
     }
     fseek(filepointer,0,SEEK_END);                      //shift filePointer to EndOfFile Position to get filelength
     long filelength = ftell(filepointer);               //get filePointer position
@@ -123,9 +132,9 @@ void CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     char* filestring = (char*)malloc(filelength+1);     //
     if(fread(filestring,sizeof(char),filelength,filepointer) != filelength){
         printf("Error: Missing characters in input string");
-        return;
+        //return;
     }
-    if(filestring[0]==0xEF&&filestring[0]==0xBB&&filestring[0]==0xBF){   //Detect if file is utf8 with bom
+    if(filestring[0]==0xEF&&filestring[1]==0xBB&&filestring[2]==0xBF){   //Detect if file is utf8 with bom
         printf("Error: Remove the bom from your utf8 shader file");
     }
     filestring[filelength]=0;                             //Set end of string
@@ -142,8 +151,9 @@ void CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     if(compStatus!=GL_TRUE){
         printf("Error: Compilation of shader %d failed\n",ShaderId);
         //TODO free resources
-        return;
+        //return;
     }
     free(filestring);                                   //Delete Shader string from heap
     fclose(filepointer);
+    return ShaderId;
 }
