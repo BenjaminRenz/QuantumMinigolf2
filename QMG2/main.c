@@ -2,6 +2,7 @@
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
+#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desiered precision use fftw3 (double), fftw3f (single) or fftwl (long double)
 #include <stdio.h>
 #include <stdlib.h>
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -40,7 +41,7 @@ int main(int argc, char* argv[]){
     //Initialize shaders
 
     createCube();
-
+    //TODO filepath for windows, alter for unix like os
     GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
     GLuint ProgrammID = glCreateProgram();              //create program to run on GPU
