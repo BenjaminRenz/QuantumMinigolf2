@@ -2,7 +2,7 @@
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
-#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desiered precision use fftw3 (double), fftw3f (single) or fftwl (long double)
+#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
 #include <stdio.h>
 #include <stdlib.h>
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -38,9 +38,13 @@ int main(int argc, char* argv[]){
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
+    //Get window height
+    int window_width;
+    int window_height;
+
+    glfwGetWindowSize(MainWindow,window_width,window_height);
     //Initialize shaders
 
-    createCube();
     //TODO filepath for windows, alter for unix like os
     GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
