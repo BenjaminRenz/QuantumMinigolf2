@@ -8,8 +8,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void mouse_button_callback();
 void createPlane();
+void createCube();
 void error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
+
 int main(int argc, char* argv[]){
     //GLFW init
     if (!glfwInit()){
@@ -37,7 +39,7 @@ int main(int argc, char* argv[]){
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
     //Initialize shaders
 
-    createPlane();
+    createCube();
 
     GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
@@ -50,8 +52,6 @@ int main(int argc, char* argv[]){
     //createPlane();
     while (!glfwWindowShouldClose(MainWindow)){
         glClear(GL_COLOR_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLES,0,390150);
-        //glUseProgram(ProgrammID);
         /* Swap front and back buffers */
         glfwSwapBuffers(MainWindow);
         /* Poll for and process events */
@@ -61,64 +61,14 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-void createPlane(){
-    #define Resolution 256
-    #define VertBufSize 196608          //3* (xyz) Resolution squared
-    #define IndexBufSize 390150 //(Res-1)**2  *6
-    #define ScaleFact 400
-    //
-    GLuint vertexBufferId=0;
-    GLuint indexBufferId=0;
-    //Generate Vertex Positions
-    printf("%d",VertBufSize);
-    float plane_vertices[VertBufSize];
-    long vert_index=0;
-    for(int z=0;z<Resolution;z++){
-        for(int x=0;x<Resolution;x++){
-            plane_vertices[vert_index++]=((float)x)/ScaleFact;
-            plane_vertices[vert_index++]=0.0f; //Set height (y) to zero
-            plane_vertices[vert_index++]=((float)z)/ScaleFact;
-        }
-    }
-    glGenBuffers(1, &vertexBufferId);                                                          //create buffer
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);                                            //Link buffer
-    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices)/sizeof(*plane_vertices),plane_vertices,GL_STATIC_DRAW);    //Upload data to Buffer
-
-    //Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
-
-    //Set data format for gpu and enable position attribute
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE, sizeof(float)*3,0);
-
-/*
-    //Generate Triangles
-    long plane_indices[IndexBufSize];
-    vert_index=0;
-    for(int z=0;z<(Resolution-1);z++){
-        for(int x=0;x<(Resolution-1);x++){
-            //Generate first triangle
-            plane_indices[vert_index++]=x+(z*Resolution);   //Vertex lower left first triangle
-            plane_indices[vert_index++]=x+1+((z+1)*Resolution); //Vertex upper right first triangle
-            plane_indices[vert_index++]=x+((z+1)*Resolution); //Vertex upper left first triangle
-            //Generate second triangle
-            plane_indices[vert_index++]=x+(z*Resolution);   //Vertex lower left second triangle
-            plane_indices[vert_index++]=x+((z+1)*Resolution); //Vertex lower right second triangle
-            plane_indices[vert_index++]=x+1+((z+1)*Resolution); //Vertex upper right first triangle
-        }
-    }
-    glGenBuffers(1, &indexBufferId);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(plane_indices)/sizeof(*plane_indices),plane_indices,GL_STATIC_DRAW);
-    //Shader creation
-
-    //glDrawElements(GL_TRIANGLES,IndexBufSize,GL_UNSIGNED_INT,NULL);
-*/
-}
-
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     if(key==GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         printf("Escape");
     }
+    if(key==GLFW_KEY_W&&action==GLFW_PRESS){
+
+    }
+
 }
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods){
     if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS){
@@ -132,7 +82,7 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods){
  *
  * \param Path to the shader file.
  * \param Type of shader to use e.g.: GL_FRAGMENT_SHADER
- * \return
+ * \return ID of compiled shader
  *
  */
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
