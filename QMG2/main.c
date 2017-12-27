@@ -39,10 +39,10 @@ int main(int argc, char* argv[]){
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
     //Get window height
-    int window_width;
-    int window_height;
+    int window_width = 0;
+    int window_height = 0;
 
-    glfwGetWindowSize(MainWindow,window_width,window_height);
+    glfwGetWindowSize(MainWindow,&window_width,&window_height);
     //Initialize shaders
 
     //TODO filepath for windows, alter for unix like os
@@ -54,7 +54,32 @@ int main(int argc, char* argv[]){
     glLinkProgram(ProgrammID);                          //create execuatble
     glUseProgram(ProgrammID);
 
-    //createPlane();
+    //create plane
+    GLuint vertexBufferId=0;
+    GLuint indexBufferId=0;
+    //Generate Vertex Positions
+    float plane_vertices[12]=
+    {
+    -1.0f,-1.0f,0.0f,
+    1.0f,-1.0f,0.0f,
+    -1.0f,1.0f,0.0f,
+    1.0f,1.0f,0.0f,
+    };
+    glGenBuffers(1, &vertexBufferId);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
+    glBufferData(GL_ARRAY_BUFFER, 12, plane_vertices,GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE,sizeof(float)*3,0);
+    //Generate Triangles
+    GLuint plane_indices[6]=
+    {
+    0,3,2,
+    0,1,3
+    };
+    glGenBuffers(1, &indexBufferId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(plane_indices)/sizeof(*plane_indices),plane_indices,GL_STATIC_DRAW);
+
     while (!glfwWindowShouldClose(MainWindow)){
         glClear(GL_COLOR_BUFFER_BIT);
         /* Swap front and back buffers */
