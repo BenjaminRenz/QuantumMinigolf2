@@ -2,7 +2,7 @@
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
-#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
+//#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
 #include <stdio.h>
 #include <stdlib.h>
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -10,14 +10,19 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void mouse_button_callback();
 void createPlane();
 void createCube();
-void error_callback(int error, const char* description);
+void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
+void glfw_error_callback(int error, const char* description);;
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 
 int main(int argc, char* argv[]){
     //GLFW init
+    glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()){
         return -1;
     }
+    //Set window creation hints
+    glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
+    //window creation
     GLFWwindow* MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
     //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
@@ -34,7 +39,10 @@ int main(int argc, char* argv[]){
     printf("QuantumMinigolf v2:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
     //Refister Callback for errors (debugging)
-   // glfwSetErrorCallback(error_callback);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(openglCallbackFunction,0);
+    GLuint unusedIds=0;
+    glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE,0,&unusedIds,GL_TRUE); //Dont filter messages
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
@@ -61,20 +69,20 @@ int main(int argc, char* argv[]){
     float plane_vertices[12]=
     {
     -1.0f,-1.0f,0.0f,
-    1.0f,-1.0f,0.0f,
     -1.0f,1.0f,0.0f,
     1.0f,1.0f,0.0f,
+    1.0f,-1.0f,0.0f,
     };
     glGenBuffers(1, &vertexBufferId);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-    glBufferData(GL_ARRAY_BUFFER, 12, plane_vertices,GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices)/sizeof(*plane_vertices), plane_vertices,GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE,sizeof(float)*3,0);
+    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE,0,0);
     //Generate Triangles
     GLuint plane_indices[6]=
     {
-    0,3,2,
-    0,1,3
+    0,2,1,
+    0,3,2
     };
     glGenBuffers(1, &indexBufferId);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
@@ -82,6 +90,7 @@ int main(int argc, char* argv[]){
 
     while (!glfwWindowShouldClose(MainWindow)){
         glClear(GL_COLOR_BUFFER_BIT);
+        glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
         /* Swap front and back buffers */
         glfwSwapBuffers(MainWindow);
         /* Poll for and process events */
@@ -106,15 +115,6 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods){
     }
 }
 
-
-
-/** \brief Loads Shader code from file into RAM and then compiles the shader.
- *
- * \param Path to the shader file.
- * \param Type of shader to use e.g.: GL_FRAGMENT_SHADER
- * \return ID of compiled shader
- *
- */
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     //read from file into heap memory
     FILE* filepointer=fopen(FilePath,"rb");                  //open specified file in read only mode
@@ -153,6 +153,46 @@ GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     return ShaderId;
 }
 
-void error_callback(int error, const char* description){
-    printf("Error %d occured\nDescription: %s\n",error,description);
+void glfw_error_callback(int error, const char* description){
+    printf("Error in glfw %d occured\nDescription: %s\n",error,description);
+}
+
+void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam){
+    printf("Error in opengl occured!\n");
+    printf("Message: %s\n",message);
+    printf("type or error: ");
+    switch (type) {
+    case GL_DEBUG_TYPE_ERROR:
+        printf("ERROR");
+        break;
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+        printf("DEPRECATED_BEHAVIOR");
+        break;
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+        printf("UNDEFINED_BEHAVIOR");
+        break;
+    case GL_DEBUG_TYPE_PORTABILITY:
+        printf("PORTABILITY");
+        break;
+    case GL_DEBUG_TYPE_PERFORMANCE:
+        printf("PERFORMANCE");
+        break;
+    case GL_DEBUG_TYPE_OTHER:
+         printf("OTHER");
+        break;
+    }
+    printf("\nId:%d \n",id);
+    printf("Severity:");
+    switch (severity){
+    case GL_DEBUG_SEVERITY_LOW:
+        printf("LOW");
+        break;
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        printf("MEDIUM");
+        break;
+    case GL_DEBUG_SEVERITY_HIGH:
+        printf("HIGH");
+        break;
+    }
+    printf("\nGLerror end\n");
 }
