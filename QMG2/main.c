@@ -22,6 +22,7 @@ int main(int argc, char* argv[]){
     }
     //Set window creation hints
     glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
     //window creation
     GLFWwindow* MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
     //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
@@ -39,10 +40,10 @@ int main(int argc, char* argv[]){
     printf("QuantumMinigolf v2:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
     //Refister Callback for errors (debugging)
+    glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(openglCallbackFunction,0);
-    GLuint unusedIds=0;
-    glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE,0,&unusedIds,GL_TRUE); //Dont filter messages
+    glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE,0,NULL,GL_TRUE); //Dont filter messages
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
