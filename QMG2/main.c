@@ -1,4 +1,7 @@
-//TODO compile GLEW as static library
+/*TODO list
+-compile GLEW as static library
+-implement webcam brightest spot detection https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
+*/
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
@@ -55,6 +58,8 @@ int main(int argc, char* argv[]){
     //Initialize shaders
 
     //TODO filepath for windows, alter for unix like os
+
+
     GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
     GLuint ProgrammID = glCreateProgram();              //create program to run on GPU
@@ -64,35 +69,33 @@ int main(int argc, char* argv[]){
     glUseProgram(ProgrammID);
 
     //create plane
-    GLuint vertexBufferId=0;
-    GLuint indexBufferId=0;
+    GLuint VertexArrayID = 0;
+    glGenVertexArrays(1,&VertexArrayID);
+    glBindVertexArray(VertexArrayID);
     //Generate Vertex Positions
-    float plane_vertices[12]=
+    float plane_vertices[9]=
     {
-    -1.0f,-1.0f,0.0f,
-    -1.0f,1.0f,0.0f,
-    1.0f,1.0f,0.0f,
-    1.0f,-1.0f,0.0f,
+        -1.0f, -1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f,
+        0.0f,  1.0f, 0.0f,
     };
+    GLuint vertexBufferId=0;
     glGenBuffers(1, &vertexBufferId);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices)/sizeof(*plane_vertices), plane_vertices,GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE,0,0);
-    //Generate Triangles
-    GLuint plane_indices[6]=
-    {
-    0,2,1,
-    0,3,2
-    };
-    glGenBuffers(1, &indexBufferId);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(plane_indices)/sizeof(*plane_indices),plane_indices,GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices), plane_vertices,GL_STATIC_DRAW);
+    glDisable(GL_CULL_FACE);
+    glClearColor(1.0f,1.0f,0.0f,0.0f);
     while (!glfwWindowShouldClose(MainWindow)){
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
-        /* Swap front and back buffers */
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        //glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+        glUseProgram(ProgrammID);
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
+        glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,NULL);
+        glDrawArrays(GL_TRIANGLES,0,3);
+        glDisableVertexAttribArray(0);
+
+    /* Swap front and back buffers */
         glfwSwapBuffers(MainWindow);
         /* Poll for and process events */
         glfwPollEvents();
