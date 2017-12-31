@@ -23,7 +23,7 @@ int main(int argc, char* argv[]){
     width = 32;
     height = 32;
 
-    psi = (fftwf_complex *) fftw_alloc_complex(sizeof (fftwf_complex) * width * height);
+    psi = (fftw_complex *) fftw_alloc_complex(width * height);
 
     fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
 
