@@ -5,7 +5,8 @@
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
-//#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
+#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
+#include "main.h"
 #include <stdio.h>
 #include <stdlib.h>
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -18,6 +19,40 @@ void glfw_error_callback(int error, const char* description);;
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 
 int main(int argc, char* argv[]){
+
+    width = 32;
+    height = 32;
+
+    psi = (fftw_complex *) fftw_alloc_complex(width * height);
+
+    for(int i=0;i<32;i++) {
+        psi[i][0]=i%32;
+    }
+
+    for(int i=0;i<1024;i++) {
+        psi[i][1]=0;
+    }
+
+    fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
+
+    for(int i=0;i<1024;i++) {
+        printf("%d;%d\n", psi[i][0], psi[i][1]);
+    }
+
+    fftw_execute(fft);
+
+    for(int i=0;i<1024;i++) {
+        printf("%d;%d\n", psi[i][0], psi[i][1]);
+    }
+
+    fftw_destroy_plan(fft);
+    fftw_free(psi);
+
+
+
+
+
+
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()){
