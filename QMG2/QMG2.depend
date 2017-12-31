@@ -98,10 +98,11 @@
 	<stdio.h>
 	<stddef.h>
 
-1514726293 source:c:\users\malte\documents\github\quantumminigolf2\qmg2\main.c
+1514739824 source:c:\users\malte\documents\github\quantumminigolf2\qmg2\main.c
 	"libraries/GLEW_2.1.0/include/glew.h"
 	"libraries/GLFW_3.2.1/include/glfw3.h"
 	"libraries/FFTW_3.3.5/include/fftw3.h"
+	"main.h"
 	<stdio.h>
 	<stdlib.h>
 
@@ -138,4 +139,9 @@
 1514725822 c:\users\malte\documents\github\quantumminigolf2\qmg2\libraries\fftw_3.3.5\include\fftw3.h
 	<stdio.h>
 	<stddef.h>
+
+1514726811 c:\users\malte\documents\github\quantumminigolf2\qmg2\main.h
+	"libraries/FFTW_3.3.5/include/fftw3.h"
+	<stdio.h>
+	<stdlib.h>
 
