@@ -25,12 +25,34 @@ int main(int argc, char* argv[]){
 
     psi = (fftw_complex *) fftw_alloc_complex(width * height);
 
+    for(int i=0;i<32;i++) {
+        psi[i][0]=i%32;
+    }
+
+    for(int i=0;i<1024;i++) {
+        psi[i][1]=0;
+    }
+
     fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
+
+    for(int i=0;i<1024;i++) {
+        printf("%d;%d\n", psi[i][0], psi[i][1]);
+    }
 
     fftw_execute(fft);
 
+    for(int i=0;i<1024;i++) {
+        printf("%d;%d\n", psi[i][0], psi[i][1]);
+    }
+
     fftw_destroy_plan(fft);
     fftw_free(psi);
+
+
+
+
+
+
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()){
