@@ -23,17 +23,21 @@ int main(int argc, char* argv[]){
     if (!glfwInit()){
         return -1;
     }
+
     //Set window creation hints
     glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
+
     //window creation
     GLFWwindow* MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
+
     //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(MainWindow);
+
     //GLEW init
     glewExperimental=GL_TRUE;
     GLenum err = glewInit();
@@ -42,24 +46,24 @@ int main(int argc, char* argv[]){
     }
     printf("QuantumMinigolf v2:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
+
     //Refister Callback for errors (debugging)
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(openglCallbackFunction,0);
     glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE,0,NULL,GL_TRUE); //Dont filter messages
+
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
+
     //Get window height
     int window_width = 0;
     int window_height = 0;
-
     glfwGetWindowSize(MainWindow,&window_width,&window_height);
+
     //Initialize shaders
-
     //TODO filepath for windows, alter for unix like os
-
-
     GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
     GLuint ProgrammID = glCreateProgram();              //create program to run on GPU
@@ -84,9 +88,18 @@ int main(int argc, char* argv[]){
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
     glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices), plane_vertices,GL_STATIC_DRAW);
     glDisable(GL_CULL_FACE);
-    glClearColor(1.0f,1.0f,0.0f,0.0f);
+    glClearColor(1.0f,1.0f,0.0f,0.5f);
+   /*
+    //Generate Texture
+    GLuint TextureId = 0;
+    glGenTextures(1,&TextureId);
+    glBindTexture(GL_TEXTURE_2D, TextureId);
+    glTexImage2D();
+    glTexSubImage2D(GL_TEXTURE_2D,0,GL_RG,)
+    */
     while (!glfwWindowShouldClose(MainWindow)){
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
         //glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
         glUseProgram(ProgrammID);
         glEnableVertexAttribArray(0);
@@ -200,3 +213,11 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     }
     printf("\nGLerror end\n");
 }
+
+/*
+psi=(fftwf_complex*)fftw_malloc(sizeof(fftw_complex)*simWidth*simHeight);
+fft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_FORWARD,FFTW_MEASURE); //psi is in and out for result
+ifft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_BACKWARD,FFTW_MEASURE);
+//BuildMomentumPropagator
+
+*/
