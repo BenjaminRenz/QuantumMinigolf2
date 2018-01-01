@@ -145,3 +145,14 @@
 	<stdio.h>
 	<stdlib.h>
 
+1514813970 source:c:\users\malte\documents\github\quantumminigolf2\qmg2\fft.c
+	"fft.h"
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+
+1514726811 c:\users\malte\documents\github\quantumminigolf2\qmg2\fft.h
+	"libraries/FFTW_3.3.5/include/fftw3.h"
+	<stdio.h>
+	<stdlib.h>
+

@@ -1,5 +1,5 @@
-#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
-#include "main.h"
+//#include "libraries/FFTW_3.3.5/include/fftw3.h"     //Depending on the desired precision use fftw3 (double), fftw3f (single) or fftwl (long double)
+#include "fft.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

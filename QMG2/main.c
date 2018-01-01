@@ -5,7 +5,7 @@
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
-#include "main.h"
+#include "fft.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
