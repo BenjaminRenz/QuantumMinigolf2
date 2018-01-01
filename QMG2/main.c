@@ -2,15 +2,14 @@
 -compile GLEW as static library
 -implement webcam brightest spot detection https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
 */
-#define GLEW_STATIC
-#include "libraries/GLEW_2.1.0/include/glew.h"
-#include "libraries/GLFW_3.2.1/include/glfw3.h"
+#include "glfw.h"
 #include "fft.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <math.h>
+<<<<<<< HEAD
 #define PI 3.14159265358979323846
 #include <limits.h>
 
@@ -23,6 +22,8 @@ float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);;
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
+=======
+>>>>>>> b26fbfd34c17604892f63e020aa83d795e4d131a
 
 int main(int argc, char* argv[]){
     //GLFW init
