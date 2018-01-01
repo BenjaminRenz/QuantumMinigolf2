@@ -106,6 +106,9 @@ int main(int argc, char* argv[]){
     glLinkProgram(ProgrammID);                          //create execuatble
     glUseProgram(ProgrammID);
 
+
+
+    /*
     //create plane
     GLuint VertexArrayID = 0;
     glGenVertexArrays(1,&VertexArrayID);
@@ -121,16 +124,27 @@ int main(int argc, char* argv[]){
     glGenBuffers(1, &vertexBufferId);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
     glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices), plane_vertices,GL_STATIC_DRAW);
+    */
     glDisable(GL_CULL_FACE);
     glClearColor(1.0f,1.0f,0.0f,0.5f);
-   /*
-    //Generate Texture
-    GLuint TextureId = 0;
-    glGenTextures(1,&TextureId);
-    glBindTexture(GL_TEXTURE_2D, TextureId);
-    glTexImage2D();
-    glTexSubImage2D(GL_TEXTURE_2D,0,GL_RG,)
-    */
+
+/* https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
+    //Generate PBO for fft result upload for gpu
+    //Double Buffering indexing
+    PBO_index=(index+1)%2;
+    PBO_next_index=(intex+1)%2;
+    //void* FFTData = ;
+
+    GLuint Texture_ID=0;
+    glBindTexture(GL_TEXTURE_2D, Texture_ID);
+
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,pboIds[PBO_index]);
+    glBufferSubData(GL_UNPACK_BUFFER, )
+    //Copy from PixelBufferObject to texture object
+    glTexSubImage2D(GL_TEXTURE_2D,0,0,0,FFT_width,FFT_height,GL_BGRA,GL_UNSIGNED_BYTE,0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,pboIds[PBO_next_index]);
+
+*/
     while (!glfwWindowShouldClose(MainWindow)){
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -247,6 +261,52 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     }
     printf("\nGLerror end\n");
 }
+
+void createPlane(){
+    #define Resolution 256
+    #define ScaleFact 400
+
+    GLuint vertexBufferId=0;
+    GLuint indexBufferId=0;
+    //Generate Vertex Positions
+    float plane_vertices[3*Resolution*Resolution];
+    long vert_index=0;
+    for(int z=0;z<Resolution;z++){
+        for(int x=0;x<Resolution;x++){
+            plane_vertices[vert_index++]=((float)x)/ScaleFact;
+            plane_vertices[vert_index++]=0.0f; //Set height (y) to zero
+            plane_vertices[vert_index++]=((float)z)/ScaleFact;
+        }
+    }
+    glGenBuffers(1, &vertexBufferId);                                                          //create buffer
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);                                            //Link buffer
+    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices),plane_vertices,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+
+    //Set data format for gpu and enable position attribute
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE, sizeof(float)*3,0);
+
+
+    //Generate Triangles
+    GLuint plane_indices[(Resolution-1)*(Resolution-1)*6];
+    vert_index=0;
+    for(unsigned int z=0;z<(Resolution-1);z++){
+        for(unsigned int x=0;x<(Resolution-1);x++){
+            //Generate first triangle
+            plane_indices[vert_index++]=x+(z*Resolution);   //Vertex lower left first triangle
+            plane_indices[vert_index++]=x+1+((z+1)*Resolution); //Vertex upper right first triangle
+            plane_indices[vert_index++]=x+((z+1)*Resolution); //Vertex upper left first triangle
+            //Generate second triangle
+            plane_indices[vert_index++]=x+(z*Resolution);   //Vertex lower left second triangle
+            plane_indices[vert_index++]=x+((z+1)*Resolution); //Vertex lower right second triangle
+            plane_indices[vert_index++]=x+1+((z+1)*Resolution); //Vertex upper right first triangle
+        }
+    }
+    glGenBuffers(1, &indexBufferId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(plane_indices),plane_indices,GL_STATIC_DRAW);
+}
+
 
 /*
 psi=(fftwf_complex*)fftw_malloc(sizeof(fftw_complex)*simWidth*simHeight);
