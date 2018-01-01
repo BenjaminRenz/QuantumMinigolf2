@@ -1,9 +1,12 @@
 # depslib dependency file v1.0
-1514664299 source:j:\qmg2\qmg2\main.c
+1514830494 source:j:\qmg2\qmg2\main.c
 	"libraries/GLEW_2.1.0/include/glew.h"
 	"libraries/GLFW_3.2.1/include/glfw3.h"
+	"fft.h"
 	<stdio.h>
 	<stdlib.h>
+	<math.h>
+	<limits.h>
 
 1471517560 j:\qmg2\qmg2\include\glfw\glfw3.h
 	<stddef.h>
@@ -152,6 +155,11 @@
 	<math.h>
 
 1514726811 c:\users\malte\documents\github\quantumminigolf2\qmg2\fft.h
+	"libraries/FFTW_3.3.5/include/fftw3.h"
+	<stdio.h>
+	<stdlib.h>
+
+1514819979 j:\qmg2\qmg2\fft.h
 	"libraries/FFTW_3.3.5/include/fftw3.h"
 	<stdio.h>
 	<stdlib.h>

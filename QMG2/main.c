@@ -6,14 +6,20 @@
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
 #include "fft.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <math.h>
+#define PI 3.14159265358979323846
+#include <limits.h>
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void mouse_button_callback();
 void createPlane();
 void createCube();
+float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);;
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
@@ -75,7 +81,7 @@ int main(int argc, char* argv[]){
 
 
 
-    /*
+
     //create plane
     GLuint VertexArrayID = 0;
     glGenVertexArrays(1,&VertexArrayID);
@@ -91,7 +97,7 @@ int main(int argc, char* argv[]){
     glGenBuffers(1, &vertexBufferId);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
     glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices), plane_vertices,GL_STATIC_DRAW);
-    */
+
     glDisable(GL_CULL_FACE);
     glClearColor(1.0f,1.0f,0.0f,0.5f);
 
@@ -112,7 +118,38 @@ int main(int argc, char* argv[]){
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER,pboIds[PBO_next_index]);
 
 */
+    double rotation_up_down=0;
+    double rotation_left_right=0.1f;
     while (!glfwWindowShouldClose(MainWindow)){
+        float delta_time = update_delta_time();
+
+        if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
+            if(rotation_up_down<(3.0)){
+                rotation_up_down=rotation_up_down+delta_time;
+            }
+        }
+        if(glfwGetKey(MainWindow,GLFW_KEY_S)==GLFW_PRESS){
+           if(rotation_up_down>(-3.0)){
+                rotation_up_down=rotation_up_down-delta_time;
+           }
+        }
+        //atan(rotation_up_down);
+        if(glfwGetKey(MainWindow,GLFW_KEY_A)==GLFW_PRESS){
+            if(rotation_left_right>(-PI)){
+                rotation_left_right=rotation_left_right-delta_time;
+            }else{
+                printf("full");
+                rotation_left_right=PI;
+            }
+        }
+        if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS){
+             if(rotation_left_right<PI){
+                rotation_left_right=rotation_left_right+delta_time;
+            }else{
+                rotation_left_right=-PI;
+            }
+        }
+        //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         //glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
@@ -130,6 +167,15 @@ int main(int argc, char* argv[]){
     }
     glfwTerminate();
     return 0;
+}
+
+float update_delta_time(){              //Get the current time with glfwGetTime and subtract last time to return deltatime
+    static double last_glfw_time=0.0f;
+    static double current_glfw_time;
+    current_glfw_time = glfwGetTime();
+    float delta = (float) (current_glfw_time-last_glfw_time);
+    last_glfw_time = current_glfw_time;
+    return delta;
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
@@ -154,10 +200,10 @@ GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
         printf("Error: Filepointer to shaderfile at %s could not be loaded.",FilePath);
         //return;
     }
-    fseek(filepointer,0,SEEK_END);                      //shift filePointer to EndOfFile Position to get filelength
-    long filelength = ftell(filepointer);               //get filePointer position
-    fseek(filepointer,0,SEEK_SET);                      //move file Pointer back to first line of file
-    char* filestring = (char*)malloc(filelength+1);     //
+    fseek(filepointer,0,SEEK_END);                          //shift filePointer to EndOfFile Position to get filelength
+    long filelength = ftell(filepointer);                   //get filePointer position
+    fseek(filepointer,0,SEEK_SET);                          //move file Pointer back to first line of file
+    char* filestring = (char*)malloc(filelength+1);         //
     if(fread(filestring,sizeof(char),filelength,filepointer) != filelength){
         printf("Error: Missing characters in input string");
         //return;
