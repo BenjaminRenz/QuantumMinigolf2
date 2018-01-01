@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1514634292 source:j:\qmg2\qmg2\main.c
+1514664299 source:j:\qmg2\qmg2\main.c
 	"libraries/GLEW_2.1.0/include/glew.h"
 	"libraries/GLFW_3.2.1/include/glfw3.h"
 	<stdio.h>
