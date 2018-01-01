@@ -19,7 +19,6 @@ void glfw_error_callback(int error, const char* description);;
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 
 int main(int argc, char* argv[]){
-
     width = 32;
     height = 32;
 
