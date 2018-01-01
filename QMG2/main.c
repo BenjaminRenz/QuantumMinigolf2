@@ -2,14 +2,15 @@
 -compile GLEW as static library
 -implement webcam brightest spot detection https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
 */
-#include "glfw.h"
+#define GLEW_STATIC
+#include "libraries/GLEW_2.1.0/include/glew.h"
+#include "libraries/GLFW_3.2.1/include/glfw3.h"
 #include "fft.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <math.h>
-<<<<<<< HEAD
 #define PI 3.14159265358979323846
 #include <limits.h>
 
@@ -22,8 +23,6 @@ float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);;
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
-=======
->>>>>>> b26fbfd34c17604892f63e020aa83d795e4d131a
 
 int main(int argc, char* argv[]){
     //GLFW init
@@ -79,7 +78,7 @@ int main(int argc, char* argv[]){
     glAttachShader(ProgrammID, fragmentShaderId);       //attach fragment shader to new program
     glLinkProgram(ProgrammID);                          //create execuatble
     glUseProgram(ProgrammID);
-
+    GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
 
 
 
@@ -121,9 +120,12 @@ int main(int argc, char* argv[]){
 */
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
+
+
     while (!glfwWindowShouldClose(MainWindow)){
         float delta_time = update_delta_time();
 
+        //Camera Movement calculation
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
             if(rotation_up_down<(3.0)){
                 rotation_up_down=rotation_up_down+delta_time;
@@ -139,7 +141,6 @@ int main(int argc, char* argv[]){
             if(rotation_left_right>(-PI)){
                 rotation_left_right=rotation_left_right-delta_time;
             }else{
-                printf("full");
                 rotation_left_right=PI;
             }
         }
@@ -150,6 +151,11 @@ int main(int argc, char* argv[]){
                 rotation_left_right=-PI;
             }
         }
+        //camera projection an transformation matrix calculation
+        glLoadIdentity();
+        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE, & );
+
+        //gluLookAt(sin(rotation_left_right),cos(rotation_left_right),1,0,0,0,0,1,0);
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -158,6 +164,7 @@ int main(int argc, char* argv[]){
         glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
         glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,NULL);
+
         glDrawArrays(GL_TRIANGLES,0,3);
         glDisableVertexAttribArray(0);
 
