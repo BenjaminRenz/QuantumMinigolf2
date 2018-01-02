@@ -13,7 +13,7 @@ int main() {
     fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
 
     for(int i=0;i<height*width;i++) {
-        psi[i][0]=i%32*1.0;
+        psi[i][0]=sin(i%32*1.0);
     }
 
     for(int i=0;i<height*width;i++) {
