@@ -108,7 +108,6 @@ int main(int argc, char* argv[]){
 
     while (!glfwWindowShouldClose(MainWindow)){
         float delta_time = update_delta_time();
-
         //Camera Movement calculation
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
             if(rotation_up_down<(3.0)){
@@ -139,19 +138,10 @@ int main(int argc, char* argv[]){
 
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
         glDrawElements(GL_LINES,6*256*256,GL_UNSIGNED_INT,0);
-        /*glUseProgram(ProgrammID);
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-        glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,NULL);
-
-        glDrawArrays(GL_TRIANGLES,0,3);
-        glDisableVertexAttribArray(0);
-        */
-    /* Swap front and back buffers */
+        //Swap Buffers
         glfwSwapBuffers(MainWindow);
-        /* Poll for and process events */
+        //Process Events
         glfwPollEvents();
     }
     glfwTerminate();
@@ -267,7 +257,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void createPlaneVBO(){
-    #define Resolution 64
+    #define Resolution 10
     GLuint VaoId=0;
     GLuint VboPositionsId=0;
     GLuint VboIndicesId=0;
@@ -314,6 +304,7 @@ void createPlaneVBO(){
 
 
 /*
+ffwt
 psi=(fftwf_complex*)fftw_malloc(sizeof(fftw_complex)*simWidth*simHeight);
 fft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_FORWARD,FFTW_MEASURE); //psi is in and out for result
 ifft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_BACKWARD,FFTW_MEASURE);
