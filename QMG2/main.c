@@ -257,7 +257,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void createPlaneVBO(){
-    #define Resolution 10
+    #define Resolution 256
     GLuint VaoId=0;
     GLuint VboPositionsId=0;
     GLuint VboIndicesId=0;
@@ -274,6 +274,7 @@ void createPlaneVBO(){
             plane_vertices[vert_index++]=(((float)x)/(Resolution-1))-0.5f;
             plane_vertices[vert_index++]=(((float)y)/(Resolution-1))-0.5f; //Set height (y) to zero
             plane_vertices[vert_index++]=0.0f;
+
         }
     }
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
