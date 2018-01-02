@@ -101,13 +101,13 @@
 	<stdio.h>
 	<stddef.h>
 
-1514806378 source:c:\users\malte\documents\github\quantumminigolf2\qmg2\main.c
-	"libraries/GLEW_2.1.0/include/glew.h"
-	"libraries/GLFW_3.2.1/include/glfw3.h"
-	"libraries/FFTW_3.3.5/include/fftw3.h"
-	"main.h"
+1514843064 source:c:\users\malte\documents\github\quantumminigolf2\qmg2\main.c
+	"glfw.h"
+	"fft.h"
 	<stdio.h>
 	<stdlib.h>
+	<math.h>
+	<limits.h>
 
 1514725823 c:\users\malte\documents\github\quantumminigolf2\qmg2\libraries\glew_2.1.0\include\glew.h
 	<stddef.h>
