@@ -37,8 +37,7 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    GLFWwindow* MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
-
+    GLFWwindow* MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);
     //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
@@ -54,7 +53,8 @@ int main(int argc, char* argv[]){
     }
     printf("QuantumMinigolf v2:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
-
+    //enable v-sync
+    glfwSwapInterval(1);
     //Refister Callback for errors (debugging)
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -79,29 +79,11 @@ int main(int argc, char* argv[]){
     glAttachShader(ProgrammID, fragmentShaderId);       //attach fragment shader to new program
     glLinkProgram(ProgrammID);                          //create execuatble
     glUseProgram(ProgrammID);
-    //GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
+    GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
 
-
-    /*
-    //create plane
-    GLuint VertexArrayID = 0;
-    glGenVertexArrays(1,&VertexArrayID);
-    glBindVertexArray(VertexArrayID);
-    //Generate Vertex Positions
-    float plane_vertices[9]=
-    {
-        -1.0f, -1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        0.0f,  1.0f, 0.0f,
-    };
-    GLuint vertexBufferId=0;
-    glGenBuffers(1, &vertexBufferId);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices), plane_vertices,GL_STATIC_DRAW);
-*/
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
-    glClearColor(1.0f,1.0f,0.0f,0.5f);
+    glClearColor(0.3f,0.3f,0.3f,0.5f);
 
 /* https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
     //Generate PBO for fft result upload for gpu
@@ -155,12 +137,10 @@ int main(int argc, char* argv[]){
         }
         //camera projection an transformation matrix calculation
 
-
-        //gluLookAt(sin(rotation_left_right),cos(rotation_left_right),1,0,0,0,0,1,0);
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-        glDrawElements(GL_TRIANGLES,256*256*2,GL_UNSIGNED_INT,0);
+        glDrawElements(GL_LINES,6*256*256,GL_UNSIGNED_INT,0);
         /*glUseProgram(ProgrammID);
         glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
@@ -287,9 +267,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void createPlaneVBO(){
-    #define Resolution 256
-    #define ScaleFact 400
-
+    #define Resolution 64
     GLuint VaoId=0;
     GLuint VboPositionsId=0;
     GLuint VboIndicesId=0;
@@ -298,55 +276,40 @@ void createPlaneVBO(){
     glGenVertexArrays(1,&VaoId);
     glBindVertexArray(VaoId);
 
-
     //Generate Vertex Positions
-    float plane_vertices[12]={  //for testing
-        -0.8f,-0.8f,0.0f,
-        0.8f,-0.8f,0.0f,
-        -0.8f,0.8f,0.0f,
-        0.8f,0.8f,0.0f
-    };
-    /*float* plane_vertices =malloc(3*Resolution*Resolution*sizeof(float));      //TODO free this pointer ( memory leak )
+    float* plane_vertices =malloc(3*Resolution*Resolution*sizeof(float));      //TODO free this pointer ( memory leak )
     long vert_index=0;
     for(int y=0;y<Resolution;y++){
         for(int x=0;x<Resolution;x++){
-            plane_vertices[vert_index++]=((float)x)/ScaleFact;
-            plane_vertices[vert_index++]=((float)y)/ScaleFact; //Set height (y) to zero
+            plane_vertices[vert_index++]=(((float)x)/(Resolution-1))-0.5f;
+            plane_vertices[vert_index++]=(((float)y)/(Resolution-1))-0.5f; //Set height (y) to zero
             plane_vertices[vert_index++]=0.0f;
         }
     }
-    */
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
-    printf("Sizeof %d",sizeof(plane_vertices));
-    glBufferData(GL_ARRAY_BUFFER, sizeof(plane_vertices),plane_vertices,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+    glBufferData(GL_ARRAY_BUFFER, Resolution*Resolution*3*sizeof(float),plane_vertices,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE,0,0);
 
-
     //Generate Vertex Indices
-    GLuint plane_indices[6]={
-        0,1,2,
-        1,2,3
-    };
-    /*GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*6*sizeof(GLuint));         //TODO free allocated Memory
+    GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*6*sizeof(GLuint));         //TODO free allocated Memory
     vert_index=0;
-    for(unsigned int z=0;z<(Resolution-1);z++){
+    for(unsigned int y=0;y<(Resolution-1);y++){
         for(unsigned int x=0;x<(Resolution-1);x++){
             //Generate first triangle
-            plane_indices[vert_index++]=x+(z*Resolution);   //Vertex lower left first triangle
-            plane_indices[vert_index++]=x+1+((z+1)*Resolution); //Vertex upper right first triangle
-            plane_indices[vert_index++]=x+((z+1)*Resolution); //Vertex upper left first triangle
+            plane_indices[vert_index++]=x+(y*Resolution);   //Vertex lower left first triangle
+            plane_indices[vert_index++]=x+1+(y*Resolution);//Vertex upper right first triangle
+            plane_indices[vert_index++]=x+((y+1)*Resolution); //Vertex upper left first triangle
             //Generate second triangle
-            plane_indices[vert_index++]=x+(z*Resolution);   //Vertex lower left second triangle
-            plane_indices[vert_index++]=x+((z+1)*Resolution); //Vertex lower right second triangle
-            plane_indices[vert_index++]=x+1+((z+1)*Resolution); //Vertex upper right first triangle
+            plane_indices[vert_index++]=(x+1)+(y*Resolution);   //Vertex lower left second triangle
+            plane_indices[vert_index++]=(x+1)+((y+1)*Resolution); //Vertex lower right second triangle
+            plane_indices[vert_index++]=x+((y+1)*Resolution); //Vertex upper right first triangle
         }
     }
-*/
     glGenBuffers(1, &VboIndicesId);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboIndicesId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(plane_indices),plane_indices,GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(Resolution-1)*(Resolution-1)*6*sizeof(GLuint),plane_indices,GL_STATIC_DRAW);
 }
 
 
