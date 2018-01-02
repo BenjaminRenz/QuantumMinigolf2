@@ -35,6 +35,7 @@
 			<Add directory="libraries/GLEW_2.1.0/include" />
 			<Add directory="libraries/GLFW_3.2.1/include" />
 			<Add directory="libraries/FFTW_3.3.5/include" />
+			<Add directory="libraries/LINMATH/include" />
 		</Compiler>
 		<Linker>
 			<Add library="glew32s" />
