@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
     }
 
     //Set window creation hints
-    glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
+    //glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
@@ -105,7 +105,11 @@ int main(int argc, char* argv[]){
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
 
-
+    mat4x4 mvp4x4;
+    mat4x4 persp4x4;
+    vec3 eye_vec={1.0f,1.0f,1.0f};
+    vec3 cent_vec={0.0f,0.0f,0.0f};
+    vec3 up_vec={0.0f,0.0f,1.0f};
     while (!glfwWindowShouldClose(MainWindow)){
         float delta_time = update_delta_time();
         //Camera Movement calculation
@@ -135,7 +139,10 @@ int main(int argc, char* argv[]){
             }
         }
         //camera projection an transformation matrix calculation
-
+        mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
+        mat4x4_perspective(persp4x4,45.0f,16.0f/9.0f,0.5f,10.0f);
+        mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
+        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,&mvp4x4);
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glDrawElements(GL_LINES,6*256*256,GL_UNSIGNED_INT,0);
@@ -257,7 +264,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void createPlaneVBO(){
-    #define Resolution 10
+    #define Resolution 100
     GLuint VaoId=0;
     GLuint VboPositionsId=0;
     GLuint VboIndicesId=0;
