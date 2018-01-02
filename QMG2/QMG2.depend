@@ -1,8 +1,9 @@
 # depslib dependency file v1.0
-1514830494 source:j:\qmg2\qmg2\main.c
+1514898614 source:j:\qmg2\qmg2\main.c
 	"libraries/GLEW_2.1.0/include/glew.h"
 	"libraries/GLFW_3.2.1/include/glfw3.h"
-	"fft.h"
+	"libraries/FFTW_3.3.5/include/fftw3.h"
+	"libraries/LINMATH/include/linmath.h"
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -163,4 +164,7 @@
 	"libraries/FFTW_3.3.5/include/fftw3.h"
 	<stdio.h>
 	<stdlib.h>
+
+1454850632 j:\qmg2\qmg2\libraries\linmath\include\linmath.h
+	<math.h>
 
