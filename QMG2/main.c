@@ -17,13 +17,16 @@
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
-void mouse_button_callback();
+void drop_file_callback(GLFWwindow* window, int count, const char** paths);
+void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void createPlaneVBO();
 void createCube();
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
-void glfw_error_callback(int error, const char* description);;
+void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
+float FOV=0.20f;
+
 
 int main(int argc, char* argv[]){
     //GLFW init
@@ -64,7 +67,8 @@ int main(int argc, char* argv[]){
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow,key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
-
+    glfwSetDropCallback(MainWindow,drop_file_callback);
+    glfwSetScrollCallback(MainWindow,mouse_scroll_callback);
     //Get window height
     int window_width = 0;
     int window_height = 0;
@@ -124,14 +128,14 @@ int main(int argc, char* argv[]){
            }
         }
         //atan(rotation_up_down);
-        if(glfwGetKey(MainWindow,GLFW_KEY_A)==GLFW_PRESS){
+        if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS){
             if(rotation_left_right>(-PI)){
                 rotation_left_right=rotation_left_right-delta_time;
             }else{
                 rotation_left_right=PI;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS){
+        if(glfwGetKey(MainWindow,GLFW_KEY_A)==GLFW_PRESS){
              if(rotation_left_right<PI){
                 rotation_left_right=rotation_left_right+delta_time;
             }else{
@@ -139,10 +143,13 @@ int main(int argc, char* argv[]){
             }
         }
         //camera projection an transformation matrix calculation
+        eye_vec[0]=1.5f*sin(rotation_left_right)*cos(atan(rotation_up_down));
+        eye_vec[1]=1.5f*cos(rotation_left_right)*cos(atan(rotation_up_down));
+        eye_vec[2]=1.5f*sin(atan(rotation_up_down));
         mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
-        mat4x4_perspective(persp4x4,45.0f,16.0f/9.0f,0.5f,10.0f);
+        mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
-        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,&mvp4x4);
+        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glDrawElements(GL_LINES,6*256*256,GL_UNSIGNED_INT,0);
@@ -264,11 +271,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void createPlaneVBO(){
-<<<<<<< HEAD
     #define Resolution 100
-=======
-    #define Resolution 256
->>>>>>> a02ed5e6ed3b9910d54949b236c7d23ea94439d7
     GLuint VaoId=0;
     GLuint VboPositionsId=0;
     GLuint VboIndicesId=0;
@@ -323,3 +326,18 @@ ifft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_BACKWARD,FFTW_MEASURE);
 //BuildMomentumPropagator
 
 */
+void drop_file_callback(GLFWwindow* window, int count, const char** paths){
+    for(int i=0; i<count; i++){
+        printf("Dropped File Path: %s\n",paths[i]);
+    }
+}
+
+void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset){
+    float temp_mouse_scroll= -0.04f*(float)yOffset;
+    if((FOV+temp_mouse_scroll<1.0f)&&(FOV+temp_mouse_scroll>0.1f)){
+        FOV+=temp_mouse_scroll;
+        printf("FOV:%f\n",FOV);
+    }else{
+    printf("Scroll range exceeded - %f!\n",FOV-yOffset);
+    }
+}
