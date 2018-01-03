@@ -54,7 +54,7 @@ int main(int argc, char* argv[]){
     if(GLEW_OK != err){
         printf("Error: glewInit() failed.");
     }
-    printf("QuantumMinigolf v2:\n");
+    printf("QuantumMinigolf v2 opengl:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
     //enable v-sync
     glfwSwapInterval(1);
