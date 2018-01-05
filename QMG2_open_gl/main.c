@@ -112,7 +112,7 @@ int main(int argc, char* argv[]){
     glActiveTexture(GL_TEXTURE0);
     GLuint psi_texture=0;
     glGenTextures(1,&psi_texture);
-    glBindTexture(GL_TEXTURE_2D,texture);
+    glBindTexture(GL_TEXTURE_2D,psi_texture);
     //generate pbo
     GLuint PBO1=0;
     GLuint PBO2=0;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]){
         //Make PBO2 ready to recieve new data
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO2);
         glBufferData(GL_PIXEL_UNPACK_BUFFER,"bytecount",0,GL_STREAM_DRAW);
-        Gluint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,"bytecount",GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
+        GLuint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,"bytecount",GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
         //write to data
         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); //start upload
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
