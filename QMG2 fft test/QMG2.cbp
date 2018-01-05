@@ -47,11 +47,10 @@
 			<Add directory="libraries/GLFW_3.2.1/lib_mingw_32" />
 			<Add directory="libraries/FFTW_3.3.5/lib_mingw_32" />
 		</Linker>
-		<Unit filename="main.c">
+		<Unit filename="fft.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="res/shaders/fragment.glsl" />
-		<Unit filename="res/shaders/vertex.glsl" />
+		<Unit filename="fft.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
