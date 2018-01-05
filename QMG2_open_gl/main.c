@@ -21,6 +21,7 @@ void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void createPlaneVBO();
 void createCube();
+void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
@@ -94,21 +95,6 @@ int main(int argc, char* argv[]){
     glClearColor(0.3f,0.3f,0.3f,0.5f);
 
 /* https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
-    //Generate PBO for fft result upload for gpu
-    //Double Buffering indexing
-    PBO_index=(index+1)%2;
-    PBO_next_index=(intex+1)%2;
-    //void* FFTData = ;
-
-    GLuint Texture_ID=0;
-    glBindTexture(GL_TEXTURE_2D, Texture_ID);
-
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,pboIds[PBO_index]);
-    glBufferSubData(GL_UNPACK_BUFFER, )
-    //Copy from PixelBufferObject to texture object
-    glTexSubImage2D(GL_TEXTURE_2D,0,0,0,FFT_width,FFT_height,GL_BGRA,GL_UNSIGNED_BYTE,0);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,pboIds[PBO_next_index]);
-*/
     glActiveTexture(GL_TEXTURE0);
     GLuint psi_texture=0;
     glGenTextures(1,&psi_texture);
@@ -141,6 +127,7 @@ int main(int argc, char* argv[]){
 
 
     }
+*/
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
@@ -150,6 +137,7 @@ int main(int argc, char* argv[]){
     vec3 eye_vec={1.0f,1.0f,1.0f};
     vec3 cent_vec={0.0f,0.0f,0.0f};
     vec3 up_vec={0.0f,0.0f,1.0f};
+    write_bmp(".\\test.bin",0,0);
     while (!glfwWindowShouldClose(MainWindow)){
         float delta_time = update_delta_time();
         //Camera Movement calculation
@@ -361,4 +349,62 @@ void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset){
         FOV+=temp_mouse_scroll;
     }else{
     }
+}
+
+//Functions for bitmap read and write
+/*
+typedef struct bmp_header{
+    //header
+    uint8_t bmp_magic_num[2];
+    uint32_t bmp_filesize;
+    unsigned int bmp_offset_to_pixelarray;
+    //v5 header
+    unsigned int bmp_info_header_size;
+    unsigned int bmp_width;
+    unsigned int height;
+    short bmp_planecount:
+    short bmp_bits_per_pixel;
+    unsigned int bmp_compression;
+    unsigned int bmp_image_size;
+    unsigned int bmp_X_PpMeter;
+    unsigned int bmp_Y_PpMeter;
+    unsigned int bmp_col_num;
+    unsigned int bmp_col_important;
+}bmp_header;
+*/
+typedef struct Image{
+    unsigned int sizeX;
+    unsigned int sizeY;
+    void* data;
+}Image;
+
+void read_bmp(char* filepath,Image* bmp_image){
+    FILE *filepointer=fopen(filepath,"rb");
+    if(filepointer==NULL){
+        printf("File :&d could not be found\n",filepath);
+        return;
+    }
+    fseek(filepointer,)
+    fclose(filepointer);
+}
+
+unsigned int read_from_endian_file(FILE* file){
+    unsigned char data[4];
+    unsigned int data_return_int;
+    if(fread(data,1,4,file)<4){ //total number of read elements is less than 4
+        return 0;
+    }
+    //little endian
+    data_return_int=(b[3]<<24)|(b[2]<<16)|(b[1]<<8)|b[0];
+    //big endian (comment out and comment little endian if needed)
+    //data_return_int=(b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3];
+    return data_return_int;
+}
+
+void write_bmp(char* filepath, unsigned int width, unsigned int height){
+    FILE* filepointer = fopen(filepath,"wb");
+    //bytes_per_line=(3*(width+1)/4)*4;
+    const char* String_to_write="BMP";
+    fwrite(&String_to_write,sizeof(char),3,filepointer);
+    return;
 }
