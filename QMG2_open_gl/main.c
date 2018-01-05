@@ -25,7 +25,10 @@ float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
+//global variables section
 float FOV=0.20f;
+unsigned int Resolution= 100;
+GLFWwindow* MainWindow;
 
 
 int main(int argc, char* argv[]){
@@ -40,7 +43,7 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    GLFWwindow* MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
     //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
@@ -76,6 +79,7 @@ int main(int argc, char* argv[]){
 
     //Initialize shaders
     //TODO filepath for windows, alter for unix like os
+    //GLuint computeShaderId = CompileShaderFromFile(".\\res\\shaders\\compute.glsl",GL_COMPUTE_SHADER);
     GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
     GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
     GLuint ProgrammID = glCreateProgram();              //create program to run on GPU
@@ -104,8 +108,40 @@ int main(int argc, char* argv[]){
     //Copy from PixelBufferObject to texture object
     glTexSubImage2D(GL_TEXTURE_2D,0,0,0,FFT_width,FFT_height,GL_BGRA,GL_UNSIGNED_BYTE,0);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER,pboIds[PBO_next_index]);
-
 */
+    glActiveTexture(GL_TEXTURE0);
+    GLuint psi_texture=0;
+    glGenTextures(1,&psi_texture);
+    glBindTexture(GL_TEXTURE_2D,texture);
+    //generate pbo
+    GLuint PBO1=0;
+    GLuint PBO2=0;
+    glGenBuffers(1,&PBO1);
+    glGenBuffers(1,&PBO2);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER,"sizeof data","datapointer",GL_STREAM_DRAW);
+    glTexImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
+    {//in render loop
+        //enable pbo1 to be uesed in the current render
+        glBindTexture(GL_TEXTURE_2D, psi_texture);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,NULL);
+        //Make PBO2 ready to recieve new data
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO2);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER,"bytecount",0,GL_STREAM_DRAW);
+        Gluint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,"bytecount",GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
+        //write to data
+        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); //start upload
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
+        {//swap pixel buffers
+            GLuint temp=PBO1;
+            PBO1=PBO2;
+            PBO2=temp;
+        }
+
+
+    }
+    //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
 
@@ -152,7 +188,7 @@ int main(int argc, char* argv[]){
         glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        glDrawElements(GL_LINES,6*256*256,GL_UNSIGNED_INT,0);
+        glDrawElements(GL_LINES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
@@ -175,12 +211,9 @@ float update_delta_time(){              //Get the current time with glfwGetTime 
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     if(key==GLFW_KEY_ESCAPE && action == GLFW_PRESS){
-        printf("Escape");
+        glfwSetWindowShouldClose(MainWindow,1);
     }
-    if(key==GLFW_KEY_W&&action==GLFW_PRESS){
-
-    }
-
+    //TODO: move key checking routines here.
 }
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods){
     if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS){
@@ -271,7 +304,6 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void createPlaneVBO(){
-    #define Resolution 100
     GLuint VaoId=0;
     GLuint VboPositionsId=0;
     GLuint VboIndicesId=0;
@@ -281,22 +313,20 @@ void createPlaneVBO(){
     glBindVertexArray(VaoId);
 
     //Generate Vertex Positions
-    float* plane_vertices =malloc(3*Resolution*Resolution*sizeof(float));      //TODO free this pointer ( memory leak )
+    float* plane_vertex_data =malloc(3*Resolution*Resolution*sizeof(float));      //TODO free this pointer ( memory leak )
     long vert_index=0;
     for(int y=0;y<Resolution;y++){
         for(int x=0;x<Resolution;x++){
-            plane_vertices[vert_index++]=(((float)x)/(Resolution-1))-0.5f;
-            plane_vertices[vert_index++]=(((float)y)/(Resolution-1))-0.5f; //Set height (y) to zero
-            plane_vertices[vert_index++]=0.0f;
-
+            //Vector coordinates (x,y,z)
+            plane_vertex_data[vert_index++]=(((float)x)/(Resolution-1))-0.5f;
+            plane_vertex_data[vert_index++]=(((float)y)/(Resolution-1))-0.5f; //Set height (y) to zero
         }
     }
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
-    glBufferData(GL_ARRAY_BUFFER, Resolution*Resolution*3*sizeof(float),plane_vertices,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE,0,0);
-
+    glBufferData(GL_ARRAY_BUFFER, Resolution*Resolution*2*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+    glEnableVertexAttribArray(0);//x,y,z
+    glVertexAttribPointer(0,2,GL_FLOAT, GL_FALSE,2*sizeof(float),0);
     //Generate Vertex Indices
     GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*6*sizeof(GLuint));         //TODO free allocated Memory
     vert_index=0;
@@ -318,14 +348,7 @@ void createPlaneVBO(){
 }
 
 
-/*
-ffwt
-psi=(fftwf_complex*)fftw_malloc(sizeof(fftw_complex)*simWidth*simHeight);
-fft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_FORWARD,FFTW_MEASURE); //psi is in and out for result
-ifft = fftwf_plan_dft_2d(simWidth,simHeight,psi,psi,FFTW_BACKWARD,FFTW_MEASURE);
-//BuildMomentumPropagator
 
-*/
 void drop_file_callback(GLFWwindow* window, int count, const char** paths){
     for(int i=0; i<count; i++){
         printf("Dropped File Path: %s\n",paths[i]);
@@ -336,8 +359,6 @@ void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset){
     float temp_mouse_scroll= -0.04f*(float)yOffset;
     if((FOV+temp_mouse_scroll<1.0f)&&(FOV+temp_mouse_scroll>0.1f)){
         FOV+=temp_mouse_scroll;
-        printf("FOV:%f\n",FOV);
     }else{
-    printf("Scroll range exceeded - %f!\n",FOV-yOffset);
     }
 }
