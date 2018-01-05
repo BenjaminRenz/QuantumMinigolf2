@@ -378,17 +378,10 @@ typedef struct Image{
     void* data;
 }Image;
 
-void read_bmp(char* filepath,Image* bmp_image){
-    FILE *filepointer=fopen(filepath,"rb");
-    if(filepointer==NULL){
-        printf("File :&d could not be found\n",filepath);
-        return;
-    }
-    fseek(filepointer,)
-    fclose(filepointer);
-}
 
-unsigned int read_from_endian_file(FILE* file){
+
+
+unsigned int read_uint_from_endian_file(FILE* file){
     unsigned char data[4];
     unsigned int data_return_int;
     if(fread(data,1,4,file)<4){ //total number of read elements is less than 4
@@ -400,6 +393,58 @@ unsigned int read_from_endian_file(FILE* file){
     //data_return_int=(b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3];
     return data_return_int;
 }
+
+unsigned short read_short_from_endian_file(FILE* file){
+    unsigned char data[2];
+    unsigned short data_return_short;
+    if(fread(data,1,2,file)<2){ //total number of read elements is less than 4
+        return 0;
+    }
+    //little endian
+    data_return_short=(b[1]<<8)|b[0];
+    //big endian (comment out and comment little endian if needed)
+    //data_return_int=(b[0]<<8)|b[1];
+    return data_return_short;
+}
+
+void read_bmp(char* filepath,Image* bmp_image){
+    FILE *filepointer=fopen(filepath,"rb");
+    if(filepointer==NULL){
+        printf("File :%d could not be found\n",filepath);
+        return;
+    }
+    if(read_short_from_endian_file(filepointer)!=0x424D){// (equals bm)
+        printf("File :%d is not an BMP\n");
+        return;
+    }
+    fseek(filepointer,14 ,SEEK_SET);
+    unsigned int BitmapInfoHeaderSize = read_uint_from_endian_file(filepointer);
+    unsigned int BitmapWidth=read_uint_from_endian_file(filepointer);
+    printf("BitmapWidth is %d.\n",BitmapWidth);
+    unsigned int BitmapHeight=read_uint_from_endian_file(filepointer);
+    printf("BitmapHeight is %d.\n",BitmapHeight);
+    printf("Calculated Image Size.\n")
+    if(read_short_from_endian_file(filepointer)!=1){
+        printf("Unsupported plane count\n");
+        return;
+    }
+    if(read_short_from_endian_file(filepointer)!=24){
+        printf("Unsupported color depth, should be 24.\n");
+        return;
+    }
+    if(read_uint_from_endian_file(filepointer)!=0){
+        printf("Does not support compressed bmp files.\n");
+        return;
+    }
+    unsigned int BitmapImageSize=read_uint_from_endian_file(filepointer);
+    unsigned int BitmapXPpM=read_uint_from_endian_file(filepointer);
+    unsigned int BitmapYPpM=read_uint_from_endian_file(filepointer);
+    void* imageData=malloc()
+    fclose(filepointer);
+}
+
+
+
 
 void write_bmp(char* filepath, unsigned int width, unsigned int height){
     FILE* filepointer = fopen(filepath,"wb");
