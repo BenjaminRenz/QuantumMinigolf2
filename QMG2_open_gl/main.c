@@ -95,7 +95,8 @@ int main(int argc, char* argv[]){
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
-
+    //Enable z checking
+    glEnable(GL_DEPTH_TEST);
     //Test for texturing
     glActiveTexture(GL_TEXTURE0);
     GLuint testTexture=0;
@@ -106,7 +107,7 @@ int main(int argc, char* argv[]){
     for(unsigned long i=0;i<(100*100*4);){
         TextureImageTest[i++]=(unsigned char)i;
         TextureImageTest[i++]=(unsigned char)0;
-        TextureImageTest[i++]=(unsigned char)i;
+        TextureImageTest[i++]=(unsigned char)0;
         TextureImageTest[i++]=(unsigned char)i;
     }
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,40,40,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
