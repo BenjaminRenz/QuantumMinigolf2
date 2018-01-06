@@ -1,8 +1,8 @@
 #version 430 core
-in vec2 uv_in;
+in vec2 UV;
 //uniform sampler2D texture0;
 out vec4 frag_color;
-
+uniform sampler2D texture0;
 void main(){
-    frag_color=vec4(uv_in.xy,1.0f,1.0f);
+    frag_color=vec4(texture(texture0,UV).rgb,1.0f);
 }

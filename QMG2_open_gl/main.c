@@ -45,8 +45,8 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
-    //GLFWwindow* MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    //MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
         return -1;
@@ -101,9 +101,16 @@ int main(int argc, char* argv[]){
     GLuint testTexture=0;
     glGenTextures(1,&testTexture);
     glBindTexture(GL_TEXTURE_2D,testTexture);
-    unsigned char* TextureImageTest=read_bmp(".\\test.bmp");
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,400,400,0,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
-    //glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
+    //unsigned char* TextureImageTest=read_bmp(".\\test.bmp");
+    unsigned char* TextureImageTest=malloc(100*100*4);
+    for(unsigned long i=0;i<(100*100*4);){
+        TextureImageTest[i++]=(unsigned char)i;
+        TextureImageTest[i++]=(unsigned char)0;
+        TextureImageTest[i++]=(unsigned char)i;
+        TextureImageTest[i++]=(unsigned char)i;
+    }
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,40,40,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
+    glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     float tempBorderColor[]={0.0f,0.0f,0.0f,1.0f};
@@ -495,21 +502,21 @@ unsigned char* read_bmp(char* filepath){
     printf("Colors in palette: %d.\n",BitmapColorsInPalette);
     fseek(filepointer,4,SEEK_CUR);//skip over important color count
     if(BitmapCompression==3){
-        unsigned char BRGA[4];
+        unsigned char RGBA_mask[4];
         for(unsigned int color_channel=0;color_channel<4;color_channel++){
             unsigned int color_channel_mask=read_uint_from_endian_file(filepointer);
             switch(color_channel_mask){//read shift value for color_channel
             case 0xFF000000:
-                BRGA[color_channel]=3;
+                RGBA_mask[color_channel]=3;
                 break;
             case 0x00FF0000:
-                BRGA[color_channel]=2;
+                RGBA_mask[color_channel]=2;
                 break;
             case 0x0000FF00:
-                BRGA[color_channel]=1;
+                RGBA_mask[color_channel]=1;
                 break;
             case 0x000000FF:
-                BRGA[color_channel]=0;
+                RGBA_mask[color_channel]=0;
                 break;
             default:
                 printf("Error while BITMASK read. Value: %x!\n",color_channel_mask);
@@ -519,10 +526,10 @@ unsigned char* read_bmp(char* filepath){
             }
         }
         //TODO implement swapping routine if brga!=[3,2,1,0]
-        printf("Shifting value for B:%d R:%d G:%d A:%d\n",BRGA[0],BRGA[1],BRGA[2],BRGA[3]);
+        printf("Shifting value for R:%d G:%d B:%d A:%d\n",RGBA_mask[0],RGBA_mask[1],RGBA_mask[2],RGBA_mask[3]);
         unsigned char* imageData=malloc(BitmapSizeCalculated);
         fseek(filepointer,BitmapOffset,SEEK_SET);//jump to pixel data
-        unsigned int rowlength=BitmapWidth+(BitmapWidth%4);
+        unsigned long rowlength=BitmapWidth+(BitmapWidth%4);
         printf("rowlength:%d",rowlength);
         fread(imageData,rowlength*BitmapHeight,1,filepointer);
         fclose(filepointer);
