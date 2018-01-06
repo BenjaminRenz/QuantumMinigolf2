@@ -21,6 +21,7 @@ void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void createPlaneVBO();
 void createCube();
+unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
@@ -88,13 +89,29 @@ int main(int argc, char* argv[]){
     glAttachShader(ProgrammID, fragmentShaderId);       //attach fragment shader to new program
     glLinkProgram(ProgrammID);                          //create execuatble
     glUseProgram(ProgrammID);
+
     GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
 
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
-    glClearColor(0.3f,0.3f,0.3f,0.5f);
+    glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
 
-/* https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
+    //Test for texturing
+    glActiveTexture(GL_TEXTURE0);
+    GLuint testTexture=0;
+    glGenTextures(1,&testTexture);
+    glBindTexture(GL_TEXTURE_2D,testTexture);
+    unsigned char* TextureImageTest=read_bmp(".\\test.bmp");
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,400,400,0,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
+    //glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float tempBorderColor[]={0.0f,0.0f,0.0f,1.0f};
+    glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+/* //https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
     glActiveTexture(GL_TEXTURE0);
     GLuint psi_texture=0;
     glGenTextures(1,&psi_texture);
@@ -137,7 +154,6 @@ int main(int argc, char* argv[]){
     vec3 eye_vec={1.0f,1.0f,1.0f};
     vec3 cent_vec={0.0f,0.0f,0.0f};
     vec3 up_vec={0.0f,0.0f,1.0f};
-    write_bmp(".\\test.bin",0,0);
     while (!glfwWindowShouldClose(MainWindow)){
         float delta_time = update_delta_time();
         //Camera Movement calculation
@@ -176,7 +192,7 @@ int main(int argc, char* argv[]){
         glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
         //atan(rotation_up_down)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        glDrawElements(GL_LINES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);
+        glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
@@ -313,8 +329,10 @@ void createPlaneVBO(){
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
     glBufferData(GL_ARRAY_BUFFER, Resolution*Resolution*2*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
-    glEnableVertexAttribArray(0);//x,y,z
+    glEnableVertexAttribArray(0);//x,y
     glVertexAttribPointer(0,2,GL_FLOAT, GL_FALSE,2*sizeof(float),0);
+
+
     //Generate Vertex Indices
     GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*6*sizeof(GLuint));         //TODO free allocated Memory
     vert_index=0;
@@ -388,59 +406,131 @@ unsigned int read_uint_from_endian_file(FILE* file){
         return 0;
     }
     //little endian
-    data_return_int=(b[3]<<24)|(b[2]<<16)|(b[1]<<8)|b[0];
+    data_return_int=(data[3]<<24)|(data[2]<<16)|(data[1]<<8)|data[0];
     //big endian (comment out and comment little endian if needed)
-    //data_return_int=(b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3];
+    //data_return_int=(data[0]<<24)|(data[1]<<16)|(data[2]<<8)|data[3];
     return data_return_int;
 }
 
 unsigned short read_short_from_endian_file(FILE* file){
+    //http://cpansearch.perl.org/src/DHUNT/PDL-Planet-0.05/libimage/bmp.c
     unsigned char data[2];
     unsigned short data_return_short;
     if(fread(data,1,2,file)<2){ //total number of read elements is less than 4
         return 0;
     }
     //little endian
-    data_return_short=(b[1]<<8)|b[0];
+    data_return_short=(data[1]<<8)|data[0];
     //big endian (comment out and comment little endian if needed)
-    //data_return_int=(b[0]<<8)|b[1];
+    //data_return_short=(data[0]<<8)|data[1];
     return data_return_short;
 }
 
-void read_bmp(char* filepath,Image* bmp_image){
+unsigned char* read_bmp(char* filepath){
+    //source https://github.com/ndd314/sjsu_cmpe295_cuda_fft_opengl/blob/master/opengl/plane/readBMPV2.c#L50
+    //https://stackoverflow.com/questions/7990273/converting-256-color-bitmap-to-rgba-bitmap
     FILE *filepointer=fopen(filepath,"rb");
+
     if(filepointer==NULL){
-        printf("File :%d could not be found\n",filepath);
-        return;
+        printf("File :%s could not be found\n",filepath);
+        fclose(filepointer);
+        return 0;
     }
-    if(read_short_from_endian_file(filepointer)!=0x424D){// (equals bm)
-        printf("File :%d is not an BMP\n");
-        return;
+
+    fseek(filepointer,0,SEEK_SET);  //Jump to beginning of file
+    if(read_short_from_endian_file(filepointer)!=0x4D42){// (equals BM in ASCII)
+        fclose(filepointer);
+        printf("File :%s is not an BMP\n",filepath);
+        return 0;
     }
-    fseek(filepointer,14 ,SEEK_SET);
-    unsigned int BitmapInfoHeaderSize = read_uint_from_endian_file(filepointer);
+
+    fseek(filepointer,10 ,SEEK_SET);
+    unsigned int BitmapOffset = read_uint_from_endian_file(filepointer);
+    printf("data offset:%d\n",BitmapOffset);
+
+    if(read_uint_from_endian_file(filepointer)!=124){
+        printf("BitmapHeader is not BITMAPV5HEADER / 124 \n");
+        fclose(filepointer);
+        return 0;
+    }
     unsigned int BitmapWidth=read_uint_from_endian_file(filepointer);
     printf("BitmapWidth is %d.\n",BitmapWidth);
+
     unsigned int BitmapHeight=read_uint_from_endian_file(filepointer);
     printf("BitmapHeight is %d.\n",BitmapHeight);
-    printf("Calculated Image Size.\n")
+
     if(read_short_from_endian_file(filepointer)!=1){
         printf("Unsupported plane count\n");
-        return;
+        return 0;
     }
-    if(read_short_from_endian_file(filepointer)!=24){
-        printf("Unsupported color depth, should be 24.\n");
-        return;
-    }
-    if(read_uint_from_endian_file(filepointer)!=0){
-        printf("Does not support compressed bmp files.\n");
-        return;
+
+    unsigned int BitmapColorDepth=read_short_from_endian_file(filepointer);
+    printf("BMP color depth:%d",BitmapColorDepth);
+    unsigned int BitmapSizeCalculated=(BitmapColorDepth/8)*BitmapHeight*BitmapWidth;
+
+    unsigned int BitmapCompression=read_uint_from_endian_file(filepointer);
+    switch(BitmapCompression){
+    case 0:
+            printf("Compression type: none/BI_RGB\n");
+        break;
+        case 3:
+            printf("Compression type: Bitfields/BI_BITFIELDS\n");
+        break;
+        default:
+            printf("Unsupported compression %d\n",BitmapCompression);
+            fclose(filepointer);
+            return 0;
+        break;
     }
     unsigned int BitmapImageSize=read_uint_from_endian_file(filepointer);
+    if(BitmapImageSize!=BitmapSizeCalculated){
+        printf("Error while reading image size: Calculated Image Size: %d.\nRead Image size: %d\n",BitmapSizeCalculated,BitmapImageSize);
+        fclose(filepointer);
+        return 0;
+    }
+    printf("Image Size:%d\n",BitmapSizeCalculated);
     unsigned int BitmapXPpM=read_uint_from_endian_file(filepointer);
     unsigned int BitmapYPpM=read_uint_from_endian_file(filepointer);
-    void* imageData=malloc()
+    unsigned int BitmapColorsInPalette=read_uint_from_endian_file(filepointer);
+    printf("Colors in palette: %d.\n",BitmapColorsInPalette);
+    fseek(filepointer,4,SEEK_CUR);//skip over important color count
+    if(BitmapCompression==3){
+        unsigned char BRGA[4];
+        for(unsigned int color_channel=0;color_channel<4;color_channel++){
+            unsigned int color_channel_mask=read_uint_from_endian_file(filepointer);
+            switch(color_channel_mask){//read shift value for color_channel
+            case 0xFF000000:
+                BRGA[color_channel]=3;
+                break;
+            case 0x00FF0000:
+                BRGA[color_channel]=2;
+                break;
+            case 0x0000FF00:
+                BRGA[color_channel]=1;
+                break;
+            case 0x000000FF:
+                BRGA[color_channel]=0;
+                break;
+            default:
+                printf("Error while BITMASK read. Value: %x!\n",color_channel_mask);
+                fclose(filepointer);
+                return 0;
+                break;
+            }
+        }
+        //TODO implement swapping routine if brga!=[3,2,1,0]
+        printf("Shifting value for B:%d R:%d G:%d A:%d\n",BRGA[0],BRGA[1],BRGA[2],BRGA[3]);
+        unsigned char* imageData=malloc(BitmapSizeCalculated);
+        fseek(filepointer,BitmapOffset,SEEK_SET);//jump to pixel data
+        unsigned int rowlength=BitmapWidth+(BitmapWidth%4);
+        printf("rowlength:%d",rowlength);
+        fread(imageData,rowlength*BitmapHeight,1,filepointer);
+        fclose(filepointer);
+        return imageData;
+    }
+    printf("Currently not implemented!");
     fclose(filepointer);
+    return 0;
 }
 
 
