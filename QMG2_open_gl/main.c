@@ -97,20 +97,13 @@ int main(int argc, char* argv[]){
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
-    //Test for texturing
+    /*Texture test code
     glActiveTexture(GL_TEXTURE0);
     GLuint testTexture=0;
     glGenTextures(1,&testTexture);
     glBindTexture(GL_TEXTURE_2D,testTexture);
-    //unsigned char* TextureImageTest=read_bmp(".\\test.bmp");
-    unsigned char* TextureImageTest=malloc(100*100*4);
-    for(unsigned long i=0;i<(100*100*4);){
-        TextureImageTest[i++]=(unsigned char)i;
-        TextureImageTest[i++]=(unsigned char)0;
-        TextureImageTest[i++]=(unsigned char)0;
-        TextureImageTest[i++]=(unsigned char)i;
-    }
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,40,40,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
+    unsigned char* TextureImageTest=read_bmp(".\\test.bmp");
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,400,400,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
     glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -118,8 +111,8 @@ int main(int argc, char* argv[]){
     glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-/* //https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
+*/
+//https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
     glActiveTexture(GL_TEXTURE0);
     GLuint psi_texture=0;
     glGenTextures(1,&psi_texture);
@@ -152,7 +145,7 @@ int main(int argc, char* argv[]){
 
 
     }
-*/
+
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
@@ -474,7 +467,7 @@ unsigned char* read_bmp(char* filepath){
 
     unsigned int BitmapColorDepth=read_short_from_endian_file(filepointer);
     printf("BMP color depth:%d",BitmapColorDepth);
-    unsigned int BitmapSizeCalculated=(BitmapColorDepth/8)*BitmapHeight*BitmapWidth;
+    unsigned int BitmapSizeCalculated=(BitmapColorDepth/8)*(BitmapWidth+(BitmapWidth%4))*BitmapWidth;
 
     unsigned int BitmapCompression=read_uint_from_endian_file(filepointer);
     switch(BitmapCompression){
@@ -529,10 +522,12 @@ unsigned char* read_bmp(char* filepath){
         //TODO implement swapping routine if brga!=[3,2,1,0]
         printf("Shifting value for R:%d G:%d B:%d A:%d\n",RGBA_mask[0],RGBA_mask[1],RGBA_mask[2],RGBA_mask[3]);
         unsigned char* imageData=malloc(BitmapSizeCalculated);
+        printf("BMOFFST:%d\n",BitmapOffset);
         fseek(filepointer,BitmapOffset,SEEK_SET);//jump to pixel data
-        unsigned long rowlength=BitmapWidth+(BitmapWidth%4);
-        printf("rowlength:%d",rowlength);
-        fread(imageData,rowlength*BitmapHeight,1,filepointer);
+        printf("Calsize:%d\n",BitmapSizeCalculated);
+        if(fread(imageData,BitmapSizeCalculated,1,filepointer)==0){
+            printf("Error while reading!");
+        }
         fclose(filepointer);
         return imageData;
     }
