@@ -91,18 +91,17 @@ int main(int argc, char* argv[]){
     glUseProgram(ProgrammID);
 
     GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
-
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
-    /*Texture test code
+    //Texture test code
     glActiveTexture(GL_TEXTURE0);
     GLuint testTexture=0;
     glGenTextures(1,&testTexture);
     glBindTexture(GL_TEXTURE_2D,testTexture);
-    unsigned char* TextureImageTest=read_bmp(".\\test.bmp");
+    unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,400,400,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
     glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -111,8 +110,11 @@ int main(int argc, char* argv[]){
     glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-*/
-//https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
+
+    /*//https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
+    //Generate data memory for psi
+    unsigned char* psi=malloc(Resolution*Resolution*4);
+    //generate Texture
     glActiveTexture(GL_TEXTURE0);
     GLuint psi_texture=0;
     glGenTextures(1,&psi_texture);
@@ -123,29 +125,10 @@ int main(int argc, char* argv[]){
     glGenBuffers(1,&PBO1);
     glGenBuffers(1,&PBO2);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER,"sizeof data","datapointer",GL_STREAM_DRAW);
-    glTexImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
-    {//in render loop
-        //enable pbo1 to be uesed in the current render
-        glBindTexture(GL_TEXTURE_2D, psi_texture);
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
-        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,NULL);
-        //Make PBO2 ready to recieve new data
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO2);
-        glBufferData(GL_PIXEL_UNPACK_BUFFER,"bytecount",0,GL_STREAM_DRAW);
-        GLuint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,"bytecount",GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
-        //write to data
-        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); //start upload
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
-        {//swap pixel buffers
-            GLuint temp=PBO1;
-            PBO1=PBO2;
-            PBO2=temp;
-        }
+    glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolution*Resolution,psi,GL_STREAM_DRAW);
 
-
-    }
-
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,Resolution,Resolution,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
+*/
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
@@ -191,9 +174,29 @@ int main(int argc, char* argv[]){
         mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
         glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
-        //atan(rotation_up_down)
+
+        /*//update textures
+        glBindTexture(GL_TEXTURE_2D, psi_texture);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,NULL);
+        //Make PBO2 ready to recieve new data
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO2);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolution*Resolution,0,GL_STREAM_DRAW);
+        GLuint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,4*Resolution*Resolution,GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
+        //write to data
+
+        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); //start upload
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
+        {//swap pixel buffers
+            GLuint temp=PBO1;
+            PBO1=PBO2;
+            PBO2=temp;
+        }
+        */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);
+        //glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
+        glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
+        //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,IndexBufferIds[1]);
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
@@ -310,10 +313,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 
 void createPlaneVBO(){
     GLuint VaoId=0;
-    GLuint VboPositionsId=0;
-    GLuint VboIndicesId=0;
-
-    //Generate Vertex Array Object
+        //Generate Vertex Array Object
     glGenVertexArrays(1,&VaoId);
     glBindVertexArray(VaoId);
 
@@ -327,6 +327,7 @@ void createPlaneVBO(){
             plane_vertex_data[vert_index++]=(((float)y)/(Resolution-1))-0.5f; //Set height (y) to zero
         }
     }
+    GLuint VboPositionsId=0;
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
     glBufferData(GL_ARRAY_BUFFER, Resolution*Resolution*2*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
@@ -334,8 +335,8 @@ void createPlaneVBO(){
     glVertexAttribPointer(0,2,GL_FLOAT, GL_FALSE,2*sizeof(float),0);
 
 
-    //Generate Vertex Indices
-    GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*6*sizeof(GLuint));         //TODO free allocated Memory
+    //Generate Vertex Indices for Triangles
+    GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*(6+8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell
     vert_index=0;
     for(unsigned int y=0;y<(Resolution-1);y++){
         for(unsigned int x=0;x<(Resolution-1);x++){
@@ -349,9 +350,28 @@ void createPlaneVBO(){
             plane_indices[vert_index++]=x+((y+1)*Resolution); //Vertex upper right first triangle
         }
     }
-    glGenBuffers(1, &VboIndicesId);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboIndicesId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(Resolution-1)*(Resolution-1)*6*sizeof(GLuint),plane_indices,GL_STATIC_DRAW);
+    //Generate Vertex Indices for Grid
+    for(unsigned int y=0;y<(Resolution-1);y++){
+        for(unsigned int x=0;x<(Resolution-1);x++){
+            //Generate first line
+            plane_indices[vert_index++]=x+(y*Resolution);
+            plane_indices[vert_index++]=x+1+(y*Resolution);
+            //Generate second line
+            plane_indices[vert_index++]=x+(y*Resolution);
+            plane_indices[vert_index++]=x+((y+1)*Resolution);
+            //Generate third line
+            plane_indices[vert_index++]=x+((y+1)*Resolution);
+            plane_indices[vert_index++]=x+1+((y+1)*Resolution);
+            //Generate fourth line
+            plane_indices[vert_index++]=x+1+(y*Resolution);
+            plane_indices[vert_index++]=x+1+((y+1)*Resolution);
+        }
+    }
+    GLuint VboPlaneIndicesId=0;
+    glGenBuffers(1, &VboPlaneIndicesId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboPlaneIndicesId);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(Resolution-1)*(Resolution-1)*(6+8)*sizeof(GLuint),plane_indices,GL_STATIC_DRAW);
+    free(plane_indices);
 }
 
 
