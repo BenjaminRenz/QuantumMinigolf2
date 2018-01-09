@@ -29,7 +29,7 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.20f;
-unsigned int Resolution= 100;
+unsigned int Resolution= 256;
 GLFWwindow* MainWindow;
 
 
@@ -101,8 +101,8 @@ int main(int argc, char* argv[]){
     GLuint testTexture=0;
     glGenTextures(1,&testTexture);
     glBindTexture(GL_TEXTURE_2D,testTexture);
-    unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,400,400,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,TextureImageTest);
+
+    //unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
     glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -124,12 +124,13 @@ int main(int argc, char* argv[]){
     GLuint PBO2=0;
     glGenBuffers(1,&PBO1);
     glGenBuffers(1,&PBO2);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
     glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolution*Resolution,psi,GL_STREAM_DRAW);
 
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,Resolution,Resolution,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
 */
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
+
     double rotation_up_down=0;
     double rotation_left_right=0.1f;
 
@@ -138,8 +139,71 @@ int main(int argc, char* argv[]){
     vec3 eye_vec={1.0f,1.0f,1.0f};
     vec3 cent_vec={0.0f,0.0f,0.0f};
     vec3 up_vec={0.0f,0.0f,1.0f};
+
+    int width = 256;
+    int height = 256;
+    fftw_complex *psi;
+    psi = (fftw_complex*) fftw_alloc_complex(width*height);
+
+    fftw_plan fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
+
+    fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
+
+    double testani=1000;
+
+    double norm_sum;
+
+    double cos_precalc, sin_precalc;
+
+    cos_precalc = cos(-0.01);
+    sin_precalc = sin(-0.01);
+
+    for(int j=0;j<height;j++) {
+        for(int i=0;i<width;i++) {
+            psi[i+j*width][0]=/*sin((i+testani)/10)/2+0.5;*/exp(-((i-width/2)*(i-width/2)+(j-height/2)*(j-height/2))/testani);
+        }
+    }
+
+    for(int j=0;j<height;j++) {
+        for(int i=0;i<width;i++) {
+            psi[i+j*width][1]=0;
+        }
+    }
+
+    unsigned char* speicher = calloc(width*height*4,1);
+
     while (!glfwWindowShouldClose(MainWindow)){
+
+        //fftw_execute(fft);
+
+        //fftw_execute(ifft);
+
+        norm_sum = 0;
+
+        for(int i=0;i<width*height;i++) {
+            norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+        }
+
+        for(int i=0;i<width*height;i++) {
+            psi[i][0]=psi[i][0]/norm_sum;
+            psi[i][1]=psi[i][1]/norm_sum;
+        }
+
+        for(int i=0;i<width*height;i++) {
+            double psi_re_temp = psi[i][0];
+            psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
+            psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
+        }
+
+        for(int i=0;i<width*height;i++) {
+            speicher[i*4]=(unsigned char) (255*(psi[i][0]*psi[i][0]/*+psi[i][1]*psi[i][1]*/));
+        }
+
+        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
+
         float delta_time = update_delta_time();
+
+        testani=testani+delta_time*20;
         //Camera Movement calculation
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
             if(rotation_up_down<(3.0)){
@@ -194,8 +258,8 @@ int main(int argc, char* argv[]){
         }
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        //glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
+        glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
+        //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
         //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,IndexBufferIds[1]);
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
@@ -203,6 +267,8 @@ int main(int argc, char* argv[]){
         glfwPollEvents();
     }
     glfwTerminate();
+    fftw_destroy_plan(fft);
+    fftw_free(psi);
     return 0;
 }
 
