@@ -143,8 +143,9 @@ int main(int argc, char* argv[]){
     int width = 256;
     int height = 256;
     fftw_complex *psi;
+    fftw_complex *prop;
     psi = (fftw_complex*) fftw_alloc_complex(width*height);
-
+    prop = (fftw_complex*) fftw_alloc_complex(width*height);
     fftw_plan fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
 
     fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
@@ -171,12 +172,42 @@ int main(int argc, char* argv[]){
     }
 
     unsigned char* speicher = calloc(width*height*4,1);
+    #define dt 0.001f
+
+    for(int x=0; x<width/2; x++){
+		for(int y=0; y<height/2; y++){
+			prop[x*height+y][0] = cos(dt*(-x*x - y*y));
+			prop[x*height+y][1] = sin(dt*(-x*x - y*y));
+		}
+		for(int y=height/2; y<height; y++){
+			prop[x*height+y][0] = cos(dt*(-x*x - (y-height)*(y-height)));
+			prop[x*height+y][1] = sin(dt*(-x*x - (y-height)*(y-height)));
+		}
+	}
+	for(int x=width/2; x<width; x++){
+		for(int y=0; y<height/2; y++){
+			prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - y*y));
+			prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - y*y));
+		}
+		for(int y=height/2; y<height; y++){
+			prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
+			prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
+		}
+	}
 
     while (!glfwWindowShouldClose(MainWindow)){
 
-        //fftw_execute(fft);
+        fftw_execute(fft);
+    //momentum space
+        for(int i=0;i<width*height;i++) {
+            double psi_re_temp = psi[i][0];
+            psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
+            psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
+        }
 
-        //fftw_execute(ifft);
+
+
+        fftw_execute(ifft);
 
         norm_sum = 0;
 
@@ -196,7 +227,8 @@ int main(int argc, char* argv[]){
         }
 
         for(int i=0;i<width*height;i++) {
-            speicher[i*4]=(unsigned char) (255*(psi[i][0]*psi[i][0]/*+psi[i][1]*psi[i][1]*/));
+            speicher[i*4+2]=(unsigned char) (255*(psi[i][0]/*+psi[i][1]*psi[i][1]*/));
+            speicher[i*4+1]=(unsigned char) (255*(psi[i][1]/*+psi[i][1]*psi[i][1]*/));
         }
 
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
