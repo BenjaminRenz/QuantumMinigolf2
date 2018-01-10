@@ -159,11 +159,13 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
+    float angle_mov = PI/2;
+
     for(int j=0;j<height;j++) {
         for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
                 #define offset_x 380
-            psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos((i-height/(float)2)*5.0f);
-            psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin((i-height/(float)2)*5.0f);
+            psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
+            psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
         }
     }
 
