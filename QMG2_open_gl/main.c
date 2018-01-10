@@ -33,6 +33,8 @@ unsigned int Resolution=400;
 GLFWwindow* MainWindow;
 
 
+
+
 int main(int argc, char* argv[]){
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
@@ -163,7 +165,7 @@ int main(int argc, char* argv[]){
 
     for(int j=0;j<height;j++) {
         for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
-                #define offset_x 380
+                #define offset_x 350
             psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
             psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
         }
@@ -194,53 +196,55 @@ int main(int argc, char* argv[]){
 		}
 	}
 
+    int measurement = 0;
+
     while (!glfwWindowShouldClose(MainWindow)){
+        if(measurement == 0) {
+            fftw_execute(fft);
 
-        fftw_execute(fft);
-    //momentum space
-        for(int i=0;i<width*height;i++) {
-            double psi_re_temp = psi[i][0];
-            psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
-            psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
-        }
+            //momentum space
+            for(int i=0;i<width*height;i++) {
+                double psi_re_temp = psi[i][0];
+                psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
+                psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
+            }
 
+            fftw_execute(ifft);
 
+            norm_sum = 0;
 
-        fftw_execute(ifft);
+            for(int i=0;i<width*height;i++) {
+                norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+            }
+            norm_sum = width*height;
+            //printf("norm:%f\n",norm_sum);
+            for(int i=0;i<width*height;i++) {
+                psi[i][0]=psi[i][0]/norm_sum;
+                psi[i][1]=psi[i][1]/norm_sum;
+            }
 
-        norm_sum = 0;
+            for(int i=0;i<width*height;i++) {
+                double psi_re_temp = psi[i][0];
+                float potential_value=0.01f*(255.0f-pot[i*4+1]);
+                psi[i][0] = psi_re_temp*cos(potential_value)-psi[i][1]*sin(potential_value);
+                psi[i][1] = psi_re_temp*sin(potential_value)+psi[i][1]*cos(potential_value);
+                //psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
+                //psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
+            }
 
-        for(int i=0;i<width*height;i++) {
-            norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-        }
-        norm_sum = width*height;
-        //printf("norm:%f\n",norm_sum);
-        for(int i=0;i<width*height;i++) {
-            psi[i][0]=psi[i][0]/norm_sum;
-            psi[i][1]=psi[i][1]/norm_sum;
-        }
+            for(int i=0;i<width;i++) {
+                psi[i][0]=0;
+                psi[i][1]=0;
+                psi[i+(width-1)*height][0]=0;
+                psi[i+(width-1)*height][1]=0;
+            }
 
-        for(int i=0;i<width*height;i++) {
-            double psi_re_temp = psi[i][0];
-            float potential_value=0.01f*(255.0f-pot[i*4+1]);
-            psi[i][0] = psi_re_temp*cos(potential_value)-psi[i][1]*sin(potential_value);
-            psi[i][1] = psi_re_temp*sin(potential_value)+psi[i][1]*cos(potential_value);
-            //psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
-            //psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
-        }
-
-        for(int i=0;i<width;i++) {
-            psi[i][0]=0;
-            psi[i][1]=0;
-            psi[i+(width-1)*height][0]=0;
-            psi[i+(width-1)*height][1]=0;
-        }
-
-        for(int i=0;i<height;i++) {
-            psi[1+i*width][0]=0;
-            psi[1+i*width][1]=0;
-            psi[height-1+i*width][0]=0;
-            psi[height-1+i*width][1]=0;
+            for(int i=0;i<height;i++) {
+                psi[1+i*width][0]=0;
+                psi[1+i*width][1]=0;
+                psi[height-1+i*width][0]=0;
+                psi[height-1+i*width][1]=0;
+            }
         }
 
         for(int i=0;i<width*height;i++) {
@@ -279,6 +283,26 @@ int main(int argc, char* argv[]){
             }else{
                 rotation_left_right=-PI;
             }
+        }
+        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
+            float middle=0;
+            for(int i=0;i<width*height;i++) {
+                middle=middle+psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1];
+            }
+            float random = (rand()%1000)/(float)1000;
+            float sum=0;
+            int s=0;
+            while(random>sum) {
+                sum=sum+(psi[s][0]*psi[s][0]+psi[s][1]*psi[s][1])/middle;
+                s++;
+            }
+            for(int i=0;i<width*height;i++) {
+                psi[i][0]=0;
+                psi[i][1]=0;
+            }
+            psi[s][0]=1;
+            psi[s][1]=1;
+            measurement=1;
         }
         //camera projection an transformation matrix calculation
         eye_vec[0]=1.5f*sin(rotation_left_right)*cos(atan(rotation_up_down));
