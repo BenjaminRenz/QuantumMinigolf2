@@ -29,7 +29,7 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.20f;
-unsigned int Resolution= 256;
+unsigned int Resolution=400;
 GLFWwindow* MainWindow;
 
 
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
     glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float tempBorderColor[]={0.0f,0.0f,0.0f,1.0f};
+    float tempBorderColor[]={0.5f,0.5f,0.5f,0.0f};
     glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -140,8 +140,8 @@ int main(int argc, char* argv[]){
     vec3 cent_vec={0.0f,0.0f,0.0f};
     vec3 up_vec={0.0f,0.0f,1.0f};
 
-    int width = 256;
-    int height = 256;
+    int width = Resolution;
+    int height = Resolution;
     fftw_complex *psi;
     fftw_complex *prop;
     psi = (fftw_complex*) fftw_alloc_complex(width*height);
@@ -150,7 +150,7 @@ int main(int argc, char* argv[]){
 
     fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
-    double testani=1000;
+    double testani=500;
 
     double norm_sum;
 
@@ -160,19 +160,16 @@ int main(int argc, char* argv[]){
     sin_precalc = sin(-0.01);
 
     for(int j=0;j<height;j++) {
-        for(int i=0;i<width;i++) {
-            psi[i+j*width][0]=/*sin((i+testani)/10)/2+0.5;*/exp(-((i-width/2)*(i-width/2)+(j-height/2)*(j-height/2))/testani);
-        }
-    }
-
-    for(int j=0;j<height;j++) {
-        for(int i=0;i<width;i++) {
-            psi[i+j*width][1]=0;
+        for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
+                #define offset_x 380
+            psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos((i-height/(float)2)*5.0f);
+            psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin((i-height/(float)2)*5.0f);
         }
     }
 
     unsigned char* speicher = calloc(width*height*4,1);
-    #define dt 0.001f
+    unsigned char* pot=read_bmp(".//double_slit.bmp");
+    #define dt 0.00005f
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
@@ -214,7 +211,8 @@ int main(int argc, char* argv[]){
         for(int i=0;i<width*height;i++) {
             norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
         }
-
+        norm_sum = width*height;
+        //printf("norm:%f\n",norm_sum);
         for(int i=0;i<width*height;i++) {
             psi[i][0]=psi[i][0]/norm_sum;
             psi[i][1]=psi[i][1]/norm_sum;
@@ -222,13 +220,17 @@ int main(int argc, char* argv[]){
 
         for(int i=0;i<width*height;i++) {
             double psi_re_temp = psi[i][0];
-            psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
-            psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
+            float potential_value=0.01f*(255.0f-pot[i*4+1]);
+            psi[i][0] = psi_re_temp*cos(potential_value)-psi[i][1]*sin(potential_value);
+            psi[i][1] = psi_re_temp*sin(potential_value)+psi[i][1]*cos(potential_value);
+            //psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
+            //psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
         }
 
         for(int i=0;i<width*height;i++) {
-            speicher[i*4+2]=(unsigned char) (255*(psi[i][0]/*+psi[i][1]*psi[i][1]*/));
-            speicher[i*4+1]=(unsigned char) (255*(psi[i][1]/*+psi[i][1]*psi[i][1]*/));
+            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]+1.0f)/*+psi[i][1]*psi[i][1]*/);
+            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]+1.0f)/*+psi[i][1]*psi[i][1]*/);
+            speicher[i*4]=pot[i*4+1];
         }
 
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
@@ -236,14 +238,14 @@ int main(int argc, char* argv[]){
         float delta_time = update_delta_time();
 
         testani=testani+delta_time*20;
-        //Camera Movement calculation
+        //Camera Movement calculationunsigned char* speicher = calloc(width*height*4,1);
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
             if(rotation_up_down<(3.0)){
                 rotation_up_down=rotation_up_down+delta_time;
             }
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_S)==GLFW_PRESS){
-           if(rotation_up_down>(-3.0)){
+           if(rotation_up_down>(-0.0)){
                 rotation_up_down=rotation_up_down-delta_time;
            }
         }
@@ -285,14 +287,13 @@ int main(int argc, char* argv[]){
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
         {//swap pixel buffers
             GLuint temp=PBO1;
-            PBO1=PBO2;
+            PBO1=PBO2;*0.5+0.5
             PBO2=temp;
         }
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
         //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
-        //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,IndexBufferIds[1]);
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
