@@ -161,7 +161,7 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov = 0;
+    float angle_mov = PI;
 
     for(int j=0;j<height;j++) {
         for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
@@ -245,6 +245,30 @@ int main(int argc, char* argv[]){
                 psi[height-1+i*width][0]=0;
                 psi[height-1+i*width][1]=0;
             }
+
+            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
+                float middle=0;
+                for(int i=0;i<width*height;i++) {
+                    middle=middle+psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1];
+                }
+                float random = (rand()%1000)/(float)1000;
+                float sum=0;
+                int s=rand()%(width*height);
+                while(random>sum) {
+                    sum=sum+(psi[s][0]*psi[s][0]+psi[s][1]*psi[s][1])/middle;
+                    if(s!=width*height) s++;
+                    else s=0;
+                }
+                for(int i=0;i<width*height;i++) {
+                    psi[i][0]=0;
+                    psi[i][1]=0;
+                }
+                psi[s][0]=1;
+                psi[s+1][0]=1;
+                psi[s+400][0]=1;
+                psi[s+401][0]=1;
+                measurement=1;
+            }
         }
 
         for(int i=0;i<width*height;i++) {
@@ -284,26 +308,7 @@ int main(int argc, char* argv[]){
                 rotation_left_right=-PI;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
-            float middle=0;
-            for(int i=0;i<width*height;i++) {
-                middle=middle+psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1];
-            }
-            float random = (rand()%1000)/(float)1000;
-            float sum=0;
-            int s=0;
-            while(random>sum) {
-                sum=sum+(psi[s][0]*psi[s][0]+psi[s][1]*psi[s][1])/middle;
-                s++;
-            }
-            for(int i=0;i<width*height;i++) {
-                psi[i][0]=0;
-                psi[i][1]=0;
-            }
-            psi[s][0]=1;
-            psi[s][1]=1;
-            measurement=1;
-        }
+
         //camera projection an transformation matrix calculation
         eye_vec[0]=1.5f*sin(rotation_left_right)*cos(atan(rotation_up_down));
         eye_vec[1]=1.5f*cos(rotation_left_right)*cos(atan(rotation_up_down));
