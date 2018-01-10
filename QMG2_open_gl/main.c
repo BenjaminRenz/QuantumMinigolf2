@@ -159,7 +159,7 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov = PI/2;
+    float angle_mov = 0;
 
     for(int j=0;j<height;j++) {
         for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
@@ -227,6 +227,20 @@ int main(int argc, char* argv[]){
             psi[i][1] = psi_re_temp*sin(potential_value)+psi[i][1]*cos(potential_value);
             //psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
             //psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
+        }
+
+        for(int i=0;i<width;i++) {
+            psi[i][0]=0;
+            psi[i][1]=0;
+            psi[i+(width-1)*height][0]=0;
+            psi[i+(width-1)*height][1]=0;
+        }
+
+        for(int i=0;i<height;i++) {
+            psi[1+i*width][0]=0;
+            psi[1+i*width][1]=0;
+            psi[height-1+i*width][0]=0;
+            psi[height-1+i*width][1]=0;
         }
 
         for(int i=0;i<width*height;i++) {
