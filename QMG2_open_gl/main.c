@@ -153,7 +153,8 @@ int main(int argc, char* argv[]){
 
     fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
-    double testani=500;
+    double testani_1=500;
+    double testani_2=500;
 
     double norm_sum;
 
@@ -162,13 +163,18 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov = PI/3;
+    float angle_mov_1 = PI/4;
+    float angle_mov_2 = 5*PI/4;
 
-
+    #define offset_x_1 500
+    #define offset_y_1 500
+    #define offset_x_2 300
+    #define offset_y_2 300
 
     unsigned char* speicher = calloc(width*height*4,1);
     unsigned char* pot=read_bmp(".//double_slit.bmp");
-    #define dt 0.000005f
+
+    #define dt 0.00005f
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
@@ -268,9 +274,11 @@ int main(int argc, char* argv[]){
         if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {
             for(int j=0;j<height;j++) {
                 for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
-                        #define offset_x 450
-                    psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
-                    psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
+
+                    psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/testani_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
+                                        +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/testani_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                    psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/testani_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
+                                        +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/testani_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                 }
             }
             measurement=0;
@@ -287,7 +295,7 @@ int main(int argc, char* argv[]){
 
         float delta_time = update_delta_time();
 
-        testani=testani+delta_time*20;
+        //testani_1=testani_1+delta_time*20;
         //Camera Movement calculationunsigned char* speicher = calloc(width*height*4,1);
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
             if(rotation_up_down<(3.0)){
@@ -343,8 +351,8 @@ int main(int argc, char* argv[]){
         }
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        //glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
+        glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
+        //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
