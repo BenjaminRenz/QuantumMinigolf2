@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <math.h>
 #define PI 3.14159265358979323846
@@ -29,7 +30,7 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.20f;
-unsigned int Resolution=400;
+unsigned int Resolution=800;
 GLFWwindow* MainWindow;
 
 
@@ -161,19 +162,13 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov = PI;
+    float angle_mov = PI/3;
 
-    for(int j=0;j<height;j++) {
-        for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
-                #define offset_x 350
-            psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
-            psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
-        }
-    }
+
 
     unsigned char* speicher = calloc(width*height*4,1);
     unsigned char* pot=read_bmp(".//double_slit.bmp");
-    #define dt 0.00005f
+    #define dt 0.000005f
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
@@ -196,7 +191,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-    int measurement = 0;
+    int measurement = 1;
 
     while (!glfwWindowShouldClose(MainWindow)){
         if(measurement == 0) {
@@ -210,12 +205,6 @@ int main(int argc, char* argv[]){
             }
 
             fftw_execute(ifft);
-
-            norm_sum = 0;
-
-            for(int i=0;i<width*height;i++) {
-                norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-            }
             norm_sum = width*height;
             //printf("norm:%f\n",norm_sum);
             for(int i=0;i<width*height;i++) {
@@ -247,28 +236,45 @@ int main(int argc, char* argv[]){
             }
 
             if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
-                float middle=0;
+                srand((long)10000.0f*glfwGetTime());
+                double random=(rand()%1001)/1000.0f;
+                double sum=0;
+                norm_sum=0;
                 for(int i=0;i<width*height;i++) {
-                    middle=middle+psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1];
-                }
-                float random = (rand()%1000)/(float)1000;
-                float sum=0;
-                int s=rand()%(width*height);
-                while(random>sum) {
-                    sum=sum+(psi[s][0]*psi[s][0]+psi[s][1]*psi[s][1])/middle;
-                    if(s!=width*height) s++;
-                    else s=0;
+                    norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
                 }
                 for(int i=0;i<width*height;i++) {
-                    psi[i][0]=0;
-                    psi[i][1]=0;
+                    psi[i][0]=(psi[i][0]/sqrt(norm_sum));
+                    psi[i][1]=(psi[i][1]/sqrt(norm_sum));
                 }
-                psi[s][0]=1;
-                psi[s+1][0]=1;
-                psi[s+400][0]=1;
-                psi[s+401][0]=1;
+                for(unsigned int i=0;i<width*height;i++){
+                    sum=sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+                    if(sum>random){
+                        printf("sum%f\n",sum);
+                        printf("rand: %f\n",random);
+                        for(int i=0;i<width*height;i++) {
+                            psi[i][0]=0;
+                            psi[i][1]=0;
+                        }
+                        psi[i][0]=1;
+                        break;
+                    }
+                }
                 measurement=1;
             }
+        }
+
+        if (measurement==1) {
+        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {
+            for(int j=0;j<height;j++) {
+                for(int i=0;i<width;i++) {          /*sin((i+testani)/10)/2+0.5;*/
+                        #define offset_x 450
+                    psi[i+j*width][0]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*cos(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
+                    psi[i+j*width][1]=exp(-((offset_x-i)*(offset_x-i)+(j-height/2)*(j-height/2))/testani)*sin(((i-height/(float)2)*cos(angle_mov)+(j-height/(float)2)*sin(angle_mov))*8.0f);
+                }
+            }
+            measurement=0;
+        }
         }
 
         for(int i=0;i<width*height;i++) {
@@ -337,8 +343,8 @@ int main(int argc, char* argv[]){
         }
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
+        //glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
+        glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
