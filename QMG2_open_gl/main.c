@@ -30,7 +30,7 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.20f;
-unsigned int Resolution=800;
+unsigned int Resolution=400;
 GLFWwindow* MainWindow;
 
 
@@ -163,18 +163,18 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov_1 = PI/4;
-    float angle_mov_2 = 5*PI/4;
+    float angle_mov_1 = 0;
+    float angle_mov_2 = PI;
 
-    #define offset_x_1 500
-    #define offset_y_1 500
-    #define offset_x_2 300
-    #define offset_y_2 300
+    #define offset_x_1 300
+    #define offset_y_1 300
+    #define offset_x_2 100
+    #define offset_y_2 100
 
     unsigned char* speicher = calloc(width*height*4,1);
     unsigned char* pot=read_bmp(".//double_slit.bmp");
 
-    #define dt 0.00005f
+    #define dt 0.0005f
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
@@ -241,48 +241,61 @@ int main(int argc, char* argv[]){
                 psi[height-1+i*width][1]=0;
             }
 
-            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
-                srand((long)10000.0f*glfwGetTime());
-                double random=(rand()%1001)/1000.0f;
-                double sum=0;
-                norm_sum=0;
-                for(int i=0;i<width*height;i++) {
-                    norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-                }
-                for(int i=0;i<width*height;i++) {
-                    psi[i][0]=(psi[i][0]/sqrt(norm_sum));
-                    psi[i][1]=(psi[i][1]/sqrt(norm_sum));
-                }
-                for(unsigned int i=0;i<width*height;i++){
-                    sum=sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-                    if(sum>random){
-                        printf("sum%f\n",sum);
-                        printf("rand: %f\n",random);
+            //if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
+            if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS) {
+                double xpos, ypos;
+                glfwGetCursorPos(MainWindow, &xpos, &ypos);
+                if(xpos<1000) {
+                    if(ypos<500) {
+                        srand((long)10000.0f*glfwGetTime());
+                        double random=(rand()%1001)/1000.0f;
+                        double sum=0;
+                        norm_sum=0;
                         for(int i=0;i<width*height;i++) {
-                            psi[i][0]=0;
-                            psi[i][1]=0;
+                            norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
                         }
-                        psi[i][0]=1;
-                        break;
+                        for(int i=0;i<width*height;i++) {
+                            psi[i][0]=(psi[i][0]/sqrt(norm_sum));
+                            psi[i][1]=(psi[i][1]/sqrt(norm_sum));
+                        }
+                        for(unsigned int i=0;i<width*height;i++){
+                            sum=sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+                            if(sum>random){
+                                printf("sum%f\n",sum);
+                                printf("rand: %f\n",random);
+                                for(int i=0;i<width*height;i++) {
+                                    psi[i][0]=0;
+                                    psi[i][1]=0;
+                                }
+                                psi[i][0]=1;
+                                break;
+                            }
+                        }
+                        measurement=1;
                     }
                 }
-                measurement=1;
             }
         }
 
         if (measurement==1) {
-        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {
-            for(int j=0;j<height;j++) {
-                for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
-
-                    psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                                        +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                    psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                                        +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+        /*if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {*/
+        if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_RELEASE) {
+                double xpos, ypos;
+                glfwGetCursorPos(MainWindow, &xpos, &ypos);
+                if(xpos<1000) {
+                    if(ypos<500) {
+                        for(int j=0;j<height;j++) {
+                            for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
+                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
+                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            }
+                        }
+                        measurement=0;
+                    }
                 }
             }
-            measurement=0;
-        }
         }
 
         for(int i=0;i<width*height;i++) {
@@ -297,6 +310,7 @@ int main(int argc, char* argv[]){
 
         //testani_1=testani_1+delta_time*20;
         //Camera Movement calculationunsigned char* speicher = calloc(width*height*4,1);
+
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
             if(rotation_up_down<(3.0)){
                 rotation_up_down=rotation_up_down+delta_time;
