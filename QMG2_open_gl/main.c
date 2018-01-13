@@ -134,7 +134,7 @@ int main(int argc, char* argv[]){
 */
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
 
-    double rotation_up_down=0;
+    double rotation_up_down=0.1f;
     double rotation_left_right=0.1f;
 
     mat4x4 mvp4x4;
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]){
 
     fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
-    double wavesize_1=500;
+    double wavesize_1=200;
     double wavesize_2=500;
 
     double norm_sum;
@@ -166,15 +166,21 @@ int main(int argc, char* argv[]){
     float angle_mov_1 = 0;
     float angle_mov_2 = PI;
 
-    #define offset_x_1 300
-    #define offset_y_1 300
-    #define offset_x_2 100
-    #define offset_y_2 100
+    int offset_x_1 = 100;
+    int offset_y_1 = 200;
+    int offset_x_2 = 300;
+    int offset_y_2 = 200;
 
     unsigned char* speicher = calloc(width*height*4,1);
     unsigned char* pot=read_bmp(".//double_slit.bmp");
 
-    #define dt 0.0005f
+    double potential[width*height];
+
+    for(int i=0;i<width*height;i++) {
+        potential[i]=(255.0f-pot[4*i+1])/100.0f;
+    }
+
+    float dt = 0.0001;
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
@@ -220,7 +226,8 @@ int main(int argc, char* argv[]){
 
             for(int i=0;i<width*height;i++) {
                 double psi_re_temp = psi[i][0];
-                float potential_value=0.01f*(255.0f-pot[i*4+1]);
+                double potential_value=potential[i];
+                if(potential_value<0.001) potential_value=0.0;
                 psi[i][0] = psi_re_temp*cos(potential_value)-psi[i][1]*sin(potential_value);
                 psi[i][1] = psi_re_temp*sin(potential_value)+psi[i][1]*cos(potential_value);
                 //psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
@@ -241,12 +248,12 @@ int main(int argc, char* argv[]){
                 psi[height-1+i*width][1]=0;
             }
 
-            //if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
-            if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS) {
+            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
+            /*if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS) {
                 double xpos, ypos;
                 glfwGetCursorPos(MainWindow, &xpos, &ypos);
-                if(xpos<1000) {
-                    if(ypos<500) {
+                if(xpos<500) {
+                    if(ypos<250) {*/
                         srand((long)10000.0f*glfwGetTime());
                         double random=(rand()%1001)/1000.0f;
                         double sum=0;
@@ -268,34 +275,38 @@ int main(int argc, char* argv[]){
                                     psi[i][1]=0;
                                 }
                                 psi[i][0]=1;
+                                if(i/Resolution<Resolution/2+50&&i/Resolution>Resolution/2-50) {
+                                    if(i%Resolution>250&&i%Resolution<350)
+                                        psi[i][1]=1;
+                                }
                                 break;
                             }
                         }
                         measurement=1;
-                    }
-                }
+                    //}
+                //}
             }
         }
 
         if (measurement==1) {
-        /*if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {*/
-        if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_RELEASE) {
+            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {
+            /*if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_RELEASE) {
                 double xpos, ypos;
                 glfwGetCursorPos(MainWindow, &xpos, &ypos);
-                if(xpos<1000) {
-                    if(ypos<500) {
+                if(xpos<500) {
+                    if(ypos<250) {*/
                         for(int j=0;j<height;j++) {
                             for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
-                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                             }
                         }
                         measurement=0;
                     }
-                }
-            }
+                //}
+            //}
         }
 
         for(int i=0;i<width*height;i++) {
