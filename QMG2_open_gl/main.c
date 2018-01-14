@@ -166,7 +166,7 @@ int main(int argc, char* argv[]){
     float angle_mov_1 = 0;
     float angle_mov_2 = PI;
 
-    int offset_x_1 = 100;
+    int offset_x_1 = 40;
     int offset_y_1 = 200;
     int offset_x_2 = 300;
     int offset_y_2 = 200;
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]){
         potential[i]=(255.0f-pot[4*i+1])/100.0f;
     }
 
-    float dt = 0.0001;
+    float dt = 0.001;
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
