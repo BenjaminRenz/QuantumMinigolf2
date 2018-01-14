@@ -163,7 +163,7 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov_1 = 0;
+    float angle_mov_1 = PI;
     float angle_mov_2 = PI;
 
     int offset_x_1 = 40;
@@ -177,10 +177,10 @@ int main(int argc, char* argv[]){
     double potential[width*height];
 
     for(int i=0;i<width*height;i++) {
-        potential[i]=(255.0f-pot[4*i+1])/100.0f;
+        potential[i]=(pot[4*i+1]/255.0f)*30000.0f;
     }
 
-    float dt = 0.001;
+    float dt = 0.00005;
 
     for(int x=0; x<width/2; x++){
 		for(int y=0; y<height/2; y++){
@@ -226,10 +226,8 @@ int main(int argc, char* argv[]){
 
             for(int i=0;i<width*height;i++) {
                 double psi_re_temp = psi[i][0];
-                double potential_value=potential[i];
-                if(potential_value<0.001) potential_value=0.0;
-                psi[i][0] = psi_re_temp*cos(potential_value)-psi[i][1]*sin(potential_value);
-                psi[i][1] = psi_re_temp*sin(potential_value)+psi[i][1]*cos(potential_value);
+                psi[i][0] = psi_re_temp*cos(potential[i])-psi[i][1]*sin(potential[i]);
+                psi[i][1] = psi_re_temp*sin(potential[i])+psi[i][1]*cos(potential[i]);
                 //psi[i][0] = psi_re_temp*cos_precalc-psi[i][1]*sin_precalc;
                 //psi[i][1] = psi_re_temp*sin_precalc+psi[i][1]*cos_precalc;
             }
