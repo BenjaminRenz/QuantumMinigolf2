@@ -29,8 +29,9 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
-float FOV=0.20f;
-unsigned int Resolution=400;
+float FOV=0.7f;
+unsigned int Resolution=100;
+unsigned int RenderResolution=200;
 GLFWwindow* MainWindow;
 
 
@@ -94,6 +95,7 @@ int main(int argc, char* argv[]){
     glUseProgram(ProgrammID);
 
     GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
+    GLint potential_true=glGetUniformLocation(ProgrammID,"potential_true");
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
@@ -109,7 +111,7 @@ int main(int argc, char* argv[]){
     glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float tempBorderColor[]={0.5f,0.5f,0.5f,0.0f};
+    float tempBorderColor[]={0.5f,0.5f,0.0f,0.0f};
     glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -134,8 +136,8 @@ int main(int argc, char* argv[]){
 */
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
 
-    double rotation_up_down=0.1f;
-    double rotation_left_right=0.1f;
+    double rotation_up_down=PI/4.0f;
+    double rotation_left_right=PI;
 
     mat4x4 mvp4x4;
     mat4x4 persp4x4;
@@ -153,7 +155,7 @@ int main(int argc, char* argv[]){
 
     fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
-    double wavesize_1=200;
+    double wavesize_1=500;
     double wavesize_2=500;
 
     double norm_sum;
@@ -163,13 +165,13 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov_1 = PI;
+    float angle_mov_1 = 0;
     float angle_mov_2 = PI;
 
-    int offset_x_1 = 40;
-    int offset_y_1 = 200;
+    int offset_x_1 = 100;
+    int offset_y_1 = 100;
     int offset_x_2 = 300;
-    int offset_y_2 = 200;
+    int offset_y_2 = 100;
 
     unsigned char* speicher = calloc(width*height*4,1);
     unsigned char* pot=read_bmp(".//double_slit.bmp");
@@ -177,7 +179,7 @@ int main(int argc, char* argv[]){
     double potential[width*height];
 
     for(int i=0;i<width*height;i++) {
-        potential[i]=(pot[4*i+1]/255.0f)*30000.0f;
+        potential[i]=(255-pot[4*i+1])/100.0f;
     }
 
     float dt = 0.00005;
@@ -295,10 +297,10 @@ int main(int argc, char* argv[]){
                     if(ypos<250) {*/
                         for(int j=0;j<height;j++) {
                             for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
-                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
+                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
+                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                             }
                         }
                         measurement=0;
@@ -310,7 +312,7 @@ int main(int argc, char* argv[]){
         for(int i=0;i<width*height;i++) {
             speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]+1.0f)/*+psi[i][1]*psi[i][1]*/);
             speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]+1.0f)/*+psi[i][1]*psi[i][1]*/);
-            speicher[i*4]=pot[i*4+1];
+            speicher[i*4+3]=pot[i*4+1];
         }
 
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
@@ -353,7 +355,7 @@ int main(int argc, char* argv[]){
         mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
         mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
-        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
+        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);glUniform1f(potential_true,1.0f);
 
         /*//update textures
         glBindTexture(GL_TEXTURE_2D, psi_texture);
@@ -374,8 +376,10 @@ int main(int argc, char* argv[]){
         }
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES,6*Resolution*Resolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        //glDrawElements(GL_LINES,8*Resolution*Resolution,GL_UNSIGNED_INT,6*(Resolution-1)*(Resolution-1)*sizeof(GLuint));
+        glUniform1f(potential_true,0.0f);
+        glDrawElements(GL_TRIANGLES,6*RenderResolution*RenderResolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
+        glUniform1f(potential_true,1.0f);
+        glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
@@ -499,59 +503,59 @@ void createPlaneVBO(){
     glBindVertexArray(VaoId);
 
     //Generate Vertex Positions
-    float* plane_vertex_data =malloc(3*Resolution*Resolution*sizeof(float));      //TODO free this pointer ( memory leak )
+    float* plane_vertex_data =malloc(3*RenderResolution*RenderResolution*sizeof(float));      //TODO free this pointer ( memory leak )
     long vert_index=0;
-    for(int y=0;y<Resolution;y++){
-        for(int x=0;x<Resolution;x++){
+    for(int y=0;y<RenderResolution;y++){
+        for(int x=0;x<RenderResolution;x++){
             //Vector coordinates (x,y,z)
-            plane_vertex_data[vert_index++]=(((float)x)/(Resolution-1))-0.5f;
-            plane_vertex_data[vert_index++]=(((float)y)/(Resolution-1))-0.5f; //Set height (y) to zero
+            plane_vertex_data[vert_index++]=(((float)x)/(RenderResolution-1))-0.5f;
+            plane_vertex_data[vert_index++]=(((float)y)/(RenderResolution-1))-0.5f; //Set height (y) to zero
         }
     }
     GLuint VboPositionsId=0;
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
-    glBufferData(GL_ARRAY_BUFFER, Resolution*Resolution*2*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+    glBufferData(GL_ARRAY_BUFFER, RenderResolution*RenderResolution*2*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
     glEnableVertexAttribArray(0);//x,y
     glVertexAttribPointer(0,2,GL_FLOAT, GL_FALSE,2*sizeof(float),0);
 
 
     //Generate Vertex Indices for Triangles
-    GLuint* plane_indices = malloc((Resolution-1)*(Resolution-1)*(6+8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell
+    GLuint* plane_indices = malloc((RenderResolution-1)*(RenderResolution-1)*(6+8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell
     vert_index=0;
-    for(unsigned int y=0;y<(Resolution-1);y++){
-        for(unsigned int x=0;x<(Resolution-1);x++){
+    for(unsigned int y=0;y<(RenderResolution-1);y++){
+        for(unsigned int x=0;x<(RenderResolution-1);x++){
             //Generate first triangle
-            plane_indices[vert_index++]=x+(y*Resolution);   //Vertex lower left first triangle
-            plane_indices[vert_index++]=x+1+(y*Resolution);//Vertex upper right first triangle
-            plane_indices[vert_index++]=x+((y+1)*Resolution); //Vertex upper left first triangle
+            plane_indices[vert_index++]=x+(y*RenderResolution);   //Vertex lower left first triangle
+            plane_indices[vert_index++]=x+1+(y*RenderResolution);//Vertex upper right first triangle
+            plane_indices[vert_index++]=x+((y+1)*RenderResolution); //Vertex upper left first triangle
             //Generate second triangle
-            plane_indices[vert_index++]=(x+1)+(y*Resolution);   //Vertex lower left second triangle
-            plane_indices[vert_index++]=(x+1)+((y+1)*Resolution); //Vertex lower right second triangle
-            plane_indices[vert_index++]=x+((y+1)*Resolution); //Vertex upper right first triangle
+            plane_indices[vert_index++]=(x+1)+(y*RenderResolution);   //Vertex lower left second triangle
+            plane_indices[vert_index++]=(x+1)+((y+1)*RenderResolution); //Vertex lower right second triangle
+            plane_indices[vert_index++]=x+((y+1)*RenderResolution); //Vertex upper right first triangle
         }
     }
     //Generate Vertex Indices for Grid
-    for(unsigned int y=0;y<(Resolution-1);y++){
-        for(unsigned int x=0;x<(Resolution-1);x++){
+    for(unsigned int y=0;y<(RenderResolution-1);y++){
+        for(unsigned int x=0;x<(RenderResolution-1);x++){
             //Generate first line
-            plane_indices[vert_index++]=x+(y*Resolution);
-            plane_indices[vert_index++]=x+1+(y*Resolution);
+            plane_indices[vert_index++]=x+(y*RenderResolution);
+            plane_indices[vert_index++]=x+1+(y*RenderResolution);
             //Generate second line
-            plane_indices[vert_index++]=x+(y*Resolution);
-            plane_indices[vert_index++]=x+((y+1)*Resolution);
+            plane_indices[vert_index++]=x+(y*RenderResolution);
+            plane_indices[vert_index++]=x+((y+1)*RenderResolution);
             //Generate third line
-            plane_indices[vert_index++]=x+((y+1)*Resolution);
-            plane_indices[vert_index++]=x+1+((y+1)*Resolution);
+            plane_indices[vert_index++]=x+((y+1)*RenderResolution);
+            plane_indices[vert_index++]=x+1+((y+1)*RenderResolution);
             //Generate fourth line
-            plane_indices[vert_index++]=x+1+(y*Resolution);
-            plane_indices[vert_index++]=x+1+((y+1)*Resolution);
+            plane_indices[vert_index++]=x+1+(y*RenderResolution);
+            plane_indices[vert_index++]=x+1+((y+1)*RenderResolution);
         }
     }
     GLuint VboPlaneIndicesId=0;
     glGenBuffers(1, &VboPlaneIndicesId);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboPlaneIndicesId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(Resolution-1)*(Resolution-1)*(6+8)*sizeof(GLuint),plane_indices,GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(RenderResolution-1)*(RenderResolution-1)*(6+8)*sizeof(GLuint),plane_indices,GL_STATIC_DRAW);
     free(plane_indices);
 }
 
