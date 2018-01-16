@@ -9,9 +9,9 @@ void main(){
     float im=(texture(texture0,UV).g)*2-1;
     //float re=(texture(texture0,UV).b)*2-1;
     //float im=(texture(texture0,UV).g)*2-1;
-    float pot=potential_true_frag*texture(texture0,UV).r;
-
+    float pot=texture(texture0,UV).r;
+    float potential_false_frag=(1-potential_true_frag);
     float intens=(re*re+im*im);
     intens=intens*intens; //make it brighter
-    frag_color=vec4(sqrt(re*re),pot,sqrt(im*im),1.0f);
+    frag_color=vec4(potential_false_frag*sqrt(re*re)+pot*potential_true_frag,pot*potential_true_frag,potential_false_frag*sqrt(im*im)+pot*potential_true_frag,1.0f);
 }

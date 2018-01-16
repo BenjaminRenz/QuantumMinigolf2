@@ -30,12 +30,9 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.7f;
-unsigned int Resolution=100;
-unsigned int RenderResolution=200;
+unsigned int Resolution=400;
+unsigned int RenderResolution=400;
 GLFWwindow* MainWindow;
-
-
-
 
 int main(int argc, char* argv[]){
     //GLFW init
@@ -109,10 +106,10 @@ int main(int argc, char* argv[]){
 
     //unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
     glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float tempBorderColor[]={0.5f,0.5f,0.0f,0.0f};
-    glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP);
+    //float tempBorderColor[]={0.5f,0.5f,0.0f,0.0f};
+    //glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
