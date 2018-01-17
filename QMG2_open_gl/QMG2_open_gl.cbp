@@ -38,6 +38,7 @@
 			<Add directory="libraries/LINMATH/include" />
 		</Compiler>
 		<Linker>
+			<Add option="-static-libgcc" />
 			<Add library="glew32s" />
 			<Add library="libglfw3.a" />
 			<Add library="opengl32" />
@@ -50,6 +51,7 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="res/shaders/compute_fft.glsl" />
 		<Unit filename="res/shaders/fragment.glsl" />
 		<Unit filename="res/shaders/vertex.glsl" />
 		<Extensions>

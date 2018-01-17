@@ -33,6 +33,9 @@ float FOV=0.7f;
 unsigned int Resolution=400;
 unsigned int RenderResolution=400;
 GLFWwindow* MainWindow;
+#define ButtonStart
+
+
 
 int main(int argc, char* argv[]){
     //GLFW init
@@ -46,8 +49,8 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    //MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
         return -1;
@@ -80,19 +83,34 @@ int main(int argc, char* argv[]){
     int window_height = 0;
     glfwGetWindowSize(MainWindow,&window_width,&window_height);
 
+
+
+
     //Initialize shaders
     //TODO filepath for windows, alter for unix like os
     //GLuint computeShaderId = CompileShaderFromFile(".\\res\\shaders\\compute.glsl",GL_COMPUTE_SHADER);
-    GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex.glsl",GL_VERTEX_SHADER);
-    GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment.glsl",GL_FRAGMENT_SHADER);
-    GLuint ProgrammID = glCreateProgram();              //create program to run on GPU
-    glAttachShader(ProgrammID, vertexShaderId);         //attach vertex shader to new program
-    glAttachShader(ProgrammID, fragmentShaderId);       //attach fragment shader to new program
-    glLinkProgram(ProgrammID);                          //create execuatble
-    glUseProgram(ProgrammID);
 
-    GLint MVPmatrix=glGetUniformLocation(ProgrammID,"MVPmatrix");//only callable after glUseProgramm has been called once
-    GLint potential_true=glGetUniformLocation(ProgrammID,"potential_true");
+    //Compile graph 3D shader
+    GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl",GL_VERTEX_SHADER);
+    GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl",GL_FRAGMENT_SHADER);
+    GLuint graphShaderID = glCreateProgram();              //create program to run on GPU
+    glAttachShader(graphShaderID, vertexShaderId);         //attach vertex shader to new program
+    glAttachShader(graphShaderID, fragmentShaderId);       //attach fragment shader to new program
+    glLinkProgram(graphShaderID);
+    //Get Shader Variables
+    glUseProgram(graphShaderID);
+    GLint MVPmatrix=glGetUniformLocation(graphShaderID,"MVPmatrix");//only callable after glUseProgramm has been called once
+    GLint potential_true=glGetUniformLocation(graphShaderID,"potential_true");
+
+
+    //Compile Gui Shader
+    vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER);
+    fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER);
+    GLuint guiShaderID = glCreateProgram();
+    glAttachShader(guiShaderID, vertexShaderId);         //attach vertex shader to new program
+    glAttachShader(guiShaderID, fragmentShaderId);       //attach fragment shader to new program
+    glLinkProgram(guiShaderID);
+
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
@@ -105,9 +123,9 @@ int main(int argc, char* argv[]){
     glBindTexture(GL_TEXTURE_2D,testTexture);
 
     //unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
-    glUniform1i(glGetUniformLocation(ProgrammID,"texture0"),0);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glUniform1i(glGetUniformLocation(graphShaderID,"texture0"),0);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     //float tempBorderColor[]={0.5f,0.5f,0.0f,0.0f};
     //glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -375,8 +393,8 @@ int main(int argc, char* argv[]){
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
         glDrawElements(GL_TRIANGLES,6*RenderResolution*RenderResolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        glUniform1f(potential_true,1.0f);
-        glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
+        //glUniform1f(potential_true,1.0f);
+        //glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events
