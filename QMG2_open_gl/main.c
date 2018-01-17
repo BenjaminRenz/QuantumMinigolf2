@@ -180,11 +180,11 @@ int main(int argc, char* argv[]){
     cos_precalc = cos(-0.01);
     sin_precalc = sin(-0.01);
 
-    float angle_mov_1 = 0;
+    float angle_mov_1 = PI;
     float angle_mov_2 = PI;
 
-    int offset_x_1 = 100;
-    int offset_y_1 = 100;
+    int offset_x_1 = 360;
+    int offset_y_1 = 200;
     int offset_x_2 = 300;
     int offset_y_2 = 100;
 
@@ -312,10 +312,10 @@ int main(int argc, char* argv[]){
                     if(ypos<250) {*/
                         for(int j=0;j<height;j++) {
                             for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
-                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                                                    +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                             }
                         }
                         measurement=0;
@@ -324,9 +324,18 @@ int main(int argc, char* argv[]){
             //}
         }
 
+        int biggest=0;
+
+        for(int i=0;i<width*height;i++){
+            if(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]>psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1])
+                biggest=i;
+        }
+
+        double norming=sqrt(1.0f/(psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1]));
+
         for(int i=0;i<width*height;i++) {
-            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]+1.0f)/*+psi[i][1]*psi[i][1]*/);
-            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]+1.0f)/*+psi[i][1]*psi[i][1]*/);
+            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+1.0f)/*+psi[i][1]*psi[i][1]*/);
+            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+1.0f)/*+psi[i][1]*psi[i][1]*/);
             speicher[i*4+3]=pot[i*4+1];
         }
 
