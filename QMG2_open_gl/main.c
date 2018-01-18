@@ -163,8 +163,8 @@ int main(int argc, char* argv[]){
     vec3 cent_vec={0.0f,0.0f,0.0f};
     vec3 up_vec={0.0f,0.0f,1.0f};
 
-    int width = Resolution;
-    int height = Resolution;
+    int width = 4*Resolution;
+    int height = 4*Resolution;
     fftw_complex *psi;
     fftw_complex *prop;
     psi = (fftw_complex*) fftw_alloc_complex(width*height);
@@ -405,7 +405,7 @@ int main(int argc, char* argv[]){
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
         glDrawElements(GL_TRIANGLES,6*RenderResolution*RenderResolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        glUniform1f(potential_true,0.0f);
+        glUniform1f(potential_true,1.0f);
         glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
