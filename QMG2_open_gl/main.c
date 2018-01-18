@@ -602,9 +602,13 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
     int maxVertices=0;
     int IndexBufferCountTriangles=0;
     int IndexBufferCountLines=0;
+    int finalVertexResolution=0;
+    int planeOffsetMultiplier=1;
+    int gridOffsetMultiplier=1;
 
     glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);         //get max supported IndexBufferSize of GPU
     glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
+
     if(maxVertices<(1048576)){
         printf("Error: Vertex Count of your GPU is %d! But requiered count is 1048576\n",maxVertices);
     }
@@ -621,6 +625,15 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
     printf("Generating %d IndexBuffer(s) for Triangles\nGenerating %d IndexBuffer(s) for Lines\n",IndexBufferCountTriangles,IndexBufferCountLines);
 
     //Which Mesh should be bigger
+    if(PlaneResolution>GridResolution){
+        finalVertexResolution=PlaneResolution;
+        gridOffsetMultiplier=PlaneResolution/GridResolution;
+        planeOffsetMultiplier=1;
+    }else{
+        finalVertexResolution=GridResolution;
+        planeOffsetMultiplier=GridResolution/PlaneResolution;
+        gridOffsetMultiplier=1;
+    }
 
     //Generate Vertex Array Object
     GLuint VaoId=0;
@@ -628,53 +641,55 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
     glBindVertexArray(VaoId);
 
     //Generate Vertex Positions
-    float* plane_vertex_data=malloc(3*RenderResolution*RenderResolution*sizeof(float));      //TODO free this pointer ( memory leak )
+    float* plane_vertex_data=malloc(2*finalVertexResolution*finalVertexResolution*sizeof(float));      //TODO free this pointer ( memory leak )
     long vert_index=0;
-    for(int y=0;y<RenderResolution;y++){
-        for(int x=0;x<RenderResolution;x++){
+    for(int y=0;y<finalVertexResolution;y++){
+        for(int x=0;x<finalVertexResolution;x++){
             //Vector coordinates (x,y,z)
-            plane_vertex_data[vert_index++]=(((float)x)/(RenderResolution-1))-0.5f;
-            plane_vertex_data[vert_index++]=(((float)y)/(RenderResolution-1))-0.5f; //Set height (y) to zero
+            plane_vertex_data[vert_index++]=(((float)x)/(finalVertexResolution-1))-0.5f;
+            plane_vertex_data[vert_index++]=(((float)y)/(finalVertexResolution-1))-0.5f; //Set height (y) to zero
         }
     }
     GLuint VboPositionsId=0;
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
-    glBufferData(GL_ARRAY_BUFFER, RenderResolution*RenderResolution*2*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+    glBufferData(GL_ARRAY_BUFFER, 2*finalVertexResolution*finalVertexResolution*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
     glEnableVertexAttribArray(0);//x,y
-    glVertexAttribPointer(0,2,GL_FLOAT, GL_FALSE,2*sizeof(float),0);
-
+    glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2*sizeof(float),0);
 
     //Generate Vertex Indices for Triangles
-    GLuint* plane_indices = malloc((RenderResolution-1)*(RenderResolution-1)*(6+8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell
+    GLuint* plane_indices = malloc((PlaneResolution-1)*(PlaneResolution-1)*(6)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell
     vert_index=0;
-    for(unsigned int y=0;y<(RenderResolution-1);y++){
-        for(unsigned int x=0;x<(RenderResolution-1);x++){
+    for(unsigned int y=0;y<(finalVertexResolution-1);y+=planeOffsetMultiplier){
+        for(unsigned int x=0;x<(finalVertexResolution-1);x=+planeOffsetMultiplier){
             //Generate first triangle
-            plane_indices[vert_index++]=x+(y*RenderResolution);   //Vertex lower left first triangle
-            plane_indices[vert_index++]=x+1+(y*RenderResolution);//Vertex upper right first triangle
-            plane_indices[vert_index++]=x+((y+1)*RenderResolution); //Vertex upper left first triangle
+            plane_indices[vert_index++]=x+(y*finalVertexResolution);   //Vertex lower left first triangle
+            plane_indices[vert_index++]=x+1+(y*finalVertexResolution);//Vertex upper right first triangle
+            plane_indices[vert_index++]=x+((y+1)*finalVertexResolution); //Vertex upper left first triangle
             //Generate second triangle
-            plane_indices[vert_index++]=(x+1)+(y*RenderResolution);   //Vertex lower left second triangle
-            plane_indices[vert_index++]=(x+1)+((y+1)*RenderResolution); //Vertex lower right second triangle
-            plane_indices[vert_index++]=x+((y+1)*RenderResolution); //Vertex upper right first triangle
+            plane_indices[vert_index++]=(x+1)+(y*finalVertexResolution);   //Vertex lower left second triangle
+            plane_indices[vert_index++]=(x+1)+((y+1)*finalVertexResolution); //Vertex lower right second triangle
+            plane_indices[vert_index++]=x+((y+1)*finalVertexResolution); //Vertex upper right first triangle
+            //Check if we need to start a new array
         }
     }
+
+    //TODO Malloc and new buffers
     //Generate Vertex Indices for Grid
-    for(unsigned int y=0;y<(RenderResolution-1);y++){
-        for(unsigned int x=0;x<(RenderResolution-1);x++){
+    for(unsigned int y=0;y<(finalVertexResolution-1);y=+gridOffsetMultiplier){
+        for(unsigned int x=0;x<(finalVertexResolution-1);x=+gridOffsetMultiplier){
             //Generate first line
-            plane_indices[vert_index++]=x+(y*RenderResolution);
-            plane_indices[vert_index++]=x+1+(y*RenderResolution);
+            plane_indices[vert_index++]=x+(y*finalVertexResolution);
+            plane_indices[vert_index++]=x+1+(y*finalVertexResolution);
             //Generate second line
-            plane_indices[vert_index++]=x+(y*RenderResolution);
-            plane_indices[vert_index++]=x+((y+1)*RenderResolution);
+            plane_indices[vert_index++]=x+(y*finalVertexResolution);
+            plane_indices[vert_index++]=x+((y+1)*finalVertexResolution);
             //Generate third line
-            plane_indices[vert_index++]=x+((y+1)*RenderResolution);
-            plane_indices[vert_index++]=x+1+((y+1)*RenderResolution);
+            plane_indices[vert_index++]=x+((y+1)*finalVertexResolution);
+            plane_indices[vert_index++]=x+1+((y+1)*finalVertexResolution);
             //Generate fourth line
-            plane_indices[vert_index++]=x+1+(y*RenderResolution);
-            plane_indices[vert_index++]=x+1+((y+1)*RenderResolution);
+            plane_indices[vert_index++]=x+1+(y*finalVertexResolution);
+            plane_indices[vert_index++]=x+1+((y+1)*finalVertexResolution);
         }
     }
     GLuint VboPlaneIndicesId=0;
