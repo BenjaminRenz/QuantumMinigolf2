@@ -122,14 +122,14 @@ int main(int argc, char* argv[]){
     GLint potential_true=glGetUniformLocation(graphShaderID,"potential_true");
 
 
-    //Compile Gui Shader
+    /*Compile Gui Shader
     vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER);
     fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER);
     GLuint guiShaderID = glCreateProgram();
     glAttachShader(guiShaderID, vertexShaderId);         //attach vertex shader to new program
     glAttachShader(guiShaderID, fragmentShaderId);       //attach fragment shader to new program
     glLinkProgram(guiShaderID);
-
+    */
     createPlaneVBO();
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
@@ -569,14 +569,44 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-void createPlaneVBO(){
+void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
+    //Input Parameter check
+    if((PlaneResolution&(PlaneResolution-1)!=0)||(GridResolution&(GridResolution-1)!=0)){
+        printf("Error Resolution of plane or grid is not a power of 2");
+        return;
+    }
+    //Local Variable Def
+    int maxIndices=0;
+    int maxVertices=0;
+    int IndexBufferCountTriangles=0;
+    int IndexBufferCountLines=0;
+
+    glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);         //get max supported IndexBufferSize of GPU
+    glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
+    if(maxVertices<(1048576)){
+        printf("Error: Vertex Count of your GPU is %d! But requiered count is 1048576\n",maxVertices);
+    }
+    if(((PlaneResolution-1)*6)%maxIndices==0){    //
+        IndexBufferCountTriangles=(((PlaneResolution-1)*6)/maxIndices);
+    }else{
+        IndexBufferCountTriangles=(((PlaneResolution-1)*6)/maxIndices)+1;
+    }
+    if(((GridResolution-1)*8)%maxIndices){
+        IndexBufferCountLines=(((GridResolution-1)*8)/maxIndices);
+    }else{
+        IndexBufferCountLines=(((GridResolution-1)*8)/maxIndices)+1;
+    }
+    printf("Generating %d IndexBuffer(s) for Triangles\nGenerating %d IndexBuffer(s) for Lines\n",IndexBufferCountTriangles,IndexBufferCountLines);
+
+    //Which Mesh should be bigger
+
+    //Generate Vertex Array Object
     GLuint VaoId=0;
-        //Generate Vertex Array Object
     glGenVertexArrays(1,&VaoId);
     glBindVertexArray(VaoId);
 
     //Generate Vertex Positions
-    float* plane_vertex_data =malloc(3*RenderResolution*RenderResolution*sizeof(float));      //TODO free this pointer ( memory leak )
+    float* plane_vertex_data=malloc(3*RenderResolution*RenderResolution*sizeof(float));      //TODO free this pointer ( memory leak )
     long vert_index=0;
     for(int y=0;y<RenderResolution;y++){
         for(int x=0;x<RenderResolution;x++){
