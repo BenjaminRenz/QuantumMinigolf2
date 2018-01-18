@@ -48,6 +48,7 @@ struct Slider {
     int Slider_width;
     int Slider_height;
     int Slider_pos; //must be smaller than Slider_width
+    int Slider_render_pos;
 };
 
 int number_Buttons;
@@ -259,6 +260,7 @@ int main(int argc, char* argv[]){
     Slider1.Slider_width=200;
     Slider1.Slider_height=100;
     Slider1.Slider_pos=50;
+    Slider1.Slider_render_pos=Slider1.Slider_left_up_y+Slider1.Slider_height/2;
 
     wavesize_1=Slider1.Slider_pos*2.5f;
 
