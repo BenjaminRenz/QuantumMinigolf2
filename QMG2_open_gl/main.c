@@ -31,7 +31,7 @@ GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.7f;
 unsigned int Resolution=400;
-unsigned int RenderResolution=400;
+unsigned int RenderResolution=300;
 GLFWwindow* MainWindow;
 #define ButtonStart
 
@@ -49,8 +49,8 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
-    //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    //MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
         return -1;
@@ -189,7 +189,7 @@ int main(int argc, char* argv[]){
     int offset_y_2 = 100;
 
     unsigned char* speicher = calloc(width*height*4,1);
-    unsigned char* pot=read_bmp(".//double_slit.bmp");
+    unsigned char* pot=read_bmp(".//double_slit1024.bmp");
 
     double potential[width*height];
 
@@ -402,8 +402,9 @@ int main(int argc, char* argv[]){
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
         glDrawElements(GL_TRIANGLES,6*RenderResolution*RenderResolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        //glUniform1f(potential_true,1.0f);
-        //glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
+        glUniform1f(potential_true,0.0f);
+        glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
+        //glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
         glfwSwapBuffers(MainWindow);
         //Process Events

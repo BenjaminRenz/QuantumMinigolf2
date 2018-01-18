@@ -52,8 +52,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="res/shaders/compute_fft.glsl" />
-		<Unit filename="res/shaders/fragment.glsl" />
-		<Unit filename="res/shaders/vertex.glsl" />
+		<Unit filename="res/shaders/fragment_graph.glsl" />
+		<Unit filename="res/shaders/fragment_gui.glsl" />
+		<Unit filename="res/shaders/vertex_graph.glsl" />
+		<Unit filename="res/shaders/vertex_gui.glsl" />
 		<Extensions>
 			<code_completion />
 			<envvars />
