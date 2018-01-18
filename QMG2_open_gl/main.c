@@ -30,8 +30,8 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
 //global variables section
 float FOV=0.7f;
-unsigned int Resolution=400;
-unsigned int RenderResolution=300;
+unsigned int Resolution=100;
+unsigned int RenderResolution=100;
 GLFWwindow* MainWindow;
 #define ButtonStart
 
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]){
     printf("QuantumMinigolf v2 opengl:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
     //enable v-sync
-    glfwSwapInterval(1);
+    //TODOglfwSwapInterval(1);
     //Refister Callback for errors (debugging)
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -82,9 +82,12 @@ int main(int argc, char* argv[]){
     int window_width = 0;
     int window_height = 0;
     glfwGetWindowSize(MainWindow,&window_width,&window_height);
-
-
-
+    int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
+    glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);
+    glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTexBufferSize);
+    printf("Ind:%d\nVert:%d\nTex:%d\nBuf:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
 
     //Initialize shaders
     //TODO filepath for windows, alter for unix like os
@@ -406,6 +409,7 @@ int main(int argc, char* argv[]){
         glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
+        glFinish();
         glfwSwapBuffers(MainWindow);
         //Process Events
         glfwPollEvents();
