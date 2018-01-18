@@ -35,7 +35,22 @@ unsigned int RenderResolution=100;
 GLFWwindow* MainWindow;
 #define ButtonStart
 
+struct Button {
+    int Button_left_up_x;
+    int Button_left_up_y;
+    int Button_width;
+    int Button_height;
+};
 
+struct Slider {
+    int Slider_left_up_x;
+    int Slider_left_up_y;
+    int Slider_width;
+    int Slider_height;
+    int Slider_pos; //must be smaller than Slider_width
+};
+
+int number_Buttons;
 
 int main(int argc, char* argv[]){
     //GLFW init
@@ -225,6 +240,28 @@ int main(int argc, char* argv[]){
 
     int measurement = 1;
 
+    struct Button Button1;
+    struct Button Button2;
+    struct Slider Slider1;
+
+    Button1.Button_left_up_x=0;
+    Button1.Button_left_up_y=0;
+    Button1.Button_width=200;
+    Button1.Button_height=100;
+
+    Button2.Button_left_up_x=0;
+    Button2.Button_left_up_y=100;
+    Button2.Button_width=200;
+    Button2.Button_height=100;
+
+    Slider1.Slider_left_up_x=0;
+    Slider1.Slider_left_up_y=200;
+    Slider1.Slider_width=200;
+    Slider1.Slider_height=100;
+    Slider1.Slider_pos=50;
+
+    wavesize_1=Slider1.Slider_pos*2.5f;
+
     while (!glfwWindowShouldClose(MainWindow)){
         if(measurement == 0) {
             fftw_execute(fft);
@@ -265,66 +302,71 @@ int main(int argc, char* argv[]){
                 psi[height-1+i*width][0]=0;
                 psi[height-1+i*width][1]=0;
             }
-
-            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
-            /*if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS) {
-                double xpos, ypos;
-                glfwGetCursorPos(MainWindow, &xpos, &ypos);
-                if(xpos<500) {
-                    if(ypos<250) {*/
-                        srand((long)10000.0f*glfwGetTime());
-                        double random=(rand()%1001)/1000.0f;
-                        double sum=0;
-                        norm_sum=0;
-                        for(int i=0;i<width*height;i++) {
-                            norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-                        }
-                        for(int i=0;i<width*height;i++) {
-                            psi[i][0]=(psi[i][0]/sqrt(norm_sum));
-                            psi[i][1]=(psi[i][1]/sqrt(norm_sum));
-                        }
-                        for(unsigned int i=0;i<width*height;i++){
-                            sum=sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-                            if(sum>random){
-                                printf("sum%f\n",sum);
-                                printf("rand: %f\n",random);
-                                for(int i=0;i<width*height;i++) {
-                                    psi[i][0]=0;
-                                    psi[i][1]=0;
-                                }
-                                psi[i][0]=1;
-                                if(i/Resolution<Resolution/2+50&&i/Resolution>Resolution/2-50) {
-                                    if(i%Resolution>250&&i%Resolution<350)
-                                        psi[i][1]=1;
-                                }
-                                break;
-                            }
-                        }
-                        measurement=1;
-                    //}
-                //}
-            }
         }
 
         if (measurement==1) {
-            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_RELEASE) {
-            /*if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_RELEASE) {
-                double xpos, ypos;
-                glfwGetCursorPos(MainWindow, &xpos, &ypos);
-                if(xpos<500) {
-                    if(ypos<250) {*/
-                        for(int j=0;j<height;j++) {
-                            for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
-                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                    //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                            }
+            for(int j=0;j<height;j++) {
+                for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+                    psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                    psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                }
+            }
+            measurement = 0;
+        }
+
+        if(measurement==2){
+            srand((long)10000.0f*glfwGetTime());
+                double random=(rand()%1001)/1000.0f;
+                double sum=0;
+                norm_sum=0;
+                for(int i=0;i<width*height;i++) {
+                    norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+                }
+                for(int i=0;i<width*height;i++) {
+                    psi[i][0]=(psi[i][0]/sqrt(norm_sum));
+                    psi[i][1]=(psi[i][1]/sqrt(norm_sum));
+                }
+                for(unsigned int i=0;i<width*height;i++){
+                    sum=sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+                    if(sum>random){
+                        //printf("sum%f\n",sum);
+                        //printf("rand: %f\n",random);
+                        for(int i=0;i<width*height;i++) {
+                            psi[i][0]=0;
+                            psi[i][1]=0;
                         }
-                        measurement=0;
+                        psi[i][0]=1;
+                        if(i/Resolution<Resolution/2+50&&i/Resolution>Resolution/2-50) {
+                            if(i%Resolution>250&&i%Resolution<350)
+                                psi[i][1]=1;
+                        }
+                        break;
                     }
-                //}
-            //}
+                }
+        }
+
+        if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS){
+            double xpos, ypos;
+            glfwGetCursorPos(MainWindow, &xpos, &ypos);
+            printf("%.0f, %.0f\n",xpos, ypos);
+            if(xpos>Button1.Button_left_up_x&&xpos<Button1.Button_left_up_x+Button1.Button_width){
+                if(ypos>Button1.Button_left_up_y&&ypos<Button1.Button_left_up_y+Button1.Button_height){
+                    measurement=1 ;
+                }
+            }
+            if(xpos>Button2.Button_left_up_x&&xpos<Button2.Button_left_up_x+Button2.Button_width){
+                if(ypos>Button2.Button_left_up_y&&ypos<Button2.Button_left_up_y+Button2.Button_height){
+                    measurement=2 ;
+                }
+            }
+            if(xpos>Slider1.Slider_left_up_x&&xpos<Slider1.Slider_left_up_x+Slider1.Slider_width){
+                if(ypos>Slider1.Slider_left_up_y&&ypos<Slider1.Slider_left_up_y+Slider1.Slider_height){
+                    Slider1.Slider_pos=xpos-Slider1.Slider_left_up_x;
+                    wavesize_1=Slider1.Slider_pos*5.0f;
+                }
+            }
         }
 
         int biggest=0;
@@ -406,7 +448,7 @@ int main(int argc, char* argv[]){
         glUniform1f(potential_true,0.0f);
         glDrawElements(GL_TRIANGLES,6*RenderResolution*RenderResolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
         glUniform1f(potential_true,1.0f);
-        glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
+        glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
         glFinish();
