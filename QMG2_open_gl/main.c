@@ -651,9 +651,9 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
+void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution){
     //Input Parameter check
-    if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1)))!=0)){       //Check if plane resolution/grid resolution is power of 2
+    if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)){       //Check if plane resolution/grid resolution is power of 2
         printf("Error Resolution of plane or grid is not a power of 2");
         return;
     }
@@ -671,21 +671,21 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
     glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);         //get max supported IndexBufferSize of GPU
     glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
 
-    if(maxVertices<(1048576)){
+    if(maxVertices<1048576){
         printf("Error: Vertex Count of your GPU is %d! But requiered count is 1048576\n",maxVertices);
+        return;
     }
-    if(((PlaneResolution-1)*6)%maxIndices==0){    //
-        IndexBufferCountTriangles=(((PlaneResolution-1)*6)/maxIndices);
+    if(((PlaneResolution-1)*(PlaneResolution-1)*6)%maxIndices==0){    //
+        IndexBufferCountTriangles=(((PlaneResolution-1)*(PlaneResolution-1)*6)/maxIndices);
     }else{
-        IndexBufferCountTriangles=(((PlaneResolution-1)*6)/maxIndices)+1;
+        IndexBufferCountTriangles=(((PlaneResolution-1)*(PlaneResolution-1)*6)/maxIndices)+1;
     }
-    if(((GridResolution-1)*8)%maxIndices){
-        IndexBufferCountLines=(((GridResolution-1)*8)/maxIndices);
+    if(((GridResolution-1)*(GridResolution-1)*8)%maxIndices){
+        IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices);
     }else{
-        IndexBufferCountLines=(((GridResolution-1)*8)/maxIndices)+1;
+        IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices)+1;
     }
     printf("Generating %d IndexBuffer(s) for Triangles\nGenerating %d IndexBuffer(s) for Lines\n",IndexBufferCountTriangles,IndexBufferCountLines);
-    glGenBuffers(IndexBufferCountTriangles);
 
     //Which Mesh should be bigger
     if(PlaneResolution>GridResolution){
@@ -717,15 +717,16 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
     glBufferData(GL_ARRAY_BUFFER, 2*finalVertexResolution*finalVertexResolution*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+    free(plane_vertex_data);    //we no longer need plane_verrtex_data because it has been uploaded to gpu memory
     glEnableVertexAttribArray(0);//x,y
     glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2*sizeof(float),0);
 
 
     //Generate Vertex Indices for Triangles
-    GLuint* plane_indices = malloc((PlaneResolution-1)*(PlaneResolution-1)*(8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
+    GLuint* plane_indices = malloc((finalVertexResolution-1)*(finalVertexResolution-1)*(8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
     vert_index=0;
     for(unsigned int y=0;y<(finalVertexResolution-1);y+=planeOffsetMultiplier){
-        for(unsigned int x=0;x<(finalVertexResolution-1);x=+planeOffsetMultiplier){
+        for(unsigned int x=0;x<(finalVertexResolution-1);x+=planeOffsetMultiplier){
             //Generate first triangle
             plane_indices[vert_index++]=x+(y*finalVertexResolution);   //Vertex lower left first triangle
             plane_indices[vert_index++]=x+1+(y*finalVertexResolution);//Vertex upper right first triangle
@@ -738,21 +739,23 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
         }
     }
     //Now upload this data to GPU
-    glGenBuffers(IndexBufferCountTriangles,&indexBufferArrayTriangles);   //Generate Buffers for Triangles
+    glGenBuffers(IndexBufferCountTriangles,indexBufferArrayTriangles);   //Generate Buffers for Triangles
     unsigned int bufferNumber=0;
-    for(;bufferNumber<(IndexBufferCountTriangles-1); bufferNumber++){ //Uploat all but the las buffer
+    for(;bufferNumber<(IndexBufferCountTriangles-1); bufferNumber++){ //Upload all but the last buffer
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayTriangles[bufferNumber]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
     //Upload the last Buffer
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayTriangles[bufferNumber]);
     if(vert_index%maxIndices!=0){
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,vertex_index%maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,vert_index%maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }else{
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
-    //TODO Malloc and new buffers
+
+    //TODO  and new buffers
     //Generate Vertex Indices for Grid
+    vert_index=0;
     for(unsigned int y=0;y<(finalVertexResolution-1);y=+gridOffsetMultiplier){
         for(unsigned int x=0;x<(finalVertexResolution-1);x=+gridOffsetMultiplier){
             //Generate first line
@@ -769,10 +772,19 @@ void createPlaneVBO(unsigned int PlaneResolution,unsigned int GridResolution){
             plane_indices[vert_index++]=x+1+((y+1)*finalVertexResolution);
         }
     }
-    GLuint VboPlaneIndicesId=0;
-    glGenBuffers(1, &VboPlaneIndicesId);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboPlaneIndicesId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,(RenderResolution-1)*(RenderResolution-1)*(6+8)*sizeof(GLuint),plane_indices,GL_STATIC_DRAW);
+    glGenBuffers(IndexBufferCountLines,indexBufferArrayLines);
+    bufferNumber=0;
+    for(;bufferNumber<(IndexBufferCountLines-1); bufferNumber++){ //Upload all but the last buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayLines[bufferNumber]);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
+    }
+    //Upload the last Buffer
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayLines[bufferNumber]);
+    if(vert_index%maxIndices!=0){
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,vert_index%maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
+    }else{
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
+    }
     free(plane_indices);
 }
 
@@ -912,8 +924,8 @@ unsigned char* read_bmp(char* filepath){
         return 0;
     }
     printf("Image Size:%d\n",BitmapSizeCalculated);
-    unsigned int BitmapXPpM=read_uint_from_endian_file(filepointer);
-    unsigned int BitmapYPpM=read_uint_from_endian_file(filepointer);
+    /*unsigned int BitmapXPpM=*/read_uint_from_endian_file(filepointer);
+    /*unsigned int BitmapYPpM=*/read_uint_from_endian_file(filepointer);
     unsigned int BitmapColorsInPalette=read_uint_from_endian_file(filepointer);
     printf("Colors in palette: %d.\n",BitmapColorsInPalette);
     fseek(filepointer,4,SEEK_CUR);//skip over important color count
