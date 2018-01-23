@@ -676,7 +676,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, unsigned int* OUTtriangleBufferCount, unsigned int* OUTlineBufferCount, GLuint* OUTtriangleBufferArray, GLuint* OUTlineBufferArray, unsigned long* OUTlastTriangleBufferLength,unsigned long* OUTlastLineBufferLength){
+void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, unsigned long* OutputArrayPointer){
     //Input Parameter check
     if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)){       //Check if plane resolution/grid resolution is power of 2
         printf("Error Resolution of plane or grid is not a power of 2");
@@ -710,8 +710,9 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, u
         IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices)+1;
     }
     printf("Generating %d IndexBuffer(s) for Triangles\nGenerating %d IndexBuffer(s) for Lines\n",IndexBufferCountTriangles,IndexBufferCountLines);
-    *OUTtriangleBufferCount=IndexBufferCountTriangles;
-    *OUTlineBufferCount=IndexBufferCountLines;
+    *OutputArrayPointer=malloc(2+IndexBufferCountTriangles+IndexBufferCountLines);
+    *((*OutputArrayPointer)+0)=IndexBufferCountTriangles;
+    *((*OutputArrayPointer)+1)=IndexBufferCountLines;
 
     //Which Mesh should be bigger
     if(PlaneResolution>GridResolution){
