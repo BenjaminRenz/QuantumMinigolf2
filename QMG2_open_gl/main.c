@@ -20,7 +20,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
-void createPlaneVBO();
+void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution, GLuint* indexlist);      //Generate Vertex and Index Buffer for plane/grid
 void createCube();
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
@@ -65,8 +65,8 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    //MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow){
         glfwTerminate();
         return -1;
@@ -130,7 +130,8 @@ int main(int argc, char* argv[]){
     glAttachShader(guiShaderID, fragmentShaderId);       //attach fragment shader to new program
     glLinkProgram(guiShaderID);
     */
-    createPlaneVBO();
+    GLuint* indexlist=0;
+    createPlaneVBO(256,128,indexlist);
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
     //Enable z checking
@@ -239,7 +240,6 @@ int main(int argc, char* argv[]){
     for(int i=0;i<width*height;i++) {
         potential[i]=(255-pot[4*i+1])/100.0f;
     }
-
     //Momentum Propagator initialisation
     float dt = 0.00005;
 
@@ -276,7 +276,6 @@ int main(int argc, char* argv[]){
                                 //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
         }
     }
-
     while (!glfwWindowShouldClose(MainWindow)){
         if(measurement == 0) {
 
@@ -409,7 +408,7 @@ int main(int argc, char* argv[]){
         }
 
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
-
+        printf("TEST if we can get here\n\n\n");
         float delta_time = update_delta_time();
 
         //testani_1=testani_1+delta_time*20;
@@ -530,9 +529,14 @@ int main(int argc, char* argv[]){
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
-        glDrawElements(GL_TRIANGLES,6*RenderResolution*RenderResolution,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
-        glUniform1f(potential_true,1.0f);
-        glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
+        for(int ibuffer=0;ibuffer<indexlist[0];ibuffer++){
+            printf("ArrayPoint%d\n",indexlist[2]);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexlist[2+ibuffer]);
+            glDrawElements(GL_TRIANGLES,6*256*256,GL_UNSIGNED_INT,0);     //Last argument if offset in indices array (here none because we want do draw the tirangles
+        }
+
+        //glUniform1f(potential_true,1.0f);
+        //glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
         //Swap Buffers
         glFinish();
@@ -651,7 +655,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution){
+void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution, GLuint* indexlist){
     //Input Parameter check
     if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)){       //Check if plane resolution/grid resolution is power of 2
         printf("Error Resolution of plane or grid is not a power of 2");
@@ -680,12 +684,15 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution){
     }else{
         IndexBufferCountTriangles=(((PlaneResolution-1)*(PlaneResolution-1)*6)/maxIndices)+1;
     }
-    if(((GridResolution-1)*(GridResolution-1)*8)%maxIndices){
+    if(((GridResolution-1)*(GridResolution-1)*8)%maxIndices==0){
         IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices);
     }else{
         IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices)+1;
     }
     printf("Generating %d IndexBuffer(s) for Triangles\nGenerating %d IndexBuffer(s) for Lines\n",IndexBufferCountTriangles,IndexBufferCountLines);
+    indexlist=malloc(2+IndexBufferCountTriangles+IndexBufferCountLines);
+    indexlist[0]=IndexBufferCountTriangles;
+    indexlist[1]=IndexBufferCountLines;
 
     //Which Mesh should be bigger
     if(PlaneResolution>GridResolution){
@@ -721,7 +728,6 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution){
     glEnableVertexAttribArray(0);//x,y
     glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2*sizeof(float),0);
 
-
     //Generate Vertex Indices for Triangles
     GLuint* plane_indices = malloc((finalVertexResolution-1)*(finalVertexResolution-1)*(8)*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
     vert_index=0;
@@ -752,12 +758,13 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution){
     }else{
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
-
-    //TODO  and new buffers
+    for(int offset=0; offset<IndexBufferCountTriangles;offset++){
+        indexlist[2+offset]=indexBufferArrayTriangles[offset];
+    }
     //Generate Vertex Indices for Grid
     vert_index=0;
-    for(unsigned int y=0;y<(finalVertexResolution-1);y=+gridOffsetMultiplier){
-        for(unsigned int x=0;x<(finalVertexResolution-1);x=+gridOffsetMultiplier){
+    for(unsigned int y=0;y<(finalVertexResolution-1);y+=gridOffsetMultiplier){
+        for(unsigned int x=0;x<(finalVertexResolution-1);x+=gridOffsetMultiplier){
             //Generate first line
             plane_indices[vert_index++]=x+(y*finalVertexResolution);
             plane_indices[vert_index++]=x+1+(y*finalVertexResolution);
@@ -785,6 +792,10 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution){
     }else{
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices,plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
+    for(unsigned int offset=0; offset<IndexBufferCountLines;offset++){
+        indexlist[2+offset+IndexBufferCountTriangles]=indexBufferArrayLines[offset];
+    }
+    printf("InBST%d\nInBSL%d\nInBTest%d\n",indexBufferArrayTriangles,indexBufferArrayLines,indexlist[0]);
     free(plane_indices);
 }
 
