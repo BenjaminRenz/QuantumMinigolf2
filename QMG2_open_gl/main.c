@@ -20,14 +20,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
-void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution, unsigned long buffer_array[6]);      //Generate Vertex and Index Buffer for plane/grid
+void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution, void* return_data);      //Generate Vertex and Index Buffer for plane/grid
 void createCube();
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
-GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType);
+GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
 unsigned int Resolution=100;
@@ -55,10 +55,10 @@ struct Slider {
 
 int number_Buttons;
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]) {
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()){
+    if (!glfwInit()) {
         return -1;
     }
 
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]){
     //window creation
     MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
     //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
-    if (!MainWindow){
+    if (!MainWindow) {
         glfwTerminate();
         return -1;
     }
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]){
     //GLEW init
     glewExperimental=GL_TRUE;
     GLenum err = glewInit();
-    if(GLEW_OK != err){
+    if(GLEW_OK != err) {
         printf("Error: glewInit() failed.");
     }
     printf("QuantumMinigolf v2 opengl:\n");
@@ -133,9 +133,8 @@ int main(int argc, char* argv[]){
     glLinkProgram(guiShaderID);
     */
     //GLuint* indexlist=createPlaneVBO(256,32);
-    //createPlaneVBO(1,1);
-    unsigned long** index_buffers=malloc(6*sizeof(unsigned long*));
-    createPlaneVBO(PlaneRes,GridRes,index_buffers);
+    void* index_buffer_array=0;
+    createPlaneVBO(PlaneRes,GridRes,index_buffer_array);
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
     //Enable z checking
@@ -172,7 +171,7 @@ int main(int argc, char* argv[]){
     glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolution*Resolution,psi,GL_STREAM_DRAW);
 
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,Resolution,Resolution,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
-*/
+    */
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
 
     double rotation_up_down=PI/4.0f;
@@ -180,9 +179,9 @@ int main(int argc, char* argv[]){
 
     mat4x4 mvp4x4;
     mat4x4 persp4x4;
-    vec3 eye_vec={1.0f,1.0f,1.0f};
-    vec3 cent_vec={0.0f,0.0f,0.0f};
-    vec3 up_vec={0.0f,0.0f,1.0f};
+    vec3 eye_vec= {1.0f,1.0f,1.0f};
+    vec3 cent_vec= {0.0f,0.0f,0.0f};
+    vec3 up_vec= {0.0f,0.0f,1.0f};
 
     int width = 4*Resolution;
     int height = 4*Resolution;
@@ -241,52 +240,52 @@ int main(int argc, char* argv[]){
 
     double potential[width*height];
 
-    for(int i=0;i<width*height;i++) {
+    for(int i=0; i<width*height; i++) {
         potential[i]=(255-pot[4*i+1])/100.0f;
     }
     //Momentum Propagator initialisation
     float dt = 0.00005;
 
-    for(int x=0; x<width/2; x++){
-		for(int y=0; y<height/2; y++){
-			prop[x*height+y][0] = cos(dt*(-x*x - y*y));
-			prop[x*height+y][1] = sin(dt*(-x*x - y*y));
-		}
-		for(int y=height/2; y<height; y++){
-			prop[x*height+y][0] = cos(dt*(-x*x - (y-height)*(y-height)));
-			prop[x*height+y][1] = sin(dt*(-x*x - (y-height)*(y-height)));
-		}
-	}
-	for(int x=width/2; x<width; x++){
-		for(int y=0; y<height/2; y++){
-			prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - y*y));
-			prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - y*y));
-		}
-		for(int y=height/2; y<height; y++){
-			prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
-			prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
-		}
-	}
+    for(int x=0; x<width/2; x++) {
+        for(int y=0; y<height/2; y++) {
+            prop[x*height+y][0] = cos(dt*(-x*x - y*y));
+            prop[x*height+y][1] = sin(dt*(-x*x - y*y));
+        }
+        for(int y=height/2; y<height; y++) {
+            prop[x*height+y][0] = cos(dt*(-x*x - (y-height)*(y-height)));
+            prop[x*height+y][1] = sin(dt*(-x*x - (y-height)*(y-height)));
+        }
+    }
+    for(int x=width/2; x<width; x++) {
+        for(int y=0; y<height/2; y++) {
+            prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - y*y));
+            prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - y*y));
+        }
+        for(int y=height/2; y<height; y++) {
+            prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
+            prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
+        }
+    }
 
     //Set program-start
     int measurement = 2;
 
     //Create wave
-    for(int j=0;j<height;j++) {
-        for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+    for(int j=0; j<height; j++) {
+        for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
             psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
             psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
         }
     }
-    while (!glfwWindowShouldClose(MainWindow)){
+    while (!glfwWindowShouldClose(MainWindow)) {
         if(measurement == 0) {
 
             fftw_execute(fft);
 
             //momentum space
-            for(int i=0;i<width*height;i++) {
+            for(int i=0; i<width*height; i++) {
                 double psi_re_temp = psi[i][0];
                 psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
                 psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
@@ -294,25 +293,25 @@ int main(int argc, char* argv[]){
 
             fftw_execute(ifft);
 
-            for(int i=0;i<width*height;i++) {
+            for(int i=0; i<width*height; i++) {
                 psi[i][0]=psi[i][0]/norm;
                 psi[i][1]=psi[i][1]/norm;
             }
 
-            for(int i=0;i<width*height;i++) {
+            for(int i=0; i<width*height; i++) {
                 double psi_re_temp = psi[i][0];
                 psi[i][0] = psi_re_temp*cos(potential[i])-psi[i][1]*sin(potential[i]);
                 psi[i][1] = psi_re_temp*sin(potential[i])+psi[i][1]*cos(potential[i]);
             }
 
-            for(int i=0;i<width;i++) {
+            for(int i=0; i<width; i++) {
                 psi[i][0]=0;
                 psi[i][1]=0;
                 psi[i+(width-1)*height][0]=0;
                 psi[i+(width-1)*height][1]=0;
             }
 
-            for(int i=0;i<height;i++) {
+            for(int i=0; i<height; i++) {
                 psi[1+i*width][0]=0;
                 psi[1+i*width][1]=0;
                 psi[height-1+i*width][0]=0;
@@ -320,25 +319,25 @@ int main(int argc, char* argv[]){
             }
         }
 
-        if(measurement==1){
+        if(measurement==1) {
             srand((long)10000.0f*glfwGetTime());
             double random=(rand()%1001)/1000.0f;
             double sum=0;
             double norm_sum=0;
-            for(int i=0;i<width*height;i++) {
+            for(int i=0; i<width*height; i++) {
                 norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
             }
             double sqrt_norm_sum=sqrt(norm_sum);
-            for(int i=0;i<width*height;i++) {
+            for(int i=0; i<width*height; i++) {
                 psi[i][0]=(psi[i][0]/sqrt_norm_sum);
                 psi[i][1]=(psi[i][1]/sqrt_norm_sum);
             }
-            for(unsigned int i=0;i<width*height;i++){
+            for(unsigned int i=0; i<width*height; i++) {
                 sum=sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-                if(sum>random){
+                if(sum>random) {
                     //printf("sum%f\n",sum);
                     //printf("rand: %f\n",random);
-                    for(int i=0;i<width*height;i++) {
+                    for(int i=0; i<width*height; i++) {
                         psi[i][0]=0;
                         psi[i][1]=0;
                     }
@@ -352,43 +351,43 @@ int main(int argc, char* argv[]){
             }
         }
 
-        if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS){
+        if(glfwGetMouseButton(MainWindow, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS) {
             double xpos, ypos;
             glfwGetCursorPos(MainWindow, &xpos, &ypos);
             //printf("%.0f, %.0f\n",xpos, ypos);
-            if(xpos>Button_new.Button_left_up_x&&xpos<Button_new.Button_left_up_x+Button_new.Button_width){
-                if(ypos>Button_new.Button_left_up_y&&ypos<Button_new.Button_left_up_y+Button_new.Button_height){
-                    for(int j=0;j<height;j++) {
-                        for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+            if(xpos>Button_new.Button_left_up_x&&xpos<Button_new.Button_left_up_x+Button_new.Button_width) {
+                if(ypos>Button_new.Button_left_up_y&&ypos<Button_new.Button_left_up_y+Button_new.Button_height) {
+                    for(int j=0; j<height; j++) {
+                        for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
                             psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                             psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         }
                     }
                     measurement=0;
                 }
             }
-            if(xpos>Button_measure.Button_left_up_x&&xpos<Button_measure.Button_left_up_x+Button_measure.Button_width){
-                if(ypos>Button_measure.Button_left_up_y&&ypos<Button_measure.Button_left_up_y+Button_measure.Button_height){
+            if(xpos>Button_measure.Button_left_up_x&&xpos<Button_measure.Button_left_up_x+Button_measure.Button_width) {
+                if(ypos>Button_measure.Button_left_up_y&&ypos<Button_measure.Button_left_up_y+Button_measure.Button_height) {
                     measurement = 1;
                 }
             }
-            if(xpos>Button_esc.Button_left_up_x&&xpos<Button_esc.Button_left_up_x+Button_esc.Button_width){
-                if(ypos>Button_esc.Button_left_up_y&&ypos<Button_esc.Button_left_up_y+Button_esc.Button_height){
+            if(xpos>Button_esc.Button_left_up_x&&xpos<Button_esc.Button_left_up_x+Button_esc.Button_width) {
+                if(ypos>Button_esc.Button_left_up_y&&ypos<Button_esc.Button_left_up_y+Button_esc.Button_height) {
                     glfwSetWindowShouldClose(MainWindow,1);
                 }
             }
-            if(xpos>Slider_size.Slider_left_up_x&&xpos<Slider_size.Slider_left_up_x+Slider_size.Slider_width){
-                if(ypos>Slider_size.Slider_left_up_y&&ypos<Slider_size.Slider_left_up_y+Slider_size.Slider_height){
+            if(xpos>Slider_size.Slider_left_up_x&&xpos<Slider_size.Slider_left_up_x+Slider_size.Slider_width) {
+                if(ypos>Slider_size.Slider_left_up_y&&ypos<Slider_size.Slider_left_up_y+Slider_size.Slider_height) {
                     Slider_size.Slider_pos=xpos-Slider_size.Slider_left_up_x;
                     wavesize_1=Slider_size.Slider_pos*5.0f;
-                    for(int j=0;j<height;j++) {
-                        for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+                    for(int j=0; j<height; j++) {
+                        for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
                             psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                             psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         }
                     }
                     measurement = 2;
@@ -398,14 +397,14 @@ int main(int argc, char* argv[]){
 
         int biggest=0;
 
-        for(int i=0;i<width*height;i++){
+        for(int i=0; i<width*height; i++) {
             if(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]>psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1])
                 biggest=i;
         }
 
         double norming=sqrt(1.0f/(psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1]));
 
-        for(int i=0;i<width*height;i++) {
+        for(int i=0; i<width*height; i++) {
             speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+1.0f)/*+psi[i][1]*psi[i][1]*/);
             speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+1.0f)/*+psi[i][1]*psi[i][1]*/);
             speicher[i*4+3]=pot[i*4+1];
@@ -418,86 +417,86 @@ int main(int argc, char* argv[]){
         //testani_1=testani_1+delta_time*20;
         //Camera Movement calculationunsigned char* speicher = calloc(width*height*4,1);
 
-        if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS){
-            if(rotation_up_down<(3.0)){
+        if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS) {
+            if(rotation_up_down<(3.0)) {
                 rotation_up_down=rotation_up_down+delta_time;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_S)==GLFW_PRESS){
-           if(rotation_up_down>(-0.0)){
+        if(glfwGetKey(MainWindow,GLFW_KEY_S)==GLFW_PRESS) {
+            if(rotation_up_down>(-0.0)) {
                 rotation_up_down=rotation_up_down-delta_time;
-           }
+            }
         }
         //atan(rotation_up_down);
-        if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS){
-            if(rotation_left_right>(-PI)){
+        if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS) {
+            if(rotation_left_right>(-PI)) {
                 rotation_left_right=rotation_left_right-delta_time;
-            }else{
+            } else {
                 rotation_left_right=PI;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_A)==GLFW_PRESS){
-             if(rotation_left_right<PI){
+        if(glfwGetKey(MainWindow,GLFW_KEY_A)==GLFW_PRESS) {
+            if(rotation_left_right<PI) {
                 rotation_left_right=rotation_left_right+delta_time;
-            }else{
+            } else {
                 rotation_left_right=-PI;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_M)==GLFW_PRESS){
+        if(glfwGetKey(MainWindow,GLFW_KEY_M)==GLFW_PRESS) {
             if(measurement==0)
                 measurement=1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS){
-            if(measurement==2){
-                for(int j=0;j<height;j++) {
-                    for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS) {
+            if(measurement==2) {
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
                         psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                     }
                 }
                 measurement=0;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_R)==GLFW_PRESS){
-            if(measurement==1){
-                for(int j=0;j<height;j++) {
-                        for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
-                            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                        }
+        if(glfwGetKey(MainWindow,GLFW_KEY_R)==GLFW_PRESS) {
+            if(measurement==1) {
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
+                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                     }
+                }
                 measurement=2;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS){
-            if(Slider_size.Slider_pos>0){
+        if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS) {
+            if(Slider_size.Slider_pos>0) {
                 Slider_size.Slider_pos=Slider_size.Slider_pos-1;
                 wavesize_1=Slider_size.Slider_pos*5.0f;
-                for(int j=0;j<height;j++) {
-                    for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
                         psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                     }
                 }
                 measurement = 2;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS){
-            if(Slider_size.Slider_pos<Slider_size.Slider_width){
+        if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS) {
+            if(Slider_size.Slider_pos<Slider_size.Slider_width) {
                 Slider_size.Slider_pos=Slider_size.Slider_pos+1;
                 wavesize_1=Slider_size.Slider_pos*5.0f;
-                for(int j=0;j<height;j++) {
-                    for(int i=0;i<width;i++) {          /*sin((i+wavesize_1)/10)/2+0.5;*/
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
                         psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                     }
                 }
                 measurement = 2;
@@ -510,7 +509,8 @@ int main(int argc, char* argv[]){
         mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
         mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
-        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);glUniform1f(potential_true,1.0f);
+        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
+        glUniform1f(potential_true,1.0f);
 
         /*//update textures
         glBindTexture(GL_TEXTURE_2D, psi_texture);
@@ -532,16 +532,11 @@ int main(int argc, char* argv[]){
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
-        for(unsigned int ibufferplane=0; ibufferplane<(*(index_buffers));ibufferplane++){
-            if(((*(index_buffers))-ibufferplane)<2){//We have reached the last buffer
-
-            }else{
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,(*((*(index_buffers+2))+ibufferplane)));
-                glDrawElements(GL_LINES,(PlaneRes-1)*(PlaneRes-1)*6,GL_UNSIGNED_INT,0);
-            }
+        for(unsigned int ibufferplane=0; ibufferplane<((*((unsigned int*)index_buffer_array)-1)); ibufferplane++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,(*((*(index_buffers+2))+ibufferplane)));
             glDrawElements(GL_LINES,(PlaneRes-1)*(PlaneRes-1)*6,GL_UNSIGNED_INT,0);
         }
+
         /*
         glUniform1f(potential_true,1.0f);
         for(unsigned int ibuffergrid=0; ibuffergrid<(*(index_buffers+1));ibuffergrid++){
@@ -573,7 +568,7 @@ int main(int argc, char* argv[]){
 
 
 
-float update_delta_time(){              //Get the current time with glfwGetTime and subtract last time to return deltatime
+float update_delta_time() {             //Get the current time with glfwGetTime and subtract last time to return deltatime
     static double last_glfw_time=0.0f;
     static double current_glfw_time;
     current_glfw_time = glfwGetTime();
@@ -582,22 +577,22 @@ float update_delta_time(){              //Get the current time with glfwGetTime 
     return delta;
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
-    if(key==GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if(key==GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(MainWindow,1);
     }
     //TODO: move key checking routines here.
 }
-void mouse_button_callback(GLFWwindow* window, int button,int action, int mods){
-    if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS){
+void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) {
+    if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS) {
         printf("LMB Down");
     }
 }
 
-GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
+GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType) {
     //read from file into heap memory
     FILE* filepointer=fopen(FilePath,"rb");                  //open specified file in read only mode
-    if(filepointer==NULL){
+    if(filepointer==NULL) {
         printf("Error: Filepointer to shaderfile at %screatePlaneVBO2 could not be loaded.",FilePath);
         //return;
     }
@@ -605,11 +600,11 @@ GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     long filelength = ftell(filepointer);                   //get filePointer position
     fseek(filepointer,0,SEEK_SET);                          //move file Pointer back to first line of file
     char* filestring = (char*)malloc(filelength+1);         //
-    if(fread(filestring,sizeof(char),filelength,filepointer) != filelength){
+    if(fread(filestring,sizeof(char),filelength,filepointer) != filelength) {
         printf("Error: Missing characters in input string");
         //return;
     }
-    if(filestring[0]==0xEF&&filestring[1]==0xBB&&filestring[2]==0xBF){   //Detect if file is utf8 with bom
+    if(filestring[0]==0xEF&&filestring[1]==0xBB&&filestring[2]==0xBF) {  //Detect if file is utf8 with bom
         printf("Error: Remove the bom from your utf8 shader file");
     }
     filestring[filelength]=0;                             //Set end of string
@@ -621,7 +616,7 @@ GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     glCompileShader(ShaderId);
     GLint compStatus = 0;
     glGetShaderiv(ShaderId,GL_COMPILE_STATUS,&compStatus);
-    if(compStatus!=GL_TRUE){
+    if(compStatus!=GL_TRUE) {
         printf("Error: Compilation of shader %d failed!\n",ShaderId);
         //TODO free resources
         //return;
@@ -632,11 +627,11 @@ GLuint CompileShaderFromFile(char FilePath[] ,GLuint shaderType){
     return ShaderId;
 }
 
-void glfw_error_callback(int error, const char* description){
+void glfw_error_callback(int error, const char* description) {
     printf("Error in glfw %d occured\nDescription: %s\n",error,description);
 }
 
-void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam){
+void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam) {
     printf("Error in opengl occured!\n");
     printf("Message: %s\n",message);
     printf("type or error: ");
@@ -657,12 +652,12 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
         printf("PERFORMANCE");
         break;
     case GL_DEBUG_TYPE_OTHER:
-         printf("OTHER");
+        printf("OTHER");
         break;
     }
     printf("\nId:%d \n",id);
     printf("Severity:");
-    switch (severity){
+    switch (severity) {
     case GL_DEBUG_SEVERITY_LOW:
         printf("LOW");
         break;
@@ -676,9 +671,9 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, unsigned long* OutputArrayPointer){
+void createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution, void* return_data) {
     //Input Parameter check
-    if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)){       //Check if plane resolution/grid resolution is power of 2
+    if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)) {      //Check if plane resolution/grid resolution is power of 2
         printf("Error Resolution of plane or grid is not a power of 2");
         return 0;
     }
@@ -687,39 +682,38 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, u
     int maxVertices=0;
     int IndexBufferCountTriangles=0;
     int IndexBufferCountLines=0;
-    GLuint* indexBufferArrayTriangles=malloc(IndexBufferCountTriangles*sizeof(int));
-    GLuint* indexBufferArrayLines=malloc(IndexBufferCountLines*sizeof(int));
     int finalVertexResolution=0;
     int planeOffsetMultiplier=1;
     int gridOffsetMultiplier=1;
     glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);         //get max supported IndexBufferSize of GPU
     glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
 
-    if(maxVertices<1048576){
+    if(maxVertices<1048576) {
         printf("Error: Vertex Count of your GPU is %d! But requiered count is 1048576\n",maxVertices);
         return 0;
     }
-    if(((PlaneResolution-1)*(PlaneResolution-1)*6)%maxIndices==0){    //
+    if(((PlaneResolution-1)*(PlaneResolution-1)*6)%maxIndices==0) {   //
         IndexBufferCountTriangles=(((PlaneResolution-1)*(PlaneResolution-1)*6)/maxIndices);
-    }else{
+    } else {
         IndexBufferCountTriangles=(((PlaneResolution-1)*(PlaneResolution-1)*6)/maxIndices)+1;
     }
-    if(((GridResolution-1)*(GridResolution-1)*8)%maxIndices==0){
+    if(((GridResolution-1)*(GridResolution-1)*8)%maxIndices==0) {
         IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices);
-    }else{
+    } else {
         IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/maxIndices)+1;
     }
     printf("Generating %d IndexBuffer(s) for Triangles\nGenerating %d IndexBuffer(s) for Lines\n",IndexBufferCountTriangles,IndexBufferCountLines);
-    *OutputArrayPointer=malloc(2+IndexBufferCountTriangles+IndexBufferCountLines);
-    *((*OutputArrayPointer)+0)=IndexBufferCountTriangles;
-    *((*OutputArrayPointer)+1)=IndexBufferCountLines;
+    *return_data=malloc(2*sizeof(unsigned int)+2*sizeof(unsigned long)+IndexBufferCountTriangles*sizeof(GLuint)+IndexBufferCountLines*sizeof(GLuint));
+
+    *((unsigned int*)return_data)=IndexBufferCountTriangles;
+    *((unsigned int*)return_data+1)=IndexBufferCountLines;
 
     //Which Mesh should be bigger
-    if(PlaneResolution>GridResolution){
+    if(PlaneResolution>GridResolution) {
         finalVertexResolution=PlaneResolution;
         gridOffsetMultiplier=PlaneResolution/GridResolution;
         planeOffsetMultiplier=1;
-    }else{
+    } else {
         finalVertexResolution=GridResolution;
         planeOffsetMultiplier=GridResolution/PlaneResolution;
         gridOffsetMultiplier=1;
@@ -734,8 +728,8 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, u
 
     float* plane_vertex_data=malloc(2*finalVertexResolution*finalVertexResolution*sizeof(float));      //TODO free this pointer ( memory leak )
     unsigned long vert_index=0;
-    for(int y=0;y<finalVertexResolution;y++){
-        for(int x=0;x<finalVertexResolution;x++){
+    for(int y=0; y<finalVertexResolution; y++) {
+        for(int x=0; x<finalVertexResolution; x++) {
             //Vector coordinates (x,y,z)
             plane_vertex_data[vert_index++]=(((float)x)/(finalVertexResolution-1))-0.5f;
             plane_vertex_data[vert_index++]=(((float)y)/(finalVertexResolution-1))-0.5f; //Set height (y) to zero
@@ -752,8 +746,8 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, u
     //Generate Vertex Indices for Triangles
     GLuint* plane_indices = malloc((finalVertexResolution-1)*(finalVertexResolution-1)*8*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
     vert_index=0;
-    for(unsigned int y=0;y<(finalVertexResolution-planeOffsetMultiplier);y+=planeOffsetMultiplier){
-        for(unsigned int x=0;x<(finalVertexResolution-planeOffsetMultiplier);x+=planeOffsetMultiplier){
+    for(unsigned int y=0; y<(finalVertexResolution-planeOffsetMultiplier); y+=planeOffsetMultiplier) {
+        for(unsigned int x=0; x<(finalVertexResolution-planeOffsetMultiplier); x+=planeOffsetMultiplier) {
             //Generate first triangle
             plane_indices[vert_index++]=x+(y*finalVertexResolution);   //Vertex lower left first triangle
             plane_indices[vert_index++]=x+1+(y*finalVertexResolution);//Vertex upper right first triangle
@@ -766,24 +760,25 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, u
             //Check if we need to start a new array
         }
     }
-    glGenBuffers(IndexBufferCountTriangles,&indexBufferArrayTriangles[0]);
+    glGenBuffers(IndexBufferCountTriangles,((GLuint*)return_data+6));
     //Now upload this data to GPU
     unsigned int bufferNumber=0;
-    for(;bufferNumber<(IndexBufferCountTriangles-1); bufferNumber++){ //Upload all but the last buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayTriangles[bufferNumber]);
+    for(; bufferNumber<(IndexBufferCountTriangles-1); bufferNumber++) { //Upload all but the last buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,((GLuint*)return_data+6)[bufferNumber]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices*sizeof(GLuint),plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
     //Upload the last Buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayTriangles[bufferNumber]);//indexBufferArrayTriangles[bufferNumber]);
-    if(vert_index%maxIndices!=0){
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,((GLuint*)return_data+6)[bufferNumber]);
+    if(vert_index%maxIndices!=0) {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,(vert_index%maxIndices)*sizeof(GLuint),plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
-    }else{
+    } else {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices*sizeof(GLuint),plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
+    *((unsigned long*)return_data+1)=vert_index%maxIndices;
     //Generate Vertex Indices for Grid
     vert_index=0;
-    for(unsigned int y=0;y<(finalVertexResolution-1);y+=gridOffsetMultiplier){
-        for(unsigned int x=0;x<(finalVertexResolution-1);x+=gridOffsetMultiplier){
+    for(unsigned int y=0; y<(finalVertexResolution-1); y+=gridOffsetMultiplier) {
+        for(unsigned int x=0; x<(finalVertexResolution-1); x+=gridOffsetMultiplier) {
             //Generate first line
             plane_indices[vert_index++]=x+(y*finalVertexResolution);
             plane_indices[vert_index++]=x+1+(y*finalVertexResolution);
@@ -798,45 +793,44 @@ void createPlaneVBO(unsigned int PlaneResolution, unsigned int LineResolution, u
             plane_indices[vert_index++]=x+1+((y+1)*finalVertexResolution);
         }
     }
-    glGenBuffers(IndexBufferCountLines,indexBufferArrayLines);
+    glGenBuffers(IndexBufferCountLines,((GLuint*)return_data+6+IndexBufferCountTriangles));   //Skip over 2*int+(2*long==4*int)=6
     bufferNumber=0;
-    for(;bufferNumber<(IndexBufferCountLines-1); bufferNumber++){ //Upload all but the last buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayLines[bufferNumber]);
+    for(; bufferNumber<(IndexBufferCountLines-1); bufferNumber++) { //Upload all but the last buffer
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,((GLuint*)return_data+6+IndexBufferCountTriangles)[bufferNumber]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices*sizeof(GLuint),plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
     //Upload the last Buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexBufferArrayLines[bufferNumber]);
-    if(vert_index%maxIndices!=0){
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,((GLuint*)return_data+6+IndexBufferCountTriangles)[bufferNumber]);
+    if(vert_index%maxIndices!=0) {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,(vert_index%maxIndices)*sizeof(GLuint),plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
-    }else{
+    } else {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,maxIndices*sizeof(GLuint),plane_indices+maxIndices*bufferNumber,GL_STATIC_DRAW);
     }
-    buffer_array[2]=indexBufferArrayTriangles;
-    buffer_array[3]=indexBufferArrayLines;
+    *((unsigned long*)return_data+2)=vert_index%maxIndices;
     free(plane_indices);
     return;
 }
 
 
 
-void drop_file_callback(GLFWwindow* window, int count, const char** paths){
-    for(int i=0; i<count; i++){
+void drop_file_callback(GLFWwindow* window, int count, const char** paths) {
+    for(int i=0; i<count; i++) {
         printf("Dropped File Path: %s\n",paths[i]);
     }
 }
 
-void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset){
+void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
     float temp_mouse_scroll= -0.04f*(float)yOffset;
-    if((FOV+temp_mouse_scroll<1.0f)&&(FOV+temp_mouse_scroll>0.1f)){
+    if((FOV+temp_mouse_scroll<1.0f)&&(FOV+temp_mouse_scroll>0.1f)) {
         FOV+=temp_mouse_scroll;
-    }else{
+    } else {
     }
 }
 
-unsigned int read_uint_from_endian_file(FILE* file){
+unsigned int read_uint_from_endian_file(FILE* file) {
     unsigned char data[4];
     unsigned int data_return_int;
-    if(fread(data,1,4,file)<4){ //total number of read elements is less than 4
+    if(fread(data,1,4,file)<4) { //total number of read elements is less than 4
         return 0;
     }
     //little endian
@@ -846,11 +840,11 @@ unsigned int read_uint_from_endian_file(FILE* file){
     return data_return_int;
 }
 
-unsigned short read_short_from_endian_file(FILE* file){
+unsigned short read_short_from_endian_file(FILE* file) {
     //http://cpansearch.perl.org/src/DHUNT/PDL-Planet-0.05/libimage/bmp.c
     unsigned char data[2];
     unsigned short data_return_short;
-    if(fread(data,1,2,file)<2){ //total number of read elements is less than 4
+    if(fread(data,1,2,file)<2) { //total number of read elements is less than 4
         return 0;
     }
     //little endian
@@ -860,29 +854,29 @@ unsigned short read_short_from_endian_file(FILE* file){
     return data_return_short;
 }
 
-unsigned char* read_bmp(char* filepath){
+unsigned char* read_bmp(char* filepath) {
     //source https://github.com/ndd314/sjsu_cmpe295_cuda_fft_opengl/blob/master/opengl/plane/readBMPV2.c#L50
     //https://stackoverflow.com/questions/7990273/converting-256-color-bitmap-to-rgba-bitmap
     FILE *filepointer=fopen(filepath,"rb");
 
-    if(filepointer==NULL){
+    if(filepointer==NULL) {
         printf("File :%s could not be found\n",filepath);
         fclose(filepointer);
         return 0;
     }
 
     fseek(filepointer,0,SEEK_SET);  //Jump to beginning of file
-    if(read_short_from_endian_file(filepointer)!=0x4D42){// (equals BM in ASCII)
+    if(read_short_from_endian_file(filepointer)!=0x4D42) { // (equals BM in ASCII)
         fclose(filepointer);
         printf("File :%s is not an BMP\n",filepath);
         return 0;
     }
 
-    fseek(filepointer,10 ,SEEK_SET);
+    fseek(filepointer,10,SEEK_SET);
     unsigned int BitmapOffset = read_uint_from_endian_file(filepointer);
     printf("data offset:%d\n",BitmapOffset);
 
-    if(read_uint_from_endian_file(filepointer)!=124){
+    if(read_uint_from_endian_file(filepointer)!=124) {
         printf("BitmapHeader is not BITMAPV5HEADER / 124 \n");
         fclose(filepointer);
         return 0;
@@ -893,7 +887,7 @@ unsigned char* read_bmp(char* filepath){
     unsigned int BitmapHeight=read_uint_from_endian_file(filepointer);
     printf("BitmapHeight is %d.\n",BitmapHeight);
 
-    if(read_short_from_endian_file(filepointer)!=1){
+    if(read_short_from_endian_file(filepointer)!=1) {
         printf("Unsupported plane count\n");
         return 0;
     }
@@ -903,21 +897,21 @@ unsigned char* read_bmp(char* filepath){
     unsigned int BitmapSizeCalculated=(BitmapColorDepth/8)*(BitmapWidth+(BitmapWidth%4))*BitmapWidth;
 
     unsigned int BitmapCompression=read_uint_from_endian_file(filepointer);
-    switch(BitmapCompression){
+    switch(BitmapCompression) {
     case 0:
-            printf("Compression type: none/BI_RGB\n");
+        printf("Compression type: none/BI_RGB\n");
         break;
-        case 3:
-            printf("Compression type: Bitfields/BI_BITFIELDS\n");
+    case 3:
+        printf("Compression type: Bitfields/BI_BITFIELDS\n");
         break;
-        default:
-            printf("Unsupported compression %d\n",BitmapCompression);
-            fclose(filepointer);
-            return 0;
+    default:
+        printf("Unsupported compression %d\n",BitmapCompression);
+        fclose(filepointer);
+        return 0;
         break;
     }
     unsigned int BitmapImageSize=read_uint_from_endian_file(filepointer);
-    if(BitmapImageSize!=BitmapSizeCalculated){
+    if(BitmapImageSize!=BitmapSizeCalculated) {
         printf("Error while reading image size: Calculated Image Size: %d.\nRead Image size: %d\n",BitmapSizeCalculated,BitmapImageSize);
         fclose(filepointer);
         return 0;
@@ -928,11 +922,11 @@ unsigned char* read_bmp(char* filepath){
     unsigned int BitmapColorsInPalette=read_uint_from_endian_file(filepointer);
     printf("Colors in palette: %d.\n",BitmapColorsInPalette);
     fseek(filepointer,4,SEEK_CUR);//skip over important color count
-    if(BitmapCompression==3){
+    if(BitmapCompression==3) {
         unsigned char RGBA_mask[4];
-        for(unsigned int color_channel=0;color_channel<4;color_channel++){
+        for(unsigned int color_channel=0; color_channel<4; color_channel++) {
             unsigned int color_channel_mask=read_uint_from_endian_file(filepointer);
-            switch(color_channel_mask){//read shift value for color_channel
+            switch(color_channel_mask) { //read shift value for color_channel
             case 0xFF000000:
                 RGBA_mask[color_channel]=3;
                 break;
@@ -958,7 +952,7 @@ unsigned char* read_bmp(char* filepath){
         printf("BMOFFST:%d\n",BitmapOffset);
         fseek(filepointer,BitmapOffset,SEEK_SET);//jump to pixel data
         printf("Calsize:%d\n",BitmapSizeCalculated);
-        if(fread(imageData,BitmapSizeCalculated,1,filepointer)==0){
+        if(fread(imageData,BitmapSizeCalculated,1,filepointer)==0) {
             printf("Error while reading!");
         }
         fclose(filepointer);
@@ -972,7 +966,7 @@ unsigned char* read_bmp(char* filepath){
 
 
 
-void write_bmp(char* filepath, unsigned int width, unsigned int height){
+void write_bmp(char* filepath, unsigned int width, unsigned int height) {
     FILE* filepointer = fopen(filepath,"wb");
     //bytes_per_line=(3*(width+1)/4)*4;
     const char* String_to_write="BMP";
