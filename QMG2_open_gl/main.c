@@ -524,28 +524,26 @@ int main(int argc, char* argv[]) {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
         unsigned int ibufferplane;
-        for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array)-1); ibufferplane++) {
+        /*for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array)-1); ibufferplane++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
             glDrawElements(GL_TRIANGLES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/3)*3,GL_UNSIGNED_INT,0);
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
         glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
-
+        */
         glUniform1f(potential_true,1.0f);
         for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array+1)-1); ibufferplane++) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+*((unsigned int*)index_buffer_array)*sizeof(GLuint)+ibufferplane));
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
             glDrawElements(GL_LINES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/2)*2,GL_UNSIGNED_INT,0);
         }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+*((unsigned int*)index_buffer_array)*sizeof(GLuint)+ibufferplane));
+        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*((GLuint*)index_buffer_array+6));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
         glDrawElements(GL_LINES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+1),GL_UNSIGNED_INT,0);
-        /*
-        glUniform1f(potential_true,1.0f);
-        for(unsigned int ibuffergrid=0; ibuffergrid<(*(index_buffers+1));ibuffergrid++){
+
+        /*for(unsigned int ibuffergrid=0; ibuffergrid<(*(index_buffers+1));ibuffergrid++){
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,(*((*(index_buffers+2+(*(index_buffers)))))+ibuffergrid)));
             glDrawElements(GL_LINES,GridRes*GridRes*6,GL_UNSIGNED_INT,0);
-        }
-        */
-
+        }*/
         //printf("deltatime%f\n",delta_time);
         /*for(int ibuffer=0;ibuffer<indexlist[0];ibuffer++){
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,indexlist[2+ibuffer]);
