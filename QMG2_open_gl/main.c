@@ -20,7 +20,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
-unsigned int* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution);
+void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution);
 void createCube();
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
@@ -30,10 +30,9 @@ void glfw_error_callback(int error, const char* description);
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
-unsigned int Resolution=128;
-unsigned int RenderResolution=128;
-#define PlaneRes 128       //must be power of 2
-#define GridRes 128        //must be power of 2
+#define Resolution 512
+#define PlaneRes 512       //must be power of 2
+#define GridRes 512        //must be power of 2
 GLFWwindow* MainWindow;
 #define ButtonStart
 
@@ -67,8 +66,8 @@ int main(int argc, char* argv[]) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
-    //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    //MainWindow = glfwCreateWindow(600, 400, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -84,7 +83,7 @@ int main(int argc, char* argv[]) {
     printf("QuantumMinigolf v2 opengl:\n");
     printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
     //enable v-sync
-    //TODOglfwSwapInterval(1);
+    glfwSwapInterval(1);
     //Refister Callback for errors (debugging)
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -133,9 +132,8 @@ int main(int argc, char* argv[]) {
     glLinkProgram(guiShaderID);
     */
     //GLuint* indexlist=createPlaneVBO(256,32);
-    unsigned int* index_buffer_array=createPlaneVBO(PlaneRes,GridRes);
-    printf("index_buffer_array%d,%d\n",index_buffer_array[0],index_buffer_array[1]);
-    printf("TTT1\n\n");
+    void* index_buffer_array=createPlaneVBO(PlaneRes,GridRes);
+    printf("index_buffer_array%d,%d\n",*((unsigned int*)index_buffer_array),*((unsigned int*)index_buffer_array+1));
     glDisable(GL_CULL_FACE);
     glClearColor(0.3f,0.3f,0.3f,0.5f);//Set background color
     //Enable z checking
@@ -176,15 +174,14 @@ int main(int argc, char* argv[]) {
 
     double rotation_up_down=PI/4.0f;
     double rotation_left_right=PI;
-    printf("TTT2\n\n");
     mat4x4 mvp4x4;
     mat4x4 persp4x4;
     vec3 eye_vec= {1.0f,1.0f,1.0f};
     vec3 cent_vec= {0.0f,0.0f,0.0f};
     vec3 up_vec= {0.0f,0.0f,1.0f};
 
-    int width = 4*Resolution;
-    int height = 4*Resolution;
+    int width = Resolution;
+    int height = Resolution;
     fftw_complex *psi;
     fftw_complex *prop;
     psi = (fftw_complex*) fftw_alloc_complex(width*height);
@@ -192,7 +189,6 @@ int main(int argc, char* argv[]) {
     fftw_plan fft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
 
     fftw_plan ifft = fftw_plan_dft_2d (width, height, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
-    printf("TTT3\n\n");
     //GUI
     struct Button Button_new;
     struct Button Button_measure;
@@ -225,7 +221,6 @@ int main(int argc, char* argv[]) {
     double wavesize_1=Slider_size.Slider_pos*2.5f;
     double wavesize_2=500;
     double norm = width*height;
-    printf("TTT3\n\n");
     float angle_mov_1 = PI;
     float angle_mov_2 = PI;
 
@@ -235,8 +230,8 @@ int main(int argc, char* argv[]) {
     int offset_y_2 = 100;
 
     unsigned char* speicher = calloc(width*height*4,1);
-    unsigned char* pot=read_bmp(".//double_slit.bmp");
-    double potential[width*height];
+    unsigned char* pot=read_bmp(".//double_slit1024.bmp");
+    double* potential=malloc(width*height*sizeof(double));
 
     for(int i=0; i<width*height; i++) {
         potential[i]=(255-pot[4*i+1])/100.0f;
@@ -275,7 +270,6 @@ int main(int argc, char* argv[]) {
             //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
         }
     }
-    printf("TTT4\n\n");
     while (!glfwWindowShouldClose(MainWindow)) {
         if(measurement == 0) {
 
@@ -529,14 +523,21 @@ int main(int argc, char* argv[]) {
         */
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUniform1f(potential_true,0.0f);
-        /*unsigned int ibufferplane=0;
-        for(; ibufferplane<(*((unsigned int*)index_buffer_array)-1); ibufferplane++) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+8+ibufferplane));
-            glDrawElements(GL_TRIANGLES,((*((unsigned long*)index_buffer_array+3))/3),GL_UNSIGNED_INT,0);
+        unsigned int ibufferplane;
+        for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array)-1); ibufferplane++) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
+            glDrawElements(GL_TRIANGLES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/3)*3,GL_UNSIGNED_INT,0);
         }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+8+ibufferplane));
-        glDrawElements(GL_TRIANGLES,(*((unsigned long*)index_buffer_array+1))/3,GL_UNSIGNED_INT,0);
-        */
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
+        glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
+
+        glUniform1f(potential_true,1.0f);
+        for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array+1)-1); ibufferplane++) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+*((unsigned int*)index_buffer_array)*sizeof(GLuint)+ibufferplane));
+            glDrawElements(GL_LINES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/2)*2,GL_UNSIGNED_INT,0);
+        }
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+*((unsigned int*)index_buffer_array)*sizeof(GLuint)+ibufferplane));
+        glDrawElements(GL_LINES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+1),GL_UNSIGNED_INT,0);
         /*
         glUniform1f(potential_true,1.0f);
         for(unsigned int ibuffergrid=0; ibuffergrid<(*(index_buffers+1));ibuffergrid++){
@@ -552,8 +553,7 @@ int main(int argc, char* argv[]) {
         }*/
 
         //glUniform1f(potential_true,1.0f);
-        //glDrawElements(GL_LINES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
-        //glDrawElements(GL_TRIANGLES,8*RenderResolution*RenderResolution,GL_UNSIGNED_INT,6*(RenderResolution-1)*(RenderResolution-1)*sizeof(GLuint));
+
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -671,7 +671,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-unsigned int* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution) {
+void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution) {
     //Input Parameter check
     if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)) {      //Check if plane resolution/grid resolution is power of 2
         printf("Error: Resolution of plane or grid is not a power of 2");
@@ -702,7 +702,7 @@ unsigned int* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridReso
     } else {
         IndexBufferCountLines=(((GridResolution-1)*(GridResolution-1)*8)/((maxIndices/2)*2))+1;
     }
-    void* return_data_pointer=(unsigned int*)malloc(2*sizeof(unsigned int)+2*sizeof(unsigned long)+IndexBufferCountTriangles*sizeof(GLuint)+IndexBufferCountLines*sizeof(GLuint));
+    void* return_data_pointer=malloc(2*sizeof(unsigned int)+3*sizeof(unsigned long)+IndexBufferCountTriangles*sizeof(GLuint)+IndexBufferCountLines*sizeof(GLuint));
     *((int*)return_data_pointer)=IndexBufferCountTriangles;
     printf("Info: IndexBufferCountTriangles %d\n",*((int*)return_data_pointer));
     *(((int*)return_data_pointer)+1)=IndexBufferCountLines;
@@ -759,25 +759,24 @@ unsigned int* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridReso
             //Check if we need to start a new array
         }
     }
-    glGenBuffers(IndexBufferCountTriangles, ((GLuint*)return_data_pointer)+8);
-    printf("Info: IndexBufferFirstInListTriangles %d\n",*(((GLuint*)return_data_pointer)+8));
+    glGenBuffers(IndexBufferCountTriangles, ((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint));
     //Now upload this data to GPU
     unsigned int bufferNumber=0;
     for(; bufferNumber<(IndexBufferCountTriangles-1); bufferNumber++) { //Upload all but the last buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+8+bufferNumber));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+bufferNumber));
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,(maxIndices/3)*3*sizeof(GLuint),plane_indices+(maxIndices/3)*3*bufferNumber,GL_STATIC_DRAW);
+        printf("Info: Uploaded PlaneIndexBuffer%d with %d bytes.\n",*(((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+bufferNumber),(maxIndices/3)*3*sizeof(GLuint));
     }
     //Upload the last Buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+8+bufferNumber));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+bufferNumber));
 
     if(vert_index%((maxIndices/3)*3)!=0) {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,(vert_index%((maxIndices/3)*3))*sizeof(GLuint),plane_indices+((maxIndices/3)*3)*bufferNumber,GL_STATIC_DRAW);
     } else {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxIndices/3)*3)*sizeof(GLuint),plane_indices+((maxIndices/3)*3)*bufferNumber,GL_STATIC_DRAW);
     }
-    *(((unsigned long*)return_data_pointer)+1)=vert_index%((maxIndices/3)*3);
-    return return_data_pointer;  //Why is int overwritten
-    printf("Info: Indices in last Triangle Buffer %d\n",*(((unsigned long*)return_data_pointer)+1));
+    *(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long))=vert_index%((maxIndices/3)*3);
+    printf("Info: Indices in last Triangle Buffer %d\n",*(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long)));
     //Generate Vertex Indices for Grid
     vert_index=0;
     for(unsigned int y=0; y<(finalVertexResolution-1); y+=gridOffsetMultiplier) {
@@ -796,26 +795,26 @@ unsigned int* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridReso
             plane_indices[vert_index++]=x+1+((y+1)*finalVertexResolution);
         }
     }
-    glGenBuffers(IndexBufferCountLines,((GLuint*)return_data_pointer)+8+IndexBufferCountTriangles);   //Skip over 2*int+(2*long==4*int)=6
-    printf("Info: IndexBufferFirstInListTriangles %d\n",*(((GLuint*)return_data_pointer)+8+IndexBufferCountLines));
+    glGenBuffers(IndexBufferCountLines,((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+IndexBufferCountTriangles);   //Skip over 2*int+(2*long==4*int)=6
+    printf("Info: IndexBufferFirstInListTriangles %d\n",*(((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+IndexBufferCountLines));
     bufferNumber=0;
     for(; bufferNumber<(IndexBufferCountLines-1); bufferNumber++) { //Upload all but the last buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+8+IndexBufferCountTriangles+bufferNumber));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+IndexBufferCountTriangles+bufferNumber));
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxIndices/2)*2)*sizeof(GLuint),plane_indices+((maxIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
     }
     //Upload the last Buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+8+IndexBufferCountTriangles+bufferNumber));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)return_data_pointer)+2+3*sizeof(long)/sizeof(GLuint)+IndexBufferCountTriangles+bufferNumber));
     if(vert_index%((maxIndices/2)*2)!=0) {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,(vert_index%((maxIndices/2)*2))*sizeof(GLuint),plane_indices+((maxIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
     } else {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxIndices/2)*2)*sizeof(GLuint),plane_indices+((maxIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
     }
-    *(((unsigned long*)return_data_pointer)+2)=vert_index%((maxIndices/2)*2);
-    printf("Info: Indices in last Grid Buffer %d\n",*(((unsigned long*)return_data_pointer)+2));
-    *(((unsigned long*)return_data_pointer)+3)=maxIndices;
-    printf("Info: Supported Max Indices %d\n",*(((unsigned long*)return_data_pointer)+3));
+    *(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long)+1)=vert_index%((maxIndices/2)*2);
+    printf("Info: Indices in last Grid Buffer %d\n",*(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long)+1));
+    *(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long)+2)=maxIndices;
+    printf("Info: Supported Max Indices %d\n",*(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long)+2));
     free(plane_indices);
-    return (unsigned int*)return_data_pointer;//return_data_pointer;
+    return return_data_pointer;//return_data_pointer;
 }
 
 
