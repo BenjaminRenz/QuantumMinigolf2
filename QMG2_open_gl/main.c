@@ -194,15 +194,16 @@ int main(int argc, char* argv[]) {
     struct GUI Button_new;
     struct GUI Button_measure;
     struct GUI Button_esc;
+    struct GUI Slider_speed;
     struct GUI Slider_size;
 
     Button_new.Left_up_x=0;
-    Button_new.Left_up_y=100;
+    Button_new.Left_up_y=200;
     Button_new.Width=200;
     Button_new.Height=100;
 
     Button_measure.Left_up_x=0;
-    Button_measure.Left_up_y=200;
+    Button_measure.Left_up_y=300;
     Button_measure.Width=200;
     Button_measure.Height=100;
 
@@ -211,11 +212,17 @@ int main(int argc, char* argv[]) {
     Button_esc.Width=200;
     Button_esc.Height=100;
 
+    Slider_speed.Left_up_x=0;
+    Slider_speed.Left_up_y=100;
+    Slider_speed.Width=200;
+    Slider_speed.Height=100;
+    Slider_speed.Position=10;
+
     Slider_size.Left_up_x=0;
     Slider_size.Left_up_y=0;
     Slider_size.Width=200;
     Slider_size.Height=100;
-    Slider_size.Position=50;
+    Slider_size.Position=49;
 
     //Wave parameter initialisation
     double wavesize_1=Slider_size.Position*2.5f;
@@ -224,8 +231,10 @@ int main(int argc, char* argv[]) {
     float angle_mov_1 = PI/2.0f;
     float angle_mov_2 = PI/2.0f;
 
-    int offset_x_1 = 256;
-    int offset_y_1 = 40;
+    int offset_x_start = 256;
+    int offset_y_start = 40;
+    int offset_x_1 = offset_x_start;
+    int offset_y_1 = offset_y_start;
     int offset_x_2 = 256;
     int offset_y_2 = 300;
 
@@ -238,7 +247,8 @@ int main(int argc, char* argv[]) {
         potential[i]=(255-pot[4*i+1])/100.0f;
     }
     //Momentum Propagator initialisation
-    float dt = 0.00005;
+    float dt = (Slider_speed.Position+1) * 0.0000005f;
+
     for(int x=0; x<width/2; x++) {
         for(int y=0; y<height/2; y++) {
             prop[x*height+y][0] = cos(dt*(-x*x - y*y));
@@ -264,51 +274,52 @@ int main(int argc, char* argv[]) {
     int measurement = 2;
     //Create wave
     for(int j=0; j<height; j++) {
-        for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
-            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-            +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-            +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+        for(int i=0; i<width; i++) {
+            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
         }
     }
 
     while (!glfwWindowShouldClose(MainWindow)) {
         if(measurement == 0) {
+            for(int i=0;i<1;i++){
+                fftw_execute(fft);
 
-            fftw_execute(fft);
+                //momentum space
+                for(int i=0; i<width*height; i++) {
+                    double psi_re_temp = psi[i][0];
+                    psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
+                    psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
+                }
 
-            //momentum space
-            for(int i=0; i<width*height; i++) {
-                double psi_re_temp = psi[i][0];
-                psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
-                psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
-            }
+                fftw_execute(ifft);
 
-            fftw_execute(ifft);
+                for(int i=0; i<width*height; i++) {
+                    psi[i][0]=psi[i][0]/norm;
+                    psi[i][1]=psi[i][1]/norm;
+                }
 
-            for(int i=0; i<width*height; i++) {
-                psi[i][0]=psi[i][0]/norm;
-                psi[i][1]=psi[i][1]/norm;
-            }
+                for(int i=0; i<width*height; i++) {
+                    double psi_re_temp = psi[i][0];
+                    psi[i][0] = psi_re_temp*cos(potential[i])-psi[i][1]*sin(potential[i]);
+                    psi[i][1] = psi_re_temp*sin(potential[i])+psi[i][1]*cos(potential[i]);
+                }
 
-            for(int i=0; i<width*height; i++) {
-                double psi_re_temp = psi[i][0];
-                psi[i][0] = psi_re_temp*cos(potential[i])-psi[i][1]*sin(potential[i]);
-                psi[i][1] = psi_re_temp*sin(potential[i])+psi[i][1]*cos(potential[i]);
-            }
+                for(int i=0; i<width; i++) {
+                    psi[i][0]=0;
+                    psi[i][1]=0;
+                    psi[i+(width-1)*height][0]=0;
+                    psi[i+(width-1)*height][1]=0;
+                }
 
-            for(int i=0; i<width; i++) {
-                psi[i][0]=0;
-                psi[i][1]=0;
-                psi[i+(width-1)*height][0]=0;
-                psi[i+(width-1)*height][1]=0;
-            }
-
-            for(int i=0; i<height; i++) {
-                psi[1+i*width][0]=0;
-                psi[1+i*width][1]=0;
-                psi[height-1+i*width][0]=0;
-                psi[height-1+i*width][1]=0;
+                for(int i=0; i<height; i++) {
+                    psi[1+i*width][0]=0;
+                    psi[1+i*width][1]=0;
+                    psi[height-1+i*width][0]=0;
+                    psi[height-1+i*width][1]=0;
+                }
             }
         }
 
@@ -348,26 +359,13 @@ int main(int argc, char* argv[]) {
             double xpos, ypos;
             glfwGetCursorPos(MainWindow, &xpos, &ypos);
             //printf("%.0f, %.0f\n",xpos, ypos);
-            if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
-                if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
-                    for(int j=0; j<height; j++) {
-                        for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
-                            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                        }
+            if(measurement==0){
+                if(xpos>Button_measure.Left_up_x&&xpos<Button_measure.Left_up_x+Button_measure.Width) {
+                    if(ypos>Button_measure.Left_up_y&&ypos<Button_measure.Left_up_y+Button_measure.Height) {
+                        measurement = 1;
+                        Button_measure.Position=1;
+                        Button_new.Position=0;
                     }
-                    measurement=0;
-                    Button_new.Position=1;
-                    Button_measure.Position=0;
-                }
-            }
-            if(xpos>Button_measure.Left_up_x&&xpos<Button_measure.Left_up_x+Button_measure.Width) {
-                if(ypos>Button_measure.Left_up_y&&ypos<Button_measure.Left_up_y+Button_measure.Height) {
-                    measurement = 1;
-                    Button_measure.Position=1;
-                    Button_new.Position=0;
                 }
             }
             if(xpos>Button_esc.Left_up_x&&xpos<Button_esc.Left_up_x+Button_esc.Width) {
@@ -375,21 +373,66 @@ int main(int argc, char* argv[]) {
                     glfwSetWindowShouldClose(MainWindow,1);
                 }
             }
-            if(xpos>Slider_size.Left_up_x&&xpos<Slider_size.Left_up_x+Slider_size.Width) {
-                if(ypos>Slider_size.Left_up_y&&ypos<Slider_size.Left_up_y+Slider_size.Height) {
-                    Slider_size.Position=xpos-Slider_size.Left_up_x;
-                    wavesize_1=Slider_size.Position*5.0f;
-                    for(int j=0; j<height; j++) {
-                        for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
-                            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+
+            if(measurement==2){
+                if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
+                    if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
+                        wavesize_1=Slider_size.Position*2.5f;
+                        for(int j=0; j<height; j++) {
+                            for(int i=0; i<width; i++) {
+                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            }
+                        }
+                        measurement=0;
+                        Button_new.Position=1;
+                        Button_measure.Position=0;
+                    }
+                }
+                if(xpos>Slider_size.Left_up_x&&xpos<Slider_size.Left_up_x+Slider_size.Width) {
+                    if(ypos>Slider_size.Left_up_y&&ypos<Slider_size.Left_up_y+Slider_size.Height) {
+                        Slider_size.Position=xpos-Slider_size.Left_up_x;
+                        wavesize_1=Slider_size.Position*5.0f;
+                        for(int j=0; j<height; j++) {
+                            for(int i=0; i<width; i++) {
+                                psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                                psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                                //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            }
+                        }
+                        Button_measure.Position=0;
+                        Button_new.Position=0;
+                    }
+                }
+                if(xpos>Slider_speed.Left_up_x&&xpos<Slider_speed.Left_up_x+Slider_speed.Width) {
+                    if(ypos>Slider_speed.Left_up_y&&ypos<Slider_speed.Left_up_y+Slider_speed.Height) {
+                        Slider_speed.Position=xpos-Slider_speed.Left_up_x;
+                        wavesize_1=Slider_speed.Position*5.0f;
+                        dt = (Slider_speed.Position+1) * 0.0000005f;
+                        for(int x=0; x<width/2; x++) {
+                            for(int y=0; y<height/2; y++) {
+                                prop[x*height+y][0] = cos(dt*(-x*x - y*y));
+                                prop[x*height+y][1] = sin(dt*(-x*x - y*y));
+                            }
+                            for(int y=height/2; y<height; y++) {
+                                prop[x*height+y][0] = cos(dt*(-x*x - (y-height)*(y-height)));
+                                prop[x*height+y][1] = sin(dt*(-x*x - (y-height)*(y-height)));
+                            }
+                        }
+                        for(int x=width/2; x<width; x++) {
+                            for(int y=0; y<height/2; y++) {
+                                prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - y*y));
+                                prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - y*y));
+                            }
+                            for(int y=height/2; y<height; y++) {
+                                prop[x*height+y][0] = cos(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
+                                prop[x*height+y][1] = sin(dt*(-(x-width)*(x-width) - (y-height)*(y-height)));
+                            }
                         }
                     }
-                    measurement = 2;
-                    Button_measure.Position=0;
-                    Button_new.Position=0;
                 }
             }
             else {
@@ -461,60 +504,107 @@ int main(int argc, char* argv[]) {
             if(measurement==0)
                 measurement=1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS) {
-            if(measurement==2) {
-                for(int j=0; j<height; j++) {
-                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
-                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                        +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f)
-                        +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                    }
-                }
+        if(measurement==2) {
+            if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS) {
                 measurement=0;
             }
-        }
-        if(glfwGetKey(MainWindow,GLFW_KEY_R)==GLFW_PRESS) {
-            if(measurement==1) {
+            if(glfwGetKey(MainWindow,GLFW_KEY_RIGHT)==GLFW_PRESS) {
+                offset_x_1=offset_x_1+1;
                 for(int j=0; j<height; j++) {
-                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
+                    for(int i=0; i<width; i++) {
                         psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
                         //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
                         //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                     }
                 }
-                measurement=2;
+            }
+            if(glfwGetKey(MainWindow,GLFW_KEY_LEFT)==GLFW_PRESS) {
+                offset_x_1=offset_x_1-1;
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {
+                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                    }
+                }
+            }
+            if(glfwGetKey(MainWindow,GLFW_KEY_UP)==GLFW_PRESS) {
+                offset_y_1=offset_y_1+1;
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {
+                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                    }
+                }
+            }
+            if(glfwGetKey(MainWindow,GLFW_KEY_DOWN)==GLFW_PRESS) {
+                offset_y_1=offset_y_1-1;
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {
+                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                    }
+                }
+            }
+            if(glfwGetKey(MainWindow,GLFW_KEY_B)==GLFW_PRESS) {
+                offset_x_1 = offset_x_start;
+                offset_y_1 = offset_y_start;
+                for(int j=0; j<height; j++) {
+                    for(int i=0; i<width; i++) {
+                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                    }
+                }
+            }
+            if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS) {
+                if(Slider_size.Position>0) {
+                    Slider_size.Position=Slider_size.Position-1;
+                    wavesize_1=Slider_size.Position*5.0f;
+                    for(int j=0; j<height; j++) {
+                        for(int i=0; i<width; i++) {
+                            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        }
+                    }
+                }
+            }
+            if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS) {
+                if(Slider_size.Position<Slider_size.Width) {
+                    Slider_size.Position=Slider_size.Position+1;
+                    wavesize_1=Slider_size.Position*5.0f;
+                    for(int j=0; j<height; j++) {
+                        for(int i=0; i<width; i++) {
+                            psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                            psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
+                            //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
+                        }
+                    }
+                }
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS) {
-            if(Slider_size.Position>0) {
-                Slider_size.Position=Slider_size.Position-1;
+        if(measurement==1){
+            if(glfwGetKey(MainWindow,GLFW_KEY_N)==GLFW_PRESS) {
+                measurement = 2;
                 wavesize_1=Slider_size.Position*5.0f;
                 for(int j=0; j<height; j++) {
-                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
+                    for(int i=0; i<width; i++) {
                         psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
                         //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                         psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
                         //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
                     }
                 }
-                measurement = 2;
-            }
-        }
-        if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS) {
-            if(Slider_size.Position<Slider_size.Width) {
-                Slider_size.Position=Slider_size.Position+1;
-                wavesize_1=Slider_size.Position*5.0f;
-                for(int j=0; j<height; j++) {
-                    for(int i=0; i<width; i++) {        /*sin((i+wavesize_1)/10)/2+0.5;*/
-                        psi[i+j*width][0]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*cos(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*cos(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                        psi[i+j*width][1]=exp(-((i-offset_x_1)*(i-offset_x_1)+(j-offset_y_1)*(j-offset_y_1))/wavesize_1)*sin(((i-height/(float)2)*cos(angle_mov_1)+(j-height/(float)2)*sin(angle_mov_1))*8.0f);
-                        //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
-                    }
-                }
-                measurement = 2;
             }
         }
         //camera projection an transformation matrix calculation
