@@ -548,9 +548,9 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-        unsigned int ibufferplane;
-
         //Render Grid
+        unsigned int ibufferplane;
+        glUseProgram(graphShaderID);
         glUniform1f(potential_true,1.0f);
         for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array+1)-1); ibufferplane++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
@@ -572,6 +572,8 @@ int main(int argc, char* argv[]) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
         glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
 
+        //Draw Gui
+        drawGui(window_height,window_width);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -584,7 +586,42 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+void drawGui(int init_true,int window_height, int window_width){
+    //create and activate vertexArrayObject
 
+    static vaoID=0;
+
+    if(init_true){
+        float GUI_positions[4*2*1]=
+        {
+        -0.5f,-0.5f,
+        0.5f,-0.5f,
+        -0.5f,0.5f,
+        0.5f,0.5f,
+        };
+        float GUI_uv[4*2*1]=
+        {
+            0.0f,0.0f,
+            1.0f,0.0f,
+            0.0f,1.0f,
+            1.0f,1.0f,
+        };
+        glGenVertexArrays(1,&vaoID);
+        glBindVertexArray(vaoID);
+        GLuint VertexBufferID=0;
+        glGenBuffers(1,&VertexBufferID);
+        glBindBuffer(GL_ARRAY_BUFFER,VertexBufferID);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*2*4,&GUI_verts,GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer();
+        glEnableVertexAttribArray(1);
+    }
+    glUseProgram(guiShaderID);
+
+
+     //Six vertices per quad, tow floats per vertex
+    //TODO implement check is something need to be upated
+}
 
 float update_delta_time() {             //Get the current time with glfwGetTime and subtract last time to return deltatime
     static double last_glfw_time=0.0f;
