@@ -27,6 +27,7 @@ void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
+void drawGui();
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
@@ -42,8 +43,8 @@ struct GUI {
     int Width;
     int Height;
     int Position;
-    int Render_pos;
-    int Push;
+    int UV_x;
+    int UV_y;
 };
 
 int number_Buttons;
@@ -93,13 +94,14 @@ int main(int argc, char* argv[]) {
     int window_width = 0;
     int window_height = 0;
     glfwGetWindowSize(MainWindow,&window_width,&window_height);
-    int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
-    glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);
-    glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
-    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTexBufferSize);
-    printf("Ind:%d\nVert:%d\nTex:%d\nBuf:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
-
+    {
+        int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
+        glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);
+        glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+        glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTexBufferSize);
+        printf("Ind:%d\nVert:%d\nTex:%d\nBuf:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
+    }
     //Initialize shaders
     //TODO filepath for windows, alter for unix like os
     //GLuint computeShaderId = ComlongpileShaderFromFile(".\\res\\shaders\\compute.glsl",GL_COMPUTE_SHADER);
@@ -115,28 +117,34 @@ int main(int argc, char* argv[]) {
     glUseProgram(graphShaderID);
     GLint MVPmatrix=glGetUniformLocation(graphShaderID,"MVPmatrix");//only callable after glUseProgramm has been called once
     GLint potential_true=glGetUniformLocation(graphShaderID,"potential_true");
-
-
-    /*Compile Gui Shader
+    //Compile Gui Shader
     vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER);
     fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER);
     GLuint guiShaderID = glCreateProgram();
     glAttachShader(guiShaderID, vertexShaderId);         //attach vertex shader to new program
     glAttachShader(guiShaderID, fragmentShaderId);       //attach fragment shader to new program
     glLinkProgram(guiShaderID);
-    */
-    //GLuint* indexlist=createPlaneVBO(256,32);
+
     void* index_buffer_array=createPlaneVBO(PlaneRes,GridRes);
     printf("index_buffer_array%d,%d\n",*((unsigned int*)index_buffer_array),*((unsigned int*)index_buffer_array+1));
-    glDisable(GL_CULL_FACE);
-    glClearColor(0.05f,0.05f,0.1f,0.5f);//Set background color
+    //Set background color
+    glClearColor(0.2f,0.2f,0.2f,1.0f);
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
-    //Texture test code
+    //Gui Texture
+    glActiveTexture(GL_TEXTURE1);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //Link Texture to shader
+    glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,1024,1024,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,read_bmp(".//GUI.bmp"));
+
     glActiveTexture(GL_TEXTURE0);
-    GLuint testTexture=0;
-    glGenTextures(1,&testTexture);
-    glBindTexture(GL_TEXTURE_2D,testTexture);
+    //GLuint testTexture=0;
+    //glGenTextures(1,&testTexture);
+    //glBindTexture(GL_TEXTURE_2D,testTexture);
     //unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
     glUniform1i(glGetUniformLocation(graphShaderID,"texture0"),0);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -173,7 +181,6 @@ int main(int argc, char* argv[]) {
     vec3 eye_vec= {1.0f,1.0f,1.0f};
     vec3 cent_vec= {0.0f,0.0f,0.0f};
     vec3 up_vec= {0.0f,0.0f,1.0f};
-
     int width = Resolution;
     int height = Resolution;
     fftw_complex *psi;
@@ -193,13 +200,11 @@ int main(int argc, char* argv[]) {
     Button_new.Left_up_y=100;
     Button_new.Width=200;
     Button_new.Height=100;
-    Button_new.Push=0;
 
     Button_measure.Left_up_x=0;
     Button_measure.Left_up_y=200;
     Button_measure.Width=200;
     Button_measure.Height=100;
-    Button_measure.Push=0;
 
     Button_esc.Left_up_x=1720;
     Button_esc.Left_up_y=0;
@@ -211,7 +216,6 @@ int main(int argc, char* argv[]) {
     Slider_size.Width=200;
     Slider_size.Height=100;
     Slider_size.Position=50;
-    Slider_size.Render_pos=Slider_size.Left_up_y+Slider_size.Height/2;
 
     //Wave parameter initialisation
     double wavesize_1=Slider_size.Position*2.5f;
@@ -226,8 +230,8 @@ int main(int argc, char* argv[]) {
     int offset_y_2 = 300;
 
     unsigned char* speicher = calloc(width*height*4,1);
+
     unsigned char* pot=read_bmp(".//double_slit512.bmp");
-    unsigned char* GUI_template=read_bmp(".//GUI.bmp");
     double* potential=malloc(width*height*sizeof(double));
 
     for(int i=0; i<width*height; i++) {
@@ -267,6 +271,7 @@ int main(int argc, char* argv[]) {
             +exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
         }
     }
+
     while (!glfwWindowShouldClose(MainWindow)) {
         if(measurement == 0) {
 
@@ -354,15 +359,15 @@ int main(int argc, char* argv[]) {
                         }
                     }
                     measurement=0;
-                    Button_new.Push=1;
-                    Button_measure.Push=0;
+                    Button_new.Position=1;
+                    Button_measure.Position=0;
                 }
             }
             if(xpos>Button_measure.Left_up_x&&xpos<Button_measure.Left_up_x+Button_measure.Width) {
                 if(ypos>Button_measure.Left_up_y&&ypos<Button_measure.Left_up_y+Button_measure.Height) {
                     measurement = 1;
-                    Button_measure.Push=1;
-                    Button_new.Push=0;
+                    Button_measure.Position=1;
+                    Button_new.Position=0;
                 }
             }
             if(xpos>Button_esc.Left_up_x&&xpos<Button_esc.Left_up_x+Button_esc.Width) {
@@ -383,13 +388,13 @@ int main(int argc, char* argv[]) {
                         }
                     }
                     measurement = 2;
-                    Button_measure.Push=0;
-                    Button_new.Push=0;
+                    Button_measure.Position=0;
+                    Button_new.Position=0;
                 }
             }
             else {
-                Button_measure.Push=0;
-                Button_new.Push=0;
+                Button_measure.Position=0;
+                Button_new.Position=0;
             }
         }
 
@@ -398,12 +403,12 @@ int main(int argc, char* argv[]) {
             glfwGetCursorPos(MainWindow, &xpos, &ypos);
             if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
                 if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
-                    Button_new.Push=0;
+                    Button_new.Position=0;
                 }
             }
             if(xpos>Button_measure.Left_up_x&&xpos<Button_measure.Left_up_x+Button_measure.Width) {
                 if(ypos>Button_measure.Left_up_y&&ypos<Button_measure.Left_up_y+Button_measure.Height) {
-                    Button_measure.Push=0;
+                    Button_measure.Position=0;
                 }
             }
         }
@@ -426,9 +431,6 @@ int main(int argc, char* argv[]) {
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
 
         float delta_time = update_delta_time();
-
-        //testani_1=testani_1+delta_time*20;
-        //Camera Movement calculationunsigned char* speicher = calloc(width*height*4,1);
 
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS) {
             if(rotation_up_down<(3.0)) {
@@ -556,10 +558,11 @@ int main(int argc, char* argv[]) {
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
         glDrawElements(GL_LINES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+1),GL_UNSIGNED_INT,0);
-
         //enable Transparency
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE,GL_ONE);
+        //glEnable(GL_BLEND);
+        //glBlendFunc(GL_ONE,GL_ONE);
+        //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
         //Render Plane
         glUniform1f(potential_true,0.0f);
         for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array)-1); ibufferplane++) {
@@ -568,8 +571,6 @@ int main(int argc, char* argv[]) {
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
         glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
-        //disable Transparency
-        glDisable(GL_BLEND);
 
         //Swap Buffers
         glFinish();
