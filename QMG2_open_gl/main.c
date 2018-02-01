@@ -569,9 +569,8 @@ int main(int argc, char* argv[]) {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         //Draw Plane and Grid
         drawPlaneAndGrid(0,PlaneRes,GridRes,mvp4x4);
-
         //Draw Gui
-        //drawGui(0,window_height,window_width);
+        drawGui(0,window_height,window_width);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -599,7 +598,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
     static GLuint gridAndPlaneShaderID=0;
     if(init_true==1){
         //Compile Shaders
-        GLuint gridAndPlaneShaderID = glCreateProgram();              //create program to run on GPU
+        gridAndPlaneShaderID = glCreateProgram();              //create program to run on GPU
         glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl",GL_VERTEX_SHADER));        //attach vertex shader to new program
         glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl",GL_FRAGMENT_SHADER));       //attach fragment shader to new program
         glLinkProgram(gridAndPlaneShaderID);
@@ -611,6 +610,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
 
         //Texture initialisation for GL_TEXTURE0
         glUniform1i(glGetUniformLocation(gridAndPlaneShaderID,"texture0"),0);
+        printf("mvp%d,renderGoP%d\n",mvpMatrixUniform,renderGridOrPlaneUniform);
 
         /*
         glActiveTexture(GL_TEXTURE0);
@@ -773,7 +773,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
         glUniform1f(renderGridOrPlaneUniform,1.0f);
         unsigned int buffernumber;
         //Draw all vertices but those in the last index buffer
-        for(buffernumber=0; buffernumber<indexBufferCountGrid; buffernumber++) {
+        for(buffernumber=0; buffernumber<(indexBufferCountGrid-1); buffernumber++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboGridPointer[buffernumber]);
             glDrawElements(GL_LINES,(maxSupportedIndices/2)*2,GL_UNSIGNED_INT,0);
         }
@@ -808,7 +808,7 @@ void drawGui(int init_true,int window_height, int window_width){
         //Compile Shader
         guiShaderID = glCreateProgram();
         glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER));         //attach vertex shader to new program
-        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER));       //attach fragment shader to new program
+        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER));     //attach fragment shader to new program
         glLinkProgram(guiShaderID);
         //Set texture for gui shader
         glActiveTexture(GL_TEXTURE1);
