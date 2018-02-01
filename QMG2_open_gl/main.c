@@ -663,7 +663,7 @@ int main(int argc, char* argv[]) {
         glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
 
         //Draw Gui
-        drawGui(window_height,window_width);
+        //drawGui(window_height,window_width);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -676,10 +676,11 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void drawGui(int init_true,int window_height, int window_width){
+void drawGui(int init_true,int window_height, int window_width, GLuint guiShaderID){
     //create and activate vertexArrayObject
 
-    static vaoID=0;
+    static GLuint vaoID=0;
+    static GLuint vboIndices=0;
 
     if(init_true){
         float GUI_positions[4*2*1]=
@@ -701,14 +702,17 @@ void drawGui(int init_true,int window_height, int window_width){
         GLuint VertexBufferID=0;
         glGenBuffers(1,&VertexBufferID);
         glBindBuffer(GL_ARRAY_BUFFER,VertexBufferID);
-        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*2*4,&GUI_verts,GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*2*4,&GUI_positions,GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer();
+        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2,0);
         glEnableVertexAttribArray(1);
+        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2,2);
+
+    }else{
+        glUseProgram(guiShaderID);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndices);
+        glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
     }
-    glUseProgram(guiShaderID);
-
-
      //Six vertices per quad, tow floats per vertex
     //TODO implement check is something need to be upated
 }
