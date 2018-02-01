@@ -27,12 +27,12 @@ void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
-void drawGui();
+void drawGui(int init_true,int window_height, int window_width);
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
 #define Resolution 512
-#define PlaneRes 4096       //must be power of 2
+#define PlaneRes 1024       //must be power of 2
 #define GridRes 256        //must be power of 2
 GLFWwindow* MainWindow;
 #define ButtonStart
@@ -48,6 +48,7 @@ struct GUI {
 };
 
 int number_Buttons;
+GLuint VboPositionsId=0;
 
 int main(int argc, char* argv[]) {
     //GLFW init
@@ -61,8 +62,8 @@ int main(int argc, char* argv[]) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    //MainWindow = glfwCreateWindow(1900, 1000, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(1000, 700, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -117,13 +118,6 @@ int main(int argc, char* argv[]) {
     glUseProgram(graphShaderID);
     GLint MVPmatrix=glGetUniformLocation(graphShaderID,"MVPmatrix");//only callable after glUseProgramm has been called once
     GLint potential_true=glGetUniformLocation(graphShaderID,"potential_true");
-    //Compile Gui Shader
-    vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER);
-    fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER);
-    GLuint guiShaderID = glCreateProgram();
-    glAttachShader(guiShaderID, vertexShaderId);         //attach vertex shader to new program
-    glAttachShader(guiShaderID, fragmentShaderId);       //attach fragment shader to new program
-    glLinkProgram(guiShaderID);
 
     void* index_buffer_array=createPlaneVBO(PlaneRes,GridRes);
     printf("index_buffer_array%d,%d\n",*((unsigned int*)index_buffer_array),*((unsigned int*)index_buffer_array+1));
@@ -137,16 +131,15 @@ int main(int argc, char* argv[]) {
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //Link Texture to shader
-    glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,1024,1024,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,read_bmp(".//GUI.bmp"));
-
+    glUseProgram(graphShaderID);
     glActiveTexture(GL_TEXTURE0);
     //GLuint testTexture=0;
     //glGenTextures(1,&testTexture);
     //glBindTexture(GL_TEXTURE_2D,testTexture);
     //unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
     glUniform1i(glGetUniformLocation(graphShaderID,"texture0"),0);
+
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     //float tempBorderColor[]={0.5f,0.5f,0.0f,0.0f};
@@ -281,6 +274,9 @@ int main(int argc, char* argv[]) {
             //+exp(-((i-offset_x_2)*(i-offset_x_2)+(j-offset_y_2)*(j-offset_y_2))/wavesize_2)*sin(((i-height/(float)2)*cos(angle_mov_2)+(j-height/(float)2)*sin(angle_mov_2))*8.0f);
         }
     }
+
+    //Init gui
+    drawGui(1,window_height,window_width);
 
     while (!glfwWindowShouldClose(MainWindow)) {
         if(measurement == 0) {
@@ -614,6 +610,7 @@ int main(int argc, char* argv[]) {
         mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
         mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
+        glUseProgram(graphShaderID);
         glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
         glUniform1f(potential_true,1.0f);
 
@@ -639,9 +636,13 @@ int main(int argc, char* argv[]) {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         //Render Grid
+        glBindBuffer(GL_ARRAY_BUFFER,VboPositionsId);
+        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        glEnableVertexAttribArray(0);//x,y
+        glDisableVertexAttribArray(1);
         unsigned int ibufferplane;
-        glUseProgram(graphShaderID);
-        glUniform1f(potential_true,1.0f);
+
+        glUniform1f(potential_true,1.0f);//glUniform1f(potential_true,1.0f);
         for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array+1)-1); ibufferplane++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
             glDrawElements(GL_LINES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/2)*2,GL_UNSIGNED_INT,0);
@@ -663,7 +664,7 @@ int main(int argc, char* argv[]) {
         glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
 
         //Draw Gui
-        //drawGui(window_height,window_width);
+        drawGui(0,window_height,window_width);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -676,42 +677,65 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void drawGui(int init_true,int window_height, int window_width, GLuint guiShaderID){
-    //create and activate vertexArrayObject
-
+void drawGui(int init_true,int window_height, int window_width){
     static GLuint vaoID=0;
-    static GLuint vboIndices=0;
-
-    if(init_true){
-        float GUI_positions[4*2*1]=
+    static GLuint vboIndicesID=0;
+    static GLuint vboVertexID=0;
+    static GLuint guiShaderID=0;
+    if(init_true==1){
+        //Compile Shader
+        guiShaderID = glCreateProgram();
+        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER));         //attach vertex shader to new program
+        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER));       //attach fragment shader to new program
+        glLinkProgram(guiShaderID);
+        //Set texture for gui shader
+        glUseProgram(guiShaderID);
+        glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
+        printf("Gui shader successfully linked as NO.: %d.\n\n",guiShaderID);
+        float GUI_positions_and_uv[8*2]=
         {
-        -0.5f,-0.5f,
-        0.5f,-0.5f,
-        -0.5f,0.5f,
-        0.5f,0.5f,
-        };
-        float GUI_uv[4*2*1]=
-        {
+            0.0f,0.0f,
+            0.0f,1.0f,
+            1.0f,0.0f,
+            1.0f,1.0f,
             0.0f,0.0f,
             1.0f,0.0f,
             0.0f,1.0f,
             1.0f,1.0f,
         };
+        unsigned int GUI_indices[6]={
+            0,1,2,
+            2,1,3
+        };
+
         glGenVertexArrays(1,&vaoID);
         glBindVertexArray(vaoID);
-        GLuint VertexBufferID=0;
-        glGenBuffers(1,&VertexBufferID);
-        glBindBuffer(GL_ARRAY_BUFFER,VertexBufferID);
-        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*2*4,&GUI_positions,GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2,0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,2,2);
 
+        glGenBuffers(1,&vboVertexID);
+        glBindBuffer(GL_ARRAY_BUFFER,vboVertexID);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*16,&GUI_positions_and_uv,GL_STATIC_DRAW);
+
+        glGenBuffers(1,&vboIndicesID);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(GLuint),&GUI_indices,GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,0,(GLvoid*)(sizeof(float)*8));
+        glEnableVertexAttribArray(1);
     }else{
+        glBindBuffer(GL_ARRAY_BUFFER,vboVertexID); //TODO THIS BREAKS IT
+        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,0,(GLvoid*)(sizeof(float)*8));
+        glEnableVertexAttribArray(1);
+        printf("Gui shader is NO.: %d.\n\n",guiShaderID);
         glUseProgram(guiShaderID);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndices);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
+        glDisable(GL_DEPTH_TEST);
         glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+        glEnable(GL_DEPTH_TEST);
     }
      //Six vertices per quad, tow floats per vertex
     //TODO implement check is something need to be upated
@@ -742,7 +766,7 @@ GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType) {
     //read from file into heap memory
     FILE* filepointer=fopen(FilePath,"rb");                  //open specified file in read only mode
     if(filepointer==NULL) {
-        printf("Error: Filepointer to shaderfile at %screatePlaneVBO2 could not be loaded.",FilePath);
+        printf("Error: Filepointer to shaderfile at %s createPlaneVBO2 could not be loaded.",FilePath);
         //return;
     }
     fseek(filepointer,0,SEEK_END);                          //shift filePointer to EndOfFile Position to get filelength
@@ -883,11 +907,11 @@ void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution) 
             plane_vertex_data[vert_index++]=(((float)y)/(finalVertexResolution-1))-0.5f; //Set height (y) to zero
         }
     }
-    GLuint VboPositionsId=0;
+    //TODO GLuint VboPositionsId=0;
     glGenBuffers(1, &VboPositionsId);                                                          //create buffer
     glBindBuffer(GL_ARRAY_BUFFER, VboPositionsId);                                            //Link buffer
     glBufferData(GL_ARRAY_BUFFER, 2*finalVertexResolution*finalVertexResolution*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
-    free(plane_vertex_data);    //we no longer need plane_verrtex_data because it has been uploaded to gpu memory
+    free(plane_vertex_data);    //we no longer need plane_vertex_data because it has been uploaded to gpu memory
     glEnableVertexAttribArray(0);//x,y
     glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
 
