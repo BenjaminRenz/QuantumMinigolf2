@@ -30,6 +30,7 @@ float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
 void drawGui(int init_true,int window_height,int window_width);
+void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
@@ -50,7 +51,8 @@ struct GUI {
 };
 
 int number_Buttons;
-GLuint VboPositionsId=0;
+GLuint VboPositionsId=0; //TODO check if removable
+GLuint psiTexture;
 
 int main(int argc, char* argv[]) {
     //GLFW init
@@ -105,43 +107,10 @@ int main(int argc, char* argv[]) {
         glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTexBufferSize);
         printf("Ind:%d\nVert:%d\nTex:%d\nBuf:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
     }
-    //Initialize shaders
-    //TODO filepath for windows, alter for unix like os
-    //GLuint computeShaderId = ComlongpileShaderFromFile(".\\res\\shaders\\compute.glsl",GL_COMPUTE_SHADER);
-
-    //Compile graph 3D shader
-    GLuint vertexShaderId = CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl",GL_VERTEX_SHADER);
-    GLuint fragmentShaderId = CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl",GL_FRAGMENT_SHADER);
-    GLuint graphShaderID = glCreateProgram();              //create program to run on GPU
-    glAttachShader(graphShaderID, vertexShaderId);         //attach vertex shader to new program
-    glAttachShader(graphShaderID, fragmentShaderId);       //attach fragment shader to new program
-    glLinkProgram(graphShaderID);
-    //Get Shader Variables
-    glUseProgram(graphShaderID);
-    GLint MVPmatrix=glGetUniformLocation(graphShaderID,"MVPmatrix");//only callable after glUseProgramm has been called once
-    GLint potential_true=glGetUniformLocation(graphShaderID,"potential_true");
-    //Compile Gui Shader
-
-    void* index_buffer_array=createPlaneVBO(PlaneRes,GridRes);
-    printf("index_buffer_array%d,%d\n",*((unsigned int*)index_buffer_array),*((unsigned int*)index_buffer_array+1));
     //Set background color
     glClearColor(0.2f,0.2f,0.2f,1.0f);
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
-    //Gui Texture
-    glUseProgram(graphShaderID);
-    glActiveTexture(GL_TEXTURE0);
-    //GLuint testTexture=0;
-    //glGenTextures(1,&testTexture);
-    //glBindTexture(GL_TEXTURE_2D,testTexture);
-    //unsigned char* TextureImageTest=read_bmp(".\\double_slit.bmp");
-    glUniform1i(glGetUniformLocation(graphShaderID,"texture0"),0);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //float tempBorderColor[]={0.5f,0.5f,0.0f,0.0f};
-    //glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR, tempBorderColor);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     /*//https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
     //Generate data memory for psi
@@ -166,12 +135,12 @@ int main(int argc, char* argv[]) {
     double rotation_up_down=PI;//PI/4.0f;
     double rotation_left_right=PI;
     mat4x4 mvp4x4;
-    mat4x4 persp4x4;
+    mat4x4 persp4x4; //remove?? TODO
     vec3 eye_vec= {1.0f,1.0f,1.0f};
     vec3 cent_vec= {0.0f,0.0f,0.0f};
     vec3 up_vec= {0.0f,0.0f,1.0f};
-    int width = Resolution;
-    int height = Resolution;
+    int width = Resolution;     //TODO can be removed
+    int height = Resolution;    //TODO can be removed
     fftw_complex *psi;
     fftw_complex *prop;
     psi = (fftw_complex*) fftw_alloc_complex(width*height);
@@ -252,9 +221,24 @@ int main(int argc, char* argv[]) {
 
     unsigned int measure_win_x=Resolution/2;
     unsigned int measure_win_y=Resolution-100;
+    //@@Graphics
+    //init texture for Psi because its dynamic
+    glActiveTexture(GL_TEXTURE0);
+    glGenTextures(1,&psiTexture);
+    glBindTexture(GL_TEXTURE_2D,psiTexture);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    //Init plane and grid
+    drawPlaneAndGrid(1,PlaneRes,GridRes,mvp4x4); //mvp4x4 useless here
+    printf("Info: Generation of plane and grid successfull!\n");
 
     //Init gui
     drawGui(1,window_height,window_width);
+    printf("Info: Generation of gui successfull!\n");
+    //Graphics@@
 
     while (!glfwWindowShouldClose(MainWindow)) {
         if(measurement == 0) {
@@ -419,7 +403,11 @@ int main(int argc, char* argv[]) {
             speicher[i*4+3]=pot[i*4+1];
         }
 
+        //@@Graphics
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D,psiTexture);
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
+        //Graphics@@
 
         delta_time = update_delta_time();
 
@@ -558,9 +546,7 @@ int main(int argc, char* argv[]) {
         mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
         mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
-        glUseProgram(graphShaderID);
-        glUniformMatrix4fv(MVPmatrix,1,GL_FALSE,(GLfloat*)mvp4x4);
-        glUniform1f(potential_true,1.0f);
+
 
         /*//update textures
         glBindTexture(GL_TEXTURE_2D, psi_texture);
@@ -578,40 +564,14 @@ int main(int argc, char* argv[]) {
             GLuint temp=PBO1;
             PBO1=PBO2;*0.5+0.5
             PBO2=temp;
-        }
-*/
+        }*/
 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-        //Render Grid
-        glBindBuffer(GL_ARRAY_BUFFER,VboPositionsId);
-        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
-        glEnableVertexAttribArray(0);//x,y
-        glDisableVertexAttribArray(1);
-        unsigned int ibufferplane;
-        glUniform1f(potential_true,1.0f);
-        for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array+1)-1); ibufferplane++) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
-            glDrawElements(GL_LINES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/2)*2,GL_UNSIGNED_INT,0);
-        }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+(*((unsigned int*)index_buffer_array))+ibufferplane));
-        glDrawElements(GL_LINES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+1),GL_UNSIGNED_INT,0);
-        //enable Transparency
-        //glEnable(GL_BLEND);
-        //glBlendFunc(GL_ONE,GL_ONE);
-        //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
-        //Render Plane
-        glUniform1f(potential_true,0.0f);
-        for(ibufferplane=0; ibufferplane<(*((unsigned int*)index_buffer_array)-1); ibufferplane++) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
-            glDrawElements(GL_TRIANGLES,(*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)+2)/3)*3,GL_UNSIGNED_INT,0);
-        }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,*(((GLuint*)index_buffer_array)+2+(3*sizeof(unsigned long)/sizeof(GLuint))+ibufferplane));
-        glDrawElements(GL_TRIANGLES,*((unsigned long*)index_buffer_array+(2*sizeof(GLuint))/sizeof(unsigned long)),GL_UNSIGNED_INT,0);
+        //Draw Plane and Grid
+        drawPlaneAndGrid(0,PlaneRes,GridRes,mvp4x4);
 
         //Draw Gui
-        drawGui(0,window_height,window_width);
+        //drawGui(0,window_height,window_width);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -643,6 +603,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
         glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl",GL_VERTEX_SHADER));        //attach vertex shader to new program
         glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl",GL_FRAGMENT_SHADER));       //attach fragment shader to new program
         glLinkProgram(gridAndPlaneShaderID);
+
         //Get Shader Variables
         glUseProgram(gridAndPlaneShaderID);
         mvpMatrixUniform=glGetUniformLocation(gridAndPlaneShaderID,"MVPmatrix");//only callable after glUseProgramm has been called once
@@ -667,9 +628,9 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
             return;
         }
         {
-            GLint* maxSupportedVertices=0;
-            glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,maxSupportedVertices);
-            if(*maxSupportedVertices<1048576){
+            GLint maxSupportedVertices=0;
+            glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxSupportedVertices);
+            if(maxSupportedVertices<1048576){
                 printf("Error: Vertex Resolution of your Graphic Card are to low. (Required Minimum 1024*1024)\nError: Initialization failed!");
                 return;
             }
@@ -691,7 +652,8 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
             indexBufferCountGrid=(((GridResolution-1)*(GridResolution-1)*8)/((maxSupportedIndices/2)*2))+1;
         }
         //generate arrays
-
+        iboPlanePointer=malloc(indexBufferCountPlane*sizeof(GLuint));
+        iboGridPointer=malloc(indexBufferCountGrid*sizeof(GLuint));
         //calculate vertex count and offset if grid- and plane-resolution are different
         unsigned int finalVertexResolution=0;
         unsigned int gridOffsetMultiplier=0;
@@ -728,6 +690,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
         free(plane_vertex_data);    //we no longer need plane_vertex_data because it has been uploaded to gpu memory
         glEnableVertexAttribArray(0);//x,y
         glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        printf("Info: vertices for plane/grid successfully generated\n");
 
         //Generate Vertex Indices for Plane
         GLuint* plane_indices = malloc((finalVertexResolution-1)*(finalVertexResolution-1)*8*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
@@ -745,8 +708,8 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
                 //printf("vert%d,%d,%d,%d,%d,%d\n",plane_indices[vert_index-6],plane_indices[vert_index-5],plane_indices[vert_index-4],plane_indices[vert_index-3],plane_indices[vert_index-2],plane_indices[vert_index-1]);
             }
         }
-        glGenBuffers(indexBufferCountPlane,iboPlanePointer);
 
+        glGenBuffers(indexBufferCountPlane,iboPlanePointer);
         //Now upload this data to GPU
         unsigned int bufferNumber=0;
         for(; bufferNumber<(indexBufferCountPlane-1); bufferNumber++) { //Upload all but the last buffer
@@ -761,6 +724,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxSupportedIndices/3)*3)*sizeof(GLuint),plane_indices+((maxSupportedIndices/3)*3)*bufferNumber,GL_STATIC_DRAW);
         }
         indicesInLastPlaneBuffer=tempVertIndex%((maxSupportedIndices/3)*3);
+        printf("Info: indices for plane successfully generated\n");
 
         //Generate Vertex Indices for Grid
         tempVertIndex=0;
@@ -780,9 +744,10 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
                 plane_indices[tempVertIndex++]=x+gridOffsetMultiplier+((y+gridOffsetMultiplier)*finalVertexResolution);
             }
         }
+
         glGenBuffers(indexBufferCountGrid,iboGridPointer);   //Skip over 2*int+(2*long==4*int)=6
         bufferNumber=0;
-        for(; bufferNumber<indexBufferCountGrid; bufferNumber++) { //Upload all but the last buffer
+        for(; bufferNumber<(indexBufferCountGrid-1); bufferNumber++) { //Upload all but the last buffer
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboGridPointer[bufferNumber]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxSupportedIndices/2)*2)*sizeof(GLuint),plane_indices+((maxSupportedIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
         }
@@ -794,6 +759,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxSupportedIndices/2)*2)*sizeof(GLuint),plane_indices+((maxSupportedIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
         }
         indicesInLastGridBuffer=tempVertIndex%((maxSupportedIndices/2)*2);
+        printf("Info: indices for grid successfully generated\n");
         free(plane_indices);                //Cleanup Array for indices
     }else{
         //Draw Call for Grid and Plane
@@ -1018,7 +984,7 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
     printf("\nGLerror end\n");
 }
 
-void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution) {
+/*void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution) {
     //Input Parameter check
     if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)) {      //Check if plane resolution/grid resolution is power of 2
         printf("Error: Resolution of plane or grid is not a power of 2");
@@ -1162,7 +1128,7 @@ void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution) 
     printf("Info: Supported Max Indices %d\n",*(((unsigned long*)return_data_pointer)+(2*sizeof(unsigned int))/sizeof(unsigned long)+2));
     free(plane_indices);
     return return_data_pointer;//return_data_pointer;
-}
+}*/
 
 
 
