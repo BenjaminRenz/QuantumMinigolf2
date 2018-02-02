@@ -17,7 +17,7 @@
 #include <limits.h>
 #ifdef _WIN32
 #define filepath_gui_bmp ".//GUI.bmp"
-#define filepath_potential_bmp ".//double_slit512.bmp"
+#define filepath_potential_bmp ".//512template.bmp"
 #elif __linux__
 #define filepath_gui_bmp "./GUI.bmp"
 #define filepath_potential_bmp "./double_slit512.bmp"
@@ -44,7 +44,7 @@ GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
 #define Resolution 512
-#define PlaneRes 1024    //must be power of 2
+#define PlaneRes 512    //must be power of 2
 #define GridRes 256        //must be power of 2
 GLFWwindow* MainWindow;
 #define ButtonStart
@@ -94,8 +94,8 @@ int main(int argc, char* argv[]) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
-    MainWindow = glfwCreateWindow(1900, 1000, "Quantum Minigolf 2.0", NULL, NULL);
-    //MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    //MainWindow = glfwCreateWindow(1900, 1000, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -617,7 +617,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned i
 
         //Render Plane
         glUniform1f(renderGridOrPlaneUniform,0.0f);
-        for(buffernumber=0; buffernumber<indexBufferCountPlane; buffernumber++) {
+        for(buffernumber=0; buffernumber<(indexBufferCountPlane-1); buffernumber++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboPlanePointer[buffernumber]);
             glDrawElements(GL_TRIANGLES,(maxSupportedIndices/3)*3,GL_UNSIGNED_INT,0);
         }
