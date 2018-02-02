@@ -17,6 +17,7 @@
 #include <limits.h>
 
 #define filepath_gui_bmp ".//GUI.bmp"
+#define filepath_potential_bmp ".//double_slit512.bmp"
 #define G_OBJECT_INIT 0
 #define G_OBJECT_DRAW 1
 #define G_OBJECT_UPDATE 2
@@ -184,7 +185,7 @@ int main(int argc, char* argv[]) {
     offset_y = offset_y_start;
 
     unsigned char* speicher = calloc(Resolution*Resolution*4,1);
-    unsigned char* pot=read_bmp(".//double_slit512.bmp");
+    unsigned char* pot=read_bmp(filepath_potential_bmp);
     double* potential=malloc(Resolution*Resolution*sizeof(double));
 
     for(int i=0; i<Resolution*Resolution; i++) {
