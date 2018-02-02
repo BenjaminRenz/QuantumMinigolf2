@@ -15,9 +15,16 @@
 #include <math.h>
 #define PI 3.14159265358979323846
 #include <limits.h>
-
+#ifdef _WIN32
 #define filepath_gui_bmp ".//GUI.bmp"
 #define filepath_potential_bmp ".//double_slit512.bmp"
+#elif __linux__
+#define filepath_gui_bmp "./GUI.bmp"
+#define filepath_potential_bmp "./double_slit512.bmp"
+#endif
+
+
+
 #define G_OBJECT_INIT 0
 #define G_OBJECT_DRAW 1
 #define G_OBJECT_UPDATE 2
@@ -26,13 +33,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
-void* createPlaneVBO(unsigned int PlaneResolution, unsigned int GridResolution);
-void createCube();
+void glfw_error_callback(int error, const char* description);
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
-void glfw_error_callback(int error, const char* description);
 void drawGui(int G_OBJECT_STATE,int window_height,int window_width);
 void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
@@ -103,8 +108,8 @@ int main(int argc, char* argv[]) {
     if(GLEW_OK != err) {
         printf("Error: glewInit() failed.");
     }
-    printf("QuantumMinigolf v2 opengl:\n");
-    printf("using OpenGl Version: %s\n",glGetString(GL_VERSION));
+    printf("QuantumMinigolf2\n");
+    printf("Info: Using OpenGl Version: %s\n",glGetString(GL_VERSION));
     //enable v-sync
     //glfwSwapInterval(1);
     //Refister Callback for errors (debugging)
@@ -128,7 +133,7 @@ int main(int argc, char* argv[]) {
         glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
         glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTexBufferSize);
-        printf("Ind:%d\nVert:%d\nTex:%d\nBuf:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
+        printf("Info: maxIndicesPerBuffer:%d\nInfo: maxVertexPerBuffer:%d\nInfo: maxTextureSize:%d\nInfo: maxBufferSize:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
     }
     //Set background color
     glClearColor(0.2f,0.2f,0.2f,1.0f);
@@ -454,7 +459,6 @@ void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned i
 
         //Texture initialisation for GL_TEXTURE0 (texture is generated outside because we need its address elsewhere
         glUniform1i(glGetUniformLocation(gridAndPlaneShaderID,"texture0"),0);
-        printf("mvp%d,renderGoP%d\n",mvpMatrixUniform,renderGridOrPlaneUniform);
 
         //input checking
         if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)) {      //Check if plane resolution/grid resolution is power of 2
@@ -650,7 +654,6 @@ void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
 
         glUseProgram(guiShaderID);
         glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
-        printf("Gui shader successfully linked as NO.: %d.\n\n",guiShaderID);
         float GUI_positions_and_uv[8*2]=
         {
             0.0f,0.0f,
@@ -977,7 +980,7 @@ unsigned char* read_bmp(char* filepath) {
     FILE *filepointer=fopen(filepath,"rb");
 
     if(filepointer==NULL) {
-        printf("File :%s could not be found\n",filepath);
+        printf("Error: File :%s could not be found\n",filepath);
         fclose(filepointer);
         return 0;
     }
@@ -985,59 +988,59 @@ unsigned char* read_bmp(char* filepath) {
     fseek(filepointer,0,SEEK_SET);  //Jump to beginning of file
     if(read_short_from_endian_file(filepointer)!=0x4D42) { // (equals BM in ASCII)
         fclose(filepointer);
-        printf("File :%s is not an BMP\n",filepath);
+        printf("Error: File :%s is not an BMP\n",filepath);
         return 0;
     }
 
     fseek(filepointer,10,SEEK_SET);
     unsigned int BitmapOffset = read_uint_from_endian_file(filepointer);
-    printf("data offset:%d\n",BitmapOffset);
+    printf("Info: BMP data offset:%d\n",BitmapOffset);
 
     if(read_uint_from_endian_file(filepointer)!=124) {
-        printf("BitmapHeader is not BITMAPV5HEADER / 124 \n");
+        printf("Error: BitmapHeader is not BITMAPV5HEADER / 124 \n");
         fclose(filepointer);
         return 0;
     }
     unsigned int BitmapWidth=read_uint_from_endian_file(filepointer);
-    printf("BitmapWidth is %d.\n",BitmapWidth);
+    printf("Info: BitmapWidth is %d.\n",BitmapWidth);
 
     unsigned int BitmapHeight=read_uint_from_endian_file(filepointer);
-    printf("BitmapHeight is %d.\n",BitmapHeight);
+    printf("Info: BitmapHeight is %d.\n",BitmapHeight);
 
     if(read_short_from_endian_file(filepointer)!=1) {
-        printf("Unsupported plane count\n");
+        printf("Error: Unsupported plane count\n");
         return 0;
     }
 
     unsigned int BitmapColorDepth=read_short_from_endian_file(filepointer);
-    printf("BMP color depth:%d",BitmapColorDepth);
+    printf("Info: BMP color depth:%d",BitmapColorDepth);
     unsigned int BitmapSizeCalculated=(BitmapColorDepth/8)*(BitmapWidth+(BitmapWidth%4))*BitmapWidth;
 
     unsigned int BitmapCompression=read_uint_from_endian_file(filepointer);
     switch(BitmapCompression) {
     case 0:
-        printf("Compression type: none/BI_RGB\n");
+        printf("Warn: Compression type: none/BI_RGB\n");
         break;
     case 3:
-        printf("Compression type: Bitfields/BI_BITFIELDS\n");
+        printf("Info: Compression type: Bitfields/BI_BITFIELDS\n");
         break;
     default:
-        printf("Unsupported compression %d\n",BitmapCompression);
+        printf("Error: Unsupported compression %d\n",BitmapCompression);
         fclose(filepointer);
         return 0;
         break;
     }
     unsigned int BitmapImageSize=read_uint_from_endian_file(filepointer);
     if(BitmapImageSize!=BitmapSizeCalculated) {
-        printf("Error while reading image size: Calculated Image Size: %d.\nRead Image size: %d\n",BitmapSizeCalculated,BitmapImageSize);
+        printf("Error: Reading image size: Calculated Image Size: %d.\nRead Image size: %d\n",BitmapSizeCalculated,BitmapImageSize);
         fclose(filepointer);
         return 0;
     }
-    printf("Image Size:%d\n",BitmapSizeCalculated);
+    printf("Info: Image Size:%d\n",BitmapSizeCalculated);
     /*unsigned int BitmapXPpM=*/read_uint_from_endian_file(filepointer);
     /*unsigned int BitmapYPpM=*/read_uint_from_endian_file(filepointer);
     unsigned int BitmapColorsInPalette=read_uint_from_endian_file(filepointer);
-    printf("Colors in palette: %d.\n",BitmapColorsInPalette);
+    printf("Info: Colors in palette: %d.\n",BitmapColorsInPalette);
     fseek(filepointer,4,SEEK_CUR);//skip over important color count
     if(BitmapCompression==3) {
         unsigned char RGBA_mask[4];
@@ -1057,25 +1060,25 @@ unsigned char* read_bmp(char* filepath) {
                 RGBA_mask[color_channel]=0;
                 break;
             default:
-                printf("Error while BITMASK read. Value: %x!\n",color_channel_mask);
+                printf("Error: Invalid BITMASK. Value: %x!\n",color_channel_mask);
                 fclose(filepointer);
                 return 0;
                 break;
             }
         }
         //TODO implement swapping routine if brga!=[3,2,1,0]
-        printf("Shifting value for R:%d G:%d B:%d A:%d\n",RGBA_mask[0],RGBA_mask[1],RGBA_mask[2],RGBA_mask[3]);
+        printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n",RGBA_mask[0],RGBA_mask[1],RGBA_mask[2],RGBA_mask[3]);
         unsigned char* imageData=malloc(BitmapSizeCalculated);
-        printf("BMOFFST:%d\n",BitmapOffset);
+        printf("Info: BMOFFST: %d\n",BitmapOffset);
         fseek(filepointer,BitmapOffset,SEEK_SET);//jump to pixel data
-        printf("Calsize:%d\n",BitmapSizeCalculated);
+        printf("Info: Calsize: %d\n",BitmapSizeCalculated);
         if(fread(imageData,BitmapSizeCalculated,1,filepointer)==0) {
-            printf("Error while reading!");
+            printf("Error: Reading failed!");
         }
         fclose(filepointer);
         return imageData;
     }
-    printf("Currently not implemented!");
+    printf("Error: Currently not implemented!");
     fclose(filepointer);
     return 0;
 }
