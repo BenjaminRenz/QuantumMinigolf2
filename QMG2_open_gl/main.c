@@ -17,6 +17,9 @@
 #include <limits.h>
 
 #define filepath_gui_bmp ".//GUI.bmp"
+#define G_OBJECT_INIT 0
+#define G_OBJECT_DRAW 1
+#define G_OBJECT_UPDATE 2
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
@@ -29,8 +32,8 @@ void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
 void glfw_error_callback(int error, const char* description);
-void drawGui(int init_true,int window_height,int window_width);
-void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4);
+void drawGui(int G_OBJECT_STATE,int window_height,int window_width);
+void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
@@ -232,11 +235,11 @@ int main(int argc, char* argv[]) {
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     //Init plane and grid
-    drawPlaneAndGrid(1,PlaneRes,GridRes,mvp4x4); //mvp4x4 useless here
+    drawPlaneAndGrid(G_OBJECT_INIT,PlaneRes,GridRes,NULL); //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
 
     //Init gui
-    drawGui(1,window_height,window_width);
+    drawGui(G_OBJECT_INIT,window_height,window_width);
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
 
@@ -568,9 +571,9 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         //Draw Plane and Grid
-        drawPlaneAndGrid(0,PlaneRes,GridRes,mvp4x4);
+        drawPlaneAndGrid(G_OBJECT_DRAW,PlaneRes,GridRes,mvp4x4);
         //Draw Gui
-        drawGui(0,window_height,window_width);
+        drawGui(G_OBJECT_DRAW,window_height,window_width);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -582,7 +585,7 @@ int main(int argc, char* argv[]) {
     fftw_free(psi);
     return 0;
 }
-void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4){
+void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4){
     //3d object info
     //uses Texture0 which is constantly updated
     static GLint maxSupportedIndices=0;
@@ -596,7 +599,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
     static GLuint mvpMatrixUniform=0;
     static GLuint renderGridOrPlaneUniform=0;
     static GLuint gridAndPlaneShaderID=0;
-    if(init_true==1){
+    if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shaders
         gridAndPlaneShaderID = glCreateProgram();              //create program to run on GPU
         glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl",GL_VERTEX_SHADER));        //attach vertex shader to new program
@@ -743,7 +746,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
         indicesInLastGridBuffer=tempVertIndex%((maxSupportedIndices/2)*2);
         printf("Info: indices for grid successfully generated\n");
         free(plane_indices);                //Cleanup Array for indices
-    }else{
+    }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         //Draw Call for Grid and Plane, this does not use vao because we have multiple GL_ELEMENT_ARRAY_BUFFER to draw only one object
         glBindBuffer(GL_ARRAY_BUFFER,VboVerticesId);
         glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
@@ -778,7 +781,7 @@ void drawPlaneAndGrid(int init_true,unsigned int PlaneResolution,unsigned int Gr
     }
 }
 
-void drawGui(int init_true,int window_height, int window_width){
+void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
     //create and activate vertexArrayObject
 
     static GLuint vaoID=0;
@@ -786,7 +789,7 @@ void drawGui(int init_true,int window_height, int window_width){
     static GLuint vboVertexID=0;
     static GLuint guiShaderID=0;
     static GLuint textureId=0;
-    if(init_true==1){
+    if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shader
         guiShaderID = glCreateProgram();
         glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER));         //attach vertex shader to new program
@@ -841,12 +844,12 @@ void drawGui(int init_true,int window_height, int window_width){
 
         glBindVertexArray(0);
 
-    }else{
+    }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         glBindVertexArray(vaoID); //This binds all buffers (vertices, indicesAndUVs)
         glUseProgram(guiShaderID);
         glActiveTexture(GL_TEXTURE1);
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
         glDisable(GL_DEPTH_TEST);
+        //TODO transparency
         glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
