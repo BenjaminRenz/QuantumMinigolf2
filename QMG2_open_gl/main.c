@@ -43,7 +43,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned i
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
-#define Resolution 512
+#define Resolution 512  //should be power of 2
 #define PlaneRes 512    //must be power of 2
 #define GridRes 256        //must be power of 2
 GLFWwindow* MainWindow;
@@ -66,15 +66,24 @@ struct GUI Slider_speed;
 struct GUI Slider_size;
 
 //Manipulation parameters
-int Slider_size_start = 50-1; double diameter1 = (50-1)*2.5f;
-double norm = Resolution*Resolution;
+#define Size_start 50-1
+#define Diameter_change 10
+double diameter = Size_start*2.5f;
+#define norm Resolution*Resolution*1.0
 float Movement_angle = PI/2.0f;
-int offset_x_start = 256; int offset_x;
-int offset_y_start = 40; int offset_y;
+#define Offset_change 10
+#define offset_x_start Resolution/2
+int offset_x = offset_x_start;
+#define offset_y_start 40
+int offset_y = offset_y_start;
 int measurement = 2;
+int particle = 0;
+int pos = 0;
 int draw=1;
 int momentum_prop=1;
-float Slider_speed_start=10; float start_dt = 11 * 0.0000005f; float dt;
+#define Speed_start 10
+#define Speed_change 5
+float dt = (Speed_start+1)*0.0000005f;
 
 int number_Buttons;
 GLuint VboPositionsId=0; //TODO check if removable
@@ -168,10 +177,14 @@ int main(int argc, char* argv[]) {
     vec3 cent_vec= {0.0f,0.0f,0.0f};
     vec3 up_vec= {0.0f,0.0f,1.0f};
 
-    fftw_complex *psi; psi = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
-    fftw_complex *prop; prop = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
-    fftw_plan fft = fftw_plan_dft_2d (Resolution, Resolution, psi, psi, FFTW_FORWARD, FFTW_MEASURE);
-    fftw_plan ifft = fftw_plan_dft_2d (Resolution, Resolution, psi, psi, FFTW_BACKWARD, FFTW_MEASURE);
+    fftw_complex *psi;
+    fftw_complex *psi_transform;
+    fftw_complex *prop;
+    psi = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
+    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
+    prop = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
+    fftw_plan fft = fftw_plan_dft_2d (Resolution, Resolution, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
+    fftw_plan ifft = fftw_plan_dft_2d (Resolution, Resolution, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
     //GUI
     Button_new.Left_up_x=0; Button_new.Left_up_y=200; Button_new.Width=200; Button_new.Height=100;
@@ -180,28 +193,17 @@ int main(int argc, char* argv[]) {
 
     Button_esc.Left_up_x=1720; Button_esc.Left_up_y=0; Button_esc.Width=200; Button_esc.Height=100;
 
-    Slider_speed.Left_up_x=0; Slider_speed.Left_up_y=100; Slider_speed.Width=200; Slider_speed.Height=100; Slider_speed.Position=Slider_speed_start;
+    Slider_speed.Left_up_x=0; Slider_speed.Left_up_y=100; Slider_speed.Width=200; Slider_speed.Height=100; Slider_speed.Position=Speed_start;
 
-    Slider_size.Left_up_x=0; Slider_size.Left_up_y=0; Slider_size.Width=200; Slider_size.Height=100; Slider_size.Position=Slider_size_start;
-
-    //Wave parameter initialisation
-
-    offset_x = offset_x_start;
-    offset_y = offset_y_start;
+    Slider_size.Left_up_x=0; Slider_size.Left_up_y=0; Slider_size.Width=200; Slider_size.Height=100; Slider_size.Position=Size_start;
 
     unsigned char* speicher = calloc(Resolution*Resolution*4,1);
     unsigned char* pot=read_bmp(filepath_potential_bmp);
     double* potential=malloc(Resolution*Resolution*sizeof(double));
 
     for(int i=0; i<Resolution*Resolution; i++) {
-        potential[i]=(255-pot[4*i+1])/100.0f;
+        potential[i]=(255-pot[4*i+1])/255.0f;
     }
-    //Momentum Propagator initialisation
-
-    dt = start_dt;
-
-    //Set program-start
-    measurement = 2;
     //Create wave
     delta_time = update_delta_time();
 
@@ -225,7 +227,6 @@ int main(int argc, char* argv[]) {
     drawGui(G_OBJECT_INIT,window_height,window_width);
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
-
     while (!glfwWindowShouldClose(MainWindow)) {
         if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS) {
             if(rotation_up_down<(3.0)) {
@@ -254,20 +255,19 @@ int main(int argc, char* argv[]) {
         }
 
         if(measurement == 0) {
-            for(int i=0;i<1;i++){
+            //for(int i=0;i<1;i++){
                 fftw_execute(fft);
                 //momentum space
                 for(int i=0; i<Resolution*Resolution; i++) {
-                    double psi_re_temp = psi[i][0];
-                    psi[i][0] = psi_re_temp*prop[i][0]-psi[i][1]*prop[i][1];
-                    psi[i][1] = psi_re_temp*prop[i][1]+psi[i][1]*prop[i][0];
+                    double psi_re_temp = psi_transform[i][0];
+                    psi_transform[i][0] = psi_re_temp*prop[i][0]-psi_transform[i][1]*prop[i][1];
+                    psi_transform[i][1] = psi_re_temp*prop[i][1]+psi_transform[i][1]*prop[i][0];
                 }
-
                 fftw_execute(ifft);
 
                 for(int i=0; i<Resolution*Resolution; i++) {
-                    psi[i][0]=psi[i][0]/norm;
-                    psi[i][1]=psi[i][1]/norm;
+                    psi[i][0]=psi[i][0]/(double)norm;
+                    psi[i][1]=psi[i][1]/(double)norm;
                 }
 
                 for(int i=0; i<Resolution*Resolution; i++) {
@@ -289,37 +289,40 @@ int main(int argc, char* argv[]) {
                     psi[Resolution-1+i*Resolution][0]=0;
                     psi[Resolution-1+i*Resolution][1]=0;
                 }
-            }
+            //}
         }
 
         if(measurement==1) {
-            srand((long)10000.0f*glfwGetTime());
-            double random=(rand()%1001)/1000.0f;
-            double sum=0;
-            double norm_sum=0;
-            for(int i=0; i<Resolution*Resolution; i++) {
-                norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-            }
-            double sqrt_norm_sum=sqrt(norm_sum);
-            for(int i=0; i<Resolution*Resolution; i++) {
-                psi[i][0]=(psi[i][0]/sqrt_norm_sum);
-                psi[i][1]=(psi[i][1]/sqrt_norm_sum);
-            }
-            unsigned int pos=0;
-            for(pos=0; pos<Resolution*Resolution; pos++) {
-                sum=sum+(psi[pos][0]*psi[pos][0]+psi[pos][1]*psi[pos][1]);
-                if(sum>random) {
-                    //printf("sum%f\n",sum);
-                    //printf("rand: %f\n",random);
-                    break;
+            if(particle==0){
+                srand((long)10000.0f*glfwGetTime());
+                double random=(rand()%1001)/1000.0f;
+                double sum=0;
+                double norm_sum=0;
+                for(int i=0; i<Resolution*Resolution; i++) {
+                    norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+                }
+                for(pos=0; pos<Resolution*Resolution; pos++) {
+                    sum=sum+((psi[pos][0]*psi[pos][0]+psi[pos][1]*psi[pos][1])/norm_sum);
+                    if(sum>random) {
+                        //printf("sum%f\n",sum);
+                        //printf("rand: %f\n",random);
+                        break;
+                    }
+                }
+                for(int i=0;i<Resolution*Resolution;i++){
+                    psi[i][0]=sqrt(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+                    psi[i][1]=0;
                 }
             }
-            for(int j=0; j<Resolution; j++) {
+            /*for(int j=0; j<Resolution; j++) {
                 for(int k=0; k<Resolution;k++){
                     if(sqrt(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))<4){
                         psi[k+j*Resolution][0]=1;
                         if(sqrt((((measure_win_x+measure_win_y*Resolution)%Resolution)-k)*(((measure_win_x+measure_win_y*Resolution)%Resolution)-k)+(((measure_win_x+measure_win_y*Resolution)/Resolution)-j)*(((measure_win_x+measure_win_y*Resolution)/Resolution)-j))<100){
                             psi[k+j*Resolution][1]=1;
+                        }
+                        else{
+                            psi[k+j*Resolution][1]=0;
                         }
                     }
                     else{
@@ -327,8 +330,18 @@ int main(int argc, char* argv[]) {
                         psi[k+j*Resolution][1]=0;
                     }
                 }
+            }*/
+            for(int j=0; j<Resolution; j++) {
+                for(int k=0; k<Resolution;k++){
+                    psi[k+j*Resolution][0]=psi[k+j*Resolution][0]*exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/100.0f);
+                }
             }
-            measurement=5;
+            particle++;
+            if(particle==20){
+                particle = 0;
+                measurement = 5;
+            }
+            //measurement=5;
         }
 
         int biggest=0;
@@ -341,8 +354,8 @@ int main(int argc, char* argv[]) {
         double norming=sqrt(1.0f/(psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1]));
 
         for(int i=0; i<Resolution*Resolution; i++) {
-            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+1.0f)/*+psi[i][1]*psi[i][1]*/);
-            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+1.0f)/*+psi[i][1]*psi[i][1]*/);
+            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+/*psi_transform[i][0]+*/1.0f));
+            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+/*psi_transform[i][1]+*/1.0f));
             speicher[i*4+3]=pot[i*4+1];
         }
 
@@ -357,8 +370,8 @@ int main(int argc, char* argv[]) {
         if(draw==1){
             for(int j=0; j<Resolution; j++) {
                 for(int i=0; i<Resolution; i++) {
-                    psi[i+j*Resolution][0]=exp(-((i-offset_x)*(i-offset_x)+(j-offset_y)*(j-offset_y))/diameter1)*cos(((i-Resolution/(float)2)*cos(Movement_angle)+(j-Resolution/(float)2)*sin(Movement_angle))*8.0f);
-                    psi[i+j*Resolution][1]=exp(-((i-offset_x)*(i-offset_x)+(j-offset_y)*(j-offset_y))/diameter1)*sin(((i-Resolution/(float)2)*cos(Movement_angle)+(j-Resolution/(float)2)*sin(Movement_angle))*8.0f);
+                    psi[i+j*Resolution][0]=exp(-((i-offset_x)*(i-offset_x)+(j-offset_y)*(j-offset_y))/diameter)*cos(((i-Resolution/(float)2)*cos(Movement_angle)+(j-Resolution/(float)2)*sin(Movement_angle))*8.0f);
+                    psi[i+j*Resolution][1]=exp(-((i-offset_x)*(i-offset_x)+(j-offset_y)*(j-offset_y))/diameter)*sin(((i-Resolution/(float)2)*cos(Movement_angle)+(j-Resolution/(float)2)*sin(Movement_angle))*8.0f);
                 }
             }
             draw=0;
@@ -656,13 +669,13 @@ void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
         glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
         float GUI_positions_and_uv[8*2]=
         {
-            0.0f,0.0f,
-            0.0f,1.0f,
-            1.0f,0.0f,
+            0.5f,0.5f,
+            0.5f,1.0f,
+            1.0f,0.5f,
             1.0f,1.0f,
-            0.0f,0.0f,
-            1.0f,0.0f,
-            0.0f,1.0f,
+            0.5f,0.5f,
+            1.0f,0.5f,
+            0.5f,1.0f,
             1.0f,1.0f,
         };
         unsigned int GUI_indices[6]={
@@ -725,42 +738,42 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             measurement=0;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_RIGHT)==GLFW_PRESS) {
-            offset_x=offset_x+10;
+            offset_x=offset_x+Offset_change;
             draw=1;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_LEFT)==GLFW_PRESS) {
-            offset_x=offset_x-10;
+            offset_x=offset_x-Offset_change;
             draw=1;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_UP)==GLFW_PRESS) {
-            offset_y=offset_y+10;
+            offset_y=offset_y+Offset_change;
             draw=1;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_DOWN)==GLFW_PRESS) {
-            offset_y=offset_y-10;
+            offset_y=offset_y-Offset_change;
             draw=1;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_R)==GLFW_PRESS) {
             offset_x = offset_x_start;
             offset_y = offset_y_start;
-            Slider_size.Position=Slider_size_start;
-            diameter1=Slider_size.Position*2.5f;
+            Slider_size.Position=Size_start;
+            diameter=Slider_size.Position*2.5f;
             draw=1;
-            Slider_speed.Position = Slider_speed_start;
-            dt = start_dt;
+            Slider_speed.Position = Speed_start;
+            dt = (Speed_start+1)*0.0000005f;
             momentum_prop=1;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS) {
-            if(Slider_size.Position>0) {
-                Slider_size.Position=Slider_size.Position-10;
-                diameter1=Slider_size.Position*5.0f;
+            if(Slider_size.Position>Diameter_change) {
+                Slider_size.Position=Slider_size.Position-Diameter_change;
+                diameter=Slider_size.Position*5.0f;
                 draw=1;
             }
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS) {
-            if(Slider_size.Position<Slider_size.Width) {
-                Slider_size.Position=Slider_size.Position+10;
-                diameter1=Slider_size.Position*5.0f;
+            if(Slider_size.Position<Slider_size.Width-Diameter_change) {
+                Slider_size.Position=Slider_size.Position+Diameter_change;
+                diameter=Slider_size.Position*5.0f;
                 draw=1;
             }
         }
@@ -768,17 +781,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if(measurement==5){
         if(glfwGetKey(MainWindow,GLFW_KEY_N)==GLFW_PRESS) {
             measurement = 2;
-            diameter1=Slider_size.Position*5.0f;
+            diameter=Slider_size.Position*5.0f;
             draw=1;
         }
     }
     if(glfwGetKey(MainWindow,GLFW_KEY_X)==GLFW_PRESS) {
-        Slider_speed.Position=Slider_speed.Position+5;
+        Slider_speed.Position=Slider_speed.Position+Diameter_change;
         dt = (Slider_speed.Position+1) * 0.0000005f;
         momentum_prop=1;
     }
     if(glfwGetKey(MainWindow,GLFW_KEY_Y)==GLFW_PRESS) {
-        Slider_speed.Position=Slider_speed.Position-5;
+        Slider_speed.Position=Slider_speed.Position-Diameter_change;
         dt = (Slider_speed.Position+1) * 0.0000005f;
         momentum_prop=1;
     }
@@ -807,7 +820,7 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
         if(measurement==2){
             if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
                 if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
-                    diameter1=Slider_size.Position*2.5f;
+                    diameter=Slider_size.Position*2.5f;
                     draw=1;
                     measurement=0;
                     Button_new.Position=1;
@@ -817,7 +830,7 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
             if(xpos>Slider_size.Left_up_x&&xpos<Slider_size.Left_up_x+Slider_size.Width) {
                 if(ypos>Slider_size.Left_up_y&&ypos<Slider_size.Left_up_y+Slider_size.Height) {
                     Slider_size.Position=xpos-Slider_size.Left_up_x;
-                    diameter1=Slider_size.Position*5.0f;
+                    diameter=Slider_size.Position*5.0f;
                     draw=1;
                     Button_measure.Position=0;
                     Button_new.Position=0;
@@ -826,7 +839,7 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
             if(xpos>Slider_speed.Left_up_x&&xpos<Slider_speed.Left_up_x+Slider_speed.Width) {
                 if(ypos>Slider_speed.Left_up_y&&ypos<Slider_speed.Left_up_y+Slider_speed.Height) {
                     Slider_speed.Position=xpos-Slider_speed.Left_up_x;
-                    diameter1=Slider_speed.Position*5.0f;
+                    diameter=Slider_speed.Position*5.0f;
                     dt = (Slider_speed.Position+1) * 0.0000005f;
                     momentum_prop=1;
                 }
