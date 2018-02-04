@@ -38,16 +38,42 @@ unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
-void drawGui(int G_OBJECT_STATE,int window_height,int window_width);
+void drawGui(int G_OBJECT_STATE,float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
 //global variables section
 float FOV=0.7f;
+GLFWwindow* MainWindow;
+GLuint psiTexture;
+float delta_time;
 #define Resolution 512  //should be power of 2
 #define PlaneRes 512    //must be power of 2
 #define GridRes 256        //must be power of 2
-GLFWwindow* MainWindow;
-#define ButtonStart
+
+//GUI texture atlas
+//Slider
+#define GUI_TYPE_SLIDER 1
+
+#define UV_SLIDER_BAR_TOP_LEFT_X 1.0f/16.0f
+#define UV_SLIDER_BAR_TOP_LEFT_Y 63.0f/64.0f
+#define UV_SLIDER_BAR_DOWN_RIGHT_X 9.0f/16.0f
+#define UV_SLIDER_BAR_DOWN_RIGHT_Y 1.0f
+
+#define UV_SLIDER_BUTTON_TOP_LEFT_X 0.0f
+#define UV_SLIDER_BUTTON_TOP_LEFT_Y 15.0f/16.0f
+#define UV_SLIDER_BUTTON_DOWN_RIGHT_X 1.0f/16.0f
+#define UV_SLIDER_BUTTON_DOWN_RIGHT_Y 1.0f
+
+//Button
+#define GUI_TYPE_BUTTON 1
+
+
+struct GUI_render {
+    float top_left_x;
+    float top_left_y;
+    int GUI_TYPE;
+    int postition;
+};
 
 struct GUI {
     int Left_up_x;
@@ -85,12 +111,6 @@ int momentum_prop=1;
 #define Speed_change 5
 float dt = (Speed_start+1)*0.0000005f;
 
-int number_Buttons;
-GLuint VboPositionsId=0; //TODO check if removable
-GLuint psiTexture;
-
-float delta_time;
-
 int main(int argc, char* argv[]) {
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
@@ -103,8 +123,9 @@ int main(int argc, char* argv[]) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
 
     //window creation
+    const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     //MainWindow = glfwCreateWindow(1900, 1000, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(1920, 1080, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -133,9 +154,6 @@ int main(int argc, char* argv[]) {
     glfwSetDropCallback(MainWindow,drop_file_callback);
     glfwSetScrollCallback(MainWindow,mouse_scroll_callback);
     //Get window height
-    int window_width = 0;
-    int window_height = 0;
-    glfwGetWindowSize(MainWindow,&window_width,&window_height);
     {
         int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
         glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);
@@ -224,7 +242,7 @@ int main(int argc, char* argv[]) {
     printf("Info: Generation of plane and grid successfull!\n");
 
     //Init gui
-    drawGui(G_OBJECT_INIT,window_height,window_width);
+    drawGui(G_OBJECT_INIT,VideoMode->width/(float)VideoMode->height);  //Initialize Gui with GL_OBJECT_INIT,aspect ratio
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
     while (!glfwWindowShouldClose(MainWindow)) {
@@ -378,6 +396,7 @@ int main(int argc, char* argv[]) {
         }
 
         if(momentum_prop==1){
+                printf("Momentum propagate1\n");
             for(int x=0; x<Resolution/2; x++) {
                 for(int y=0; y<Resolution/2; y++) {
                     prop[x*Resolution+y][0] = cos(dt*(-x*x - y*y));
@@ -410,7 +429,7 @@ int main(int argc, char* argv[]) {
         mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
 
 
-        /*//update textures
+        /*concept for async texture upload
         glBindTexture(GL_TEXTURE_2D, psi_texture);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
         glTexSubImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,NULL);
@@ -429,10 +448,8 @@ int main(int argc, char* argv[]) {
         }*/
 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        //Draw Plane and Grid
         drawPlaneAndGrid(G_OBJECT_DRAW,PlaneRes,GridRes,mvp4x4);
-        //Draw Gui
-        drawGui(G_OBJECT_DRAW,window_height,window_width);
+        drawGui(G_OBJECT_DRAW,0);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -639,7 +656,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned i
     }
 }
 
-void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
+void drawGui(int G_OBJECT_STATE,float aspectRatio){
     //create and activate vertexArrayObject
 
     static GLuint vaoID=0;
@@ -659,8 +676,8 @@ void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
         glBindTexture(GL_TEXTURE_2D,textureId);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         void* tempClientGuiTexture=read_bmp(filepath_gui_bmp);
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,1024,1024,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,tempClientGuiTexture);
         free(tempClientGuiTexture);
@@ -669,14 +686,14 @@ void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
         glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
         float GUI_positions_and_uv[8*2]=
         {
-            0.5f,0.5f,
-            0.5f,1.0f,
-            1.0f,0.5f,
-            1.0f,1.0f,
-            0.5f,0.5f,
-            1.0f,0.5f,
-            0.5f,1.0f,
-            1.0f,1.0f,
+            -1.0f,0.5f,
+            -0.5f,0.5f,
+            -1.0f,1.0f,
+            -0.5f,1.0f,
+            0.0f,15.0/16.0f,
+            1.0f/16.0f,15.0/16.0f,
+            0.0f,1.0f,
+            1.0f/16.0f,1.0f
         };
         unsigned int GUI_indices[6]={
             0,1,2,
@@ -707,13 +724,16 @@ void drawGui(int G_OBJECT_STATE,int window_height, int window_width){
         glActiveTexture(GL_TEXTURE1);
         glDisable(GL_DEPTH_TEST);
         //TODO transparency
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+        glDisable(GL_BLEND);
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
+    }else if(G_OBJECT_STATE==G_OBJECT_UPDATE){
+
     }
-     //Six vertices per quad, tow floats per vertex
-    //TODO implement check is something need to be upated
 }
 
 float update_delta_time() {             //Get the current time with glfwGetTime and subtract last time to return deltatime
