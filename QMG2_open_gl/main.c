@@ -270,6 +270,9 @@ int main(int argc, char* argv[]) {
             if(rotation_up_down>(-0.0)) {
                 rotation_up_down=rotation_up_down-delta_time;
             }
+            if(rotation_up_down<(-0.0)){
+                rotation_up_down=0.0;
+            }
         }
         //atan(rotation_up_down);
         if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS) {
@@ -351,8 +354,13 @@ int main(int argc, char* argv[]) {
                 for(int k=0; k<Resolution;k++){
                     //psi[k+j*Resolution][0]=psi[k+j*Resolution][0]*exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/1000.0f);
                     radius_squared=((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j);
-                    if(radius_squared<64){
-                        psi[k+j*Resolution][0]+=(1.0-psi[k+j*Resolution][0])*(1.0-psi[k+j*Resolution][0])*0.02;
+                    if(particle>20){
+                        if(radius_squared<3){
+                            psi[k+j*Resolution][0]+=exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/100.0f)/*(1.0-psi[k+j*Resolution][0])*(1.0-psi[k+j*Resolution][0])*/*0.01;
+                        }
+                        else{
+                            psi[k+j*Resolution][0]=0.99*psi[k+j*Resolution][0];
+                        }
                     }
                     else{
                         psi[k+j*Resolution][0]=0.99*psi[k+j*Resolution][0];
