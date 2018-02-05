@@ -95,7 +95,7 @@ struct GUI Slider_size;
 #define Size_start 50-1
 #define Diameter_change 10
 double diameter = Size_start*2.5f;
-#define norm Resolution*Resolution*1.0
+#define norm Resolution*Resolution
 float Movement_angle = PI/2.0f;
 #define Offset_change 10
 #define offset_x_start Resolution/2
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(1900, 1000, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(1400, 1000, "Quantum Minigolf 2.0", NULL, NULL);
     MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
@@ -273,7 +273,7 @@ int main(int argc, char* argv[]) {
         }
 
         if(measurement == 0) {
-            //for(int i=0;i<1;i++){
+            for(int i=0;i<1;i++){
                 fftw_execute(fft);
                 //momentum space
                 for(int i=0; i<Resolution*Resolution; i++) {
@@ -282,12 +282,10 @@ int main(int argc, char* argv[]) {
                     psi_transform[i][1] = psi_re_temp*prop[i][1]+psi_transform[i][1]*prop[i][0];
                 }
                 fftw_execute(ifft);
-
                 for(int i=0; i<Resolution*Resolution; i++) {
-                    psi[i][0]=psi[i][0]/(double)norm;
-                    psi[i][1]=psi[i][1]/(double)norm;
+                    psi[i][0]=psi[i][0]/(double)(norm);
+                    psi[i][1]=psi[i][1]/(double)(norm);
                 }
-
                 for(int i=0; i<Resolution*Resolution; i++) {
                     double psi_re_temp = psi[i][0];
                     psi[i][0] = psi_re_temp*cos(potential[i])-psi[i][1]*sin(potential[i]);
@@ -307,7 +305,7 @@ int main(int argc, char* argv[]) {
                     psi[Resolution-1+i*Resolution][0]=0;
                     psi[Resolution-1+i*Resolution][1]=0;
                 }
-            //}
+            }
         }
 
         if(measurement==1) {
@@ -332,30 +330,42 @@ int main(int argc, char* argv[]) {
                     psi[i][1]=0;
                 }
             }
-            /*for(int j=0; j<Resolution; j++) {
+
+            for(int j=0; j<Resolution; j++) {
+                double nearToMes;
                 for(int k=0; k<Resolution;k++){
-                    if(sqrt(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))<4){
-                        psi[k+j*Resolution][0]=1;
-                        if(sqrt((((measure_win_x+measure_win_y*Resolution)%Resolution)-k)*(((measure_win_x+measure_win_y*Resolution)%Resolution)-k)+(((measure_win_x+measure_win_y*Resolution)/Resolution)-j)*(((measure_win_x+measure_win_y*Resolution)/Resolution)-j))<100){
-                            psi[k+j*Resolution][1]=1;
-                        }
-                        else{
-                            psi[k+j*Resolution][1]=0;
-                        }
+                    //psi[k+j*Resolution][0]=psi[k+j*Resolution][0]*exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/1000.0f);
+                    nearToMes=100-sqrt(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j));
+                    if(nearToMes<0){
+                        nearToMes=0;
+                    }
+                    if(nearToMes>90){
+                        psi[k+j*Resolution][0]=(1.0-psi[k+j*Resolution][0])*0.0001*(nearToMes+20);
                     }
                     else{
-                        psi[k+j*Resolution][0]=0;
-                        psi[k+j*Resolution][1]=0;
+                        psi[k+j*Resolution][0]=nearToMes*0.000009*psi[k+j*Resolution][0];
                     }
-                }
-            }*/
-            for(int j=0; j<Resolution; j++) {
-                for(int k=0; k<Resolution;k++){
-                    psi[k+j*Resolution][0]=psi[k+j*Resolution][0]*exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/100.0f);
                 }
             }
             particle++;
-            if(particle==20){
+            if(particle==30){
+                /*for(int j=0; j<Resolution; j++) {
+                    for(int k=0; k<Resolution;k++){
+                        if(sqrt(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))<3){
+                            psi[k+j*Resolution][0]=1;
+                            if(sqrt((((measure_win_x+measure_win_y*Resolution)%Resolution)-k)*(((measure_win_x+measure_win_y*Resolution)%Resolution)-k)+(((measure_win_x+measure_win_y*Resolution)/Resolution)-j)*(((measure_win_x+measure_win_y*Resolution)/Resolution)-j))<100){
+                                psi[k+j*Resolution][1]=1;
+                            }
+                            else{
+                                psi[k+j*Resolution][1]=0;
+                            }
+                        }
+                        else{
+                            psi[k+j*Resolution][0]=0;
+                            psi[k+j*Resolution][1]=0;
+                        }
+                    }
+                }*/
                 particle = 0;
                 measurement = 5;
             }
@@ -363,6 +373,7 @@ int main(int argc, char* argv[]) {
         }
 
         int biggest=0;
+        biggest=0;
 
         for(int i=0; i<Resolution*Resolution; i++) {
             if(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]>psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1])
@@ -372,11 +383,10 @@ int main(int argc, char* argv[]) {
         double norming=sqrt(1.0f/(psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1]));
 
         for(int i=0; i<Resolution*Resolution; i++) {
-            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+/*psi_transform[i][0]+*/1.0f));
-            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+/*psi_transform[i][1]+*/1.0f));
+            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+1.0f));
+            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+1.0f));
             speicher[i*4+3]=pot[i*4+1];
         }
-
         //@@Graphics
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D,psiTexture);
@@ -396,7 +406,6 @@ int main(int argc, char* argv[]) {
         }
 
         if(momentum_prop==1){
-                printf("Momentum propagate1\n");
             for(int x=0; x<Resolution/2; x++) {
                 for(int y=0; y<Resolution/2; y++) {
                     prop[x*Resolution+y][0] = cos(dt*(-x*x - y*y));
