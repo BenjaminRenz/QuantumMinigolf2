@@ -137,8 +137,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(1400, 1000, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(1400, 1000, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -845,12 +845,18 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
                 GUI_indices[positionInIbo++]=index++; //3
                 printf("piIBO6: %d index%d\n",positionInIbo-1,index-1);
             }
+            GUI_indices[0]=0;
+            GUI_indices[1]=1;
+            GUI_indices[2]=2;
+            GUI_indices[3]=2;
+            GUI_indices[4]=1;
+            GUI_indices[5]=3;
         }
 
         glBindBuffer(GL_ARRAY_BUFFER,vboVertexID);
         glBufferData(GL_ARRAY_BUFFER,8*numberOfQuads*sizeof(float),GUI_positions_and_uv,GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*numberOfQuads*sizeof(GLuint),GUI_indices,GL_DYNAMIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(GLuint),GUI_indices,GL_DYNAMIC_DRAW);
         free(GUI_positions_and_uv);
         free(GUI_indices);
     }
