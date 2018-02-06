@@ -35,6 +35,7 @@ void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void windows_size_callback(GLFWwindow* window, int width, int height);
 void glfw_error_callback(int error, const char* description);
+void cursor_pos_callback(GLFWwindow* window,double xpos, double ypos);
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
@@ -47,7 +48,8 @@ float FOV=0.7f;
 GLFWwindow* MainWindow;
 GLuint psiTexture;
 float delta_time;
-int numberOfGuiEelements;
+int numberOfGuiElements;
+int selectedGuiElement=-1;  //-1 == no element selected
 struct GUI_render* guiElementsStorage;
 #define Resolution 512  //should be power of 2
 #define PlaneRes 1024    //must be power of 2
@@ -117,7 +119,7 @@ float dt = (Speed_start+1)*0.0000005f;
 
 int main(int argc, char* argv[]) {
     //GUI INIT
-    numberOfGuiEelements=1;
+    numberOfGuiElements=1;
     guiElementsStorage=malloc(100*sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
     guiElementsStorage[0].top_left_x=0.0f;
@@ -167,6 +169,7 @@ int main(int argc, char* argv[]) {
     glfwSetDropCallback(MainWindow,drop_file_callback);
     glfwSetScrollCallback(MainWindow,mouse_scroll_callback);
     glfwSetWindowSizeCallback(MainWindow,windows_size_callback);
+    glfwSetCursorPosCallback(MainWindow,cursor_pos_callback);
     //Get window height
     {
         int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
@@ -764,7 +767,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
     }else if(G_OBJECT_STATE==G_OBJECT_UPDATE){
         printf("Info: GUI Updated\n");
         numberOfQuads=0;
-        for(int gElmt=0;gElmt<numberOfGuiEelements;gElmt++){
+        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 numberOfQuads+=3;
             }
@@ -775,7 +778,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
         float* GUI_positions_and_uv = (float*)malloc(16*numberOfQuads*sizeof(float)); //(*2 UV and XY Positions) (*4 vertices) (*2 each x,y)
         GLuint* GUI_indices = (GLuint*)malloc(6*numberOfQuads*sizeof(GLuint));
         int offsetInGuiPaUV=0;
-        for(int gElmt=0;gElmt<numberOfGuiEelements;gElmt++){
+        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
@@ -979,10 +982,33 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) {
-    double xpos, ypos;
+    double xpos=0;
+    double ypos=0;
+    int width=0;
+    int height=0;
     glfwGetCursorPos(MainWindow, &xpos, &ypos);
-    if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS) {
-        printf("LMB Down");
+    glfwGetWindowSize(MainWindow, &width, &height);
+    xpos=xpos/width;
+    ypos=ypos/width;
+    printf("Info: click at x%f y%f\n",xpos,ypos);
+    if(button==GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS) {
+        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
+            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
+                float x_offset=(guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth*((36.0f)+guiElementsStorage[gElmt].position*440.0f)/512.0f)-xpos;
+                float y_offset=(guiElementsStorage[gElmt].top_left_y+guiElementsStorage[gElmt].percentOfWidth*(32.0f/512.0f))-ypos;
+                if((x_offset*x_offset+y_offset*y_offset)<((guiElementsStorage[gElmt].percentOfWidth*32.0f/512.0f)*(guiElementsStorage[gElmt].percentOfWidth*32.0f/512.0f))){
+                    selectedGuiElement=gElmt;
+                    printf("Info: Grabbed on Gui Element %d",selectedGuiElement);
+                    return;
+                }
+            }
+            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON){
+                selectedGuiElement=-1;
+            }
+        }
+        selectedGuiElement=-1;
+    }/*
+        printf("Info: LMB Down\n");
         //printf("%.0f, %.0f\n",xpos, ypos);
         if(measurement==0){
             if(xpos>Button_measure.Left_up_x&&xpos<Button_measure.Left_up_x+Button_measure.Width) {
@@ -1032,8 +1058,7 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
         else {
             Button_measure.Position=0;
             Button_new.Position=0;
-        }
-    }
+        }*/
     if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_RELEASE) {
         if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
             if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
@@ -1282,6 +1307,25 @@ unsigned char* read_bmp(char* filepath) {
 
 void windows_size_callback(GLFWwindow* window, int width, int height){
     glViewport(0,0,width,height);
+    drawGui(G_OBJECT_UPDATE,width/(float)height);
+    printf("Info: Rerender caused by window resize.\n");
+}
+
+void cursor_pos_callback(GLFWwindow* window,double xpos, double ypos){
+    int width=0;
+    int height=0;
+    glfwGetWindowSize(MainWindow, &width, &height);
+    xpos=xpos/width;
+    if(selectedGuiElement==-1){
+        return;
+    }
+    guiElementsStorage[selectedGuiElement].position=((((xpos-guiElementsStorage[selectedGuiElement].top_left_x)/guiElementsStorage[selectedGuiElement].percentOfWidth)*512.0f)-36.0f)/440.0f;
+    if(guiElementsStorage[selectedGuiElement].position<0.0f){
+        guiElementsStorage[selectedGuiElement].position=0.0f;
+    }else if(guiElementsStorage[selectedGuiElement].position>1.0f){
+        guiElementsStorage[selectedGuiElement].position=1.0f;
+    }
+    printf("Info: Slider value changed to %f\n",guiElementsStorage[selectedGuiElement].position);
     drawGui(G_OBJECT_UPDATE,width/(float)height);
 }
 
