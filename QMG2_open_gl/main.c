@@ -33,6 +33,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
 void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
+void windows_size_callback(GLFWwindow* window, int width, int height);
 void glfw_error_callback(int error, const char* description);
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
@@ -120,7 +121,7 @@ int main(int argc, char* argv[]) {
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
     guiElementsStorage[0].top_left_x=0.0f;
     guiElementsStorage[0].top_left_y=0.5f;
-    guiElementsStorage[0].position=1.0f;
+    guiElementsStorage[0].position=0.5f;
     guiElementsStorage[0].percentOfWidth=0.2f;
     guiElementsStorage[0].GUI_TYPE=GUI_TYPE_SLIDER;
     //GLFW init
@@ -135,8 +136,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(1400, 400, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(1600, 900, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -164,6 +165,7 @@ int main(int argc, char* argv[]) {
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
     glfwSetDropCallback(MainWindow,drop_file_callback);
     glfwSetScrollCallback(MainWindow,mouse_scroll_callback);
+    glfwSetWindowSizeCallback(MainWindow,windows_size_callback);
     //Get window height
     {
         int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
@@ -1275,8 +1277,10 @@ unsigned char* read_bmp(char* filepath) {
     return 0;
 }
 
-
-
+void windows_size_callback(GLFWwindow* window, int width, int height){
+    glViewport(0,0,width,height);
+    drawGui(G_OBJECT_UPDATE,width/(float)height);
+}
 
 void write_bmp(char* filepath, unsigned int width, unsigned int height) {
     FILE* filepointer = fopen(filepath,"wb");
