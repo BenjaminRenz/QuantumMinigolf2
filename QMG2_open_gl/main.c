@@ -69,6 +69,7 @@ struct GUI_render* guiElementsStorage;
 
 //Button
 #define GUI_TYPE_BUTTON 2
+#define SLIDER_SIZE 0
 
 
 struct GUI_render {
@@ -91,11 +92,11 @@ struct GUI Button_new;
 struct GUI Button_measure;
 struct GUI Button_esc;
 struct GUI Slider_speed;
-struct GUI Slider_size;
+//struct GUI Slider_size;
 
 //Manipulation parameters
-#define Size_start 50-1
-#define Diameter_change 10
+#define Size_start 0.1f
+#define Diameter_change 0.1f
 double diameter = Size_start*2.5f;
 #define norm Resolution*Resolution
 float Movement_angle = PI/2.0f;
@@ -224,7 +225,7 @@ int main(int argc, char* argv[]) {
 
     Slider_speed.Left_up_x=0; Slider_speed.Left_up_y=100; Slider_speed.Width=200; Slider_speed.Height=100; Slider_speed.Position=Speed_start;
 
-    Slider_size.Left_up_x=0; Slider_size.Left_up_y=0; Slider_size.Width=200; Slider_size.Height=100; Slider_size.Position=Size_start;
+    //Slider_size.Left_up_x=0; Slider_size.Left_up_y=0; Slider_size.Width=200; Slider_size.Height=100; Slider_size.Position=Size_start;
 
     unsigned char* speicher = calloc(Resolution*Resolution*4,1);
     unsigned char* pot=read_bmp(filepath_potential_bmp);
@@ -935,24 +936,24 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if(glfwGetKey(MainWindow,GLFW_KEY_R)==GLFW_PRESS) {
             offset_x = offset_x_start;
             offset_y = offset_y_start;
-            Slider_size.Position=Size_start;
-            diameter=Slider_size.Position*2.5f;
+            guiElementsStorage[SLIDER_SIZE].position=Size_start;
+            diameter=guiElementsStorage[SLIDER_SIZE].position*50.0f;
             draw=1;
             Slider_speed.Position = Speed_start;
             dt = (Speed_start+1)*0.0000005f;
             momentum_prop=1;
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS) {
-            if(Slider_size.Position>Diameter_change) {
-                Slider_size.Position=Slider_size.Position-Diameter_change;
-                diameter=Slider_size.Position*5.0f;
+            if(guiElementsStorage[SLIDER_SIZE].position>Diameter_change) {
+                guiElementsStorage[SLIDER_SIZE].position=guiElementsStorage[SLIDER_SIZE].position-Diameter_change;
+                diameter=guiElementsStorage[SLIDER_SIZE].position*50.0f;
                 draw=1;
             }
         }
         if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS) {
-            if(Slider_size.Position<Slider_size.Width-Diameter_change) {
-                Slider_size.Position=Slider_size.Position+Diameter_change;
-                diameter=Slider_size.Position*5.0f;
+            if(guiElementsStorage[SLIDER_SIZE].position<1.0f-Diameter_change) {
+                guiElementsStorage[SLIDER_SIZE].position=guiElementsStorage[SLIDER_SIZE].position+Diameter_change;
+                diameter=guiElementsStorage[SLIDER_SIZE].position*50.0f;
                 draw=1;
             }
         }
@@ -960,7 +961,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if(measurement==5){
         if(glfwGetKey(MainWindow,GLFW_KEY_N)==GLFW_PRESS) {
             measurement = 2;
-            diameter=Slider_size.Position*5.0f;
+            diameter=guiElementsStorage[SLIDER_SIZE].position*50.0f;
             draw=1;
         }
     }
@@ -999,20 +1000,22 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
         if(measurement==2){
             if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
                 if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
-                    diameter=Slider_size.Position*2.5f;
+                    //diameter=Slider_size.Position*2.5f;
                     draw=1;
                     measurement=0;
                     Button_new.Position=1;
                     Button_measure.Position=0;
                 }
             }
-            if(xpos>Slider_size.Left_up_x&&xpos<Slider_size.Left_up_x+Slider_size.Width) {
-                if(ypos>Slider_size.Left_up_y&&ypos<Slider_size.Left_up_y+Slider_size.Height) {
-                    Slider_size.Position=xpos-Slider_size.Left_up_x;
-                    diameter=Slider_size.Position*5.0f;
+            if((xpos/1920.0f)>guiElementsStorage[SLIDER_SIZE].top_left_x+(36.0f/512.0f)*guiElementsStorage[SLIDER_SIZE].percentOfWidth&&(xpos/1920.0f)<guiElementsStorage[SLIDER_SIZE].top_left_x+(476.0f/512.0f)*guiElementsStorage[SLIDER_SIZE].percentOfWidth) {
+                if((ypos/1920.0f)>guiElementsStorage[SLIDER_SIZE].top_left_y&&(ypos/1920.0f)<guiElementsStorage[SLIDER_SIZE].top_left_y+64.0f/1920.0f) {
+                    guiElementsStorage[SLIDER_SIZE].position=((xpos/1920.0f)-(guiElementsStorage[SLIDER_SIZE].top_left_x+(36.0f/512.0f)*guiElementsStorage[SLIDER_SIZE].percentOfWidth))/guiElementsStorage[SLIDER_SIZE].percentOfWidth*1.17;//TODO correct
+                    diameter=guiElementsStorage[SLIDER_SIZE].position*50.0f;
                     draw=1;
                     Button_measure.Position=0;
                     Button_new.Position=0;
+                    const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+                    drawGui(G_OBJECT_UPDATE,VideoMode->width/(float)VideoMode->height);
                 }
             }
             if(xpos>Slider_speed.Left_up_x&&xpos<Slider_speed.Left_up_x+Slider_speed.Width) {
