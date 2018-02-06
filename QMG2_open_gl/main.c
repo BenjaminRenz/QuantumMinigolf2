@@ -72,9 +72,9 @@ struct GUI_render* guiElementsStorage;
 
 
 struct GUI_render {
-    float top_left_x;
-    float top_left_y;
-    float screenSize;
+    float top_left_x;       //between [0,(9/16 or 3/4)]
+    float top_left_y;       //between [0,1]
+    float percentOfWidth;   //between [0,1.0f]
     int GUI_TYPE;
     float position;
 };
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
     guiElementsStorage[0].top_left_x=0.0f;
     guiElementsStorage[0].top_left_y=0.5f;
     guiElementsStorage[0].position=1.0f;
-    guiElementsStorage[0].screenSize=0.2f;
+    guiElementsStorage[0].percentOfWidth=0.2f;
     guiElementsStorage[0].GUI_TYPE=GUI_TYPE_SLIDER;
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
@@ -776,7 +776,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsSize=2.0f*guiElementsStorage[gElmt].screenSize;       //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsSize=2.0f*guiElementsStorage[gElmt].percentOfWidth;       //Transform coordinates from [0,1] to [-1,1]
                 //Positions
 
                 //Part 1 slider
