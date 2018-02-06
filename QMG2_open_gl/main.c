@@ -120,13 +120,19 @@ float dt = (Speed_start+1)*0.0000005f;
 int main(int argc, char* argv[]) {
     //GUI INIT
     numberOfGuiElements=1;
-    guiElementsStorage=malloc(100*sizeof(struct GUI_render));
+    guiElementsStorage=malloc(2*sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
     guiElementsStorage[0].top_left_x=0.0f;
-    guiElementsStorage[0].top_left_y=0.5f;
+    guiElementsStorage[0].top_left_y=0.0f;
     guiElementsStorage[0].position=0.5f;
     guiElementsStorage[0].percentOfWidth=0.2f;
     guiElementsStorage[0].GUI_TYPE=GUI_TYPE_SLIDER;
+
+    guiElementsStorage[1].top_left_x=0.0f;
+    guiElementsStorage[1].top_left_y=0.2f;
+    guiElementsStorage[1].position=0.5f;
+    guiElementsStorage[1].percentOfWidth=0.2f;
+    guiElementsStorage[1].GUI_TYPE=GUI_TYPE_SLIDER;
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
@@ -779,6 +785,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
         GLuint* GUI_indices = (GLuint*)malloc(6*numberOfQuads*sizeof(GLuint));
         int offsetInGuiPaUV=0;
         for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
+            printf("Warn: gElmt%d\n",gElmt);
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
@@ -1060,6 +1067,7 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
             Button_new.Position=0;
         }*/
     if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_RELEASE) {
+        selectedGuiElement=-1;  //Deselect all gui elements
         if(xpos>Button_new.Left_up_x&&xpos<Button_new.Left_up_x+Button_new.Width) {
             if(ypos>Button_new.Left_up_y&&ypos<Button_new.Left_up_y+Button_new.Height) {
                 Button_new.Position=0;
