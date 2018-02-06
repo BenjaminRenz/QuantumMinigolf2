@@ -85,8 +85,6 @@ struct GUI {
     int Width;
     int Height;
     int Position;
-    int UV_x;
-    int UV_y;
 };
 
 struct GUI Button_new;
@@ -120,10 +118,10 @@ int main(int argc, char* argv[]) {
     numberOfGuiEelements=1;
     guiElementsStorage=malloc(100*sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
-    guiElementsStorage[0].top_left_x=-1.0f;
-    guiElementsStorage[0].top_left_y=1.0f;
-    guiElementsStorage[0].position=0.1f;
-    guiElementsStorage[0].screenSize=0.5f;
+    guiElementsStorage[0].top_left_x=0.0f;
+    guiElementsStorage[0].top_left_y=0.5f;
+    guiElementsStorage[0].position=1.0f;
+    guiElementsStorage[0].screenSize=0.2f;
     guiElementsStorage[0].GUI_TYPE=GUI_TYPE_SLIDER;
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
@@ -137,8 +135,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    MainWindow = glfwCreateWindow(1400, 1000, "Quantum Minigolf 2.0", NULL, NULL);
-    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    //MainWindow = glfwCreateWindow(1400, 400, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -176,7 +174,7 @@ int main(int argc, char* argv[]) {
         printf("Info: maxIndicesPerBuffer:%d\nInfo: maxVertexPerBuffer:%d\nInfo: maxTextureSize:%d\nInfo: maxBufferSize:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
     }
     //Set background color
-    glClearColor(0.2f,0.2f,0.2f,1.0f);
+    glClearColor(0.4f,0.4f,0.4f,1.0f);
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
 
@@ -693,6 +691,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
     static GLuint vboVertexID=0;
     static GLuint guiShaderID=0;
     static GLuint textureId=0;
+    static int numberOfQuads=3;
     if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shader
         guiShaderID = glCreateProgram();
@@ -719,10 +718,10 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
             -0.5f,0.5f,
             -1.0f,1.0f,
             -0.5f,1.0f,
-            0.0f,15.0/16.0f,
-            1.0f/16.0f,15.0/16.0f,
-            0.0f,1.0f,
-            1.0f/16.0f,1.0f
+            UV_SLIDER_BAR_TOP_LEFT_X,UV_SLIDER_BAR_DOWN_RIGHT_Y,
+            UV_SLIDER_BAR_DOWN_RIGHT_X,UV_SLIDER_BAR_DOWN_RIGHT_Y,
+            UV_SLIDER_BAR_TOP_LEFT_X,UV_SLIDER_BAR_TOP_LEFT_Y,
+            UV_SLIDER_BAR_DOWN_RIGHT_X,UV_SLIDER_BAR_TOP_LEFT_Y
         };
         unsigned int GUI_indices[6]={
             0,1,2,
@@ -734,7 +733,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
 
         glGenBuffers(1,&vboVertexID);
         glBindBuffer(GL_ARRAY_BUFFER,vboVertexID);
-        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*16,&GUI_positions_and_uv,GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(float)*16,GUI_positions_and_uv,GL_DYNAMIC_DRAW);
 
         glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
         glEnableVertexAttribArray(0);
@@ -743,7 +742,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
 
         glGenBuffers(1,&vboIndicesID);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(GLuint),&GUI_indices,GL_DYNAMIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(GLuint),GUI_indices,GL_DYNAMIC_DRAW);
         glBindVertexArray(0);
 
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
@@ -752,16 +751,16 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
         glActiveTexture(GL_TEXTURE1);
         glDisable(GL_DEPTH_TEST);
         //TODO transparency
-        //glEnable(GL_BLEND);
-        //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
-        //glDisable(GL_BLEND);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        glDrawElements(GL_TRIANGLES,6*numberOfQuads,GL_UNSIGNED_INT,0); //TODO dynamic
+        glDisable(GL_BLEND);
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
     }else if(G_OBJECT_STATE==G_OBJECT_UPDATE){
         printf("Info: GUI Updated\n");
-        int numberOfQuads=0;
+        numberOfQuads=0;
         for(int gElmt=0;gElmt<numberOfGuiEelements;gElmt++){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 numberOfQuads+=3;
@@ -770,58 +769,100 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
                 numberOfQuads+=1;
             }
         }
-        //TODO remove
-        numberOfQuads=1;
-        //TODO remove
-        float* GUI_positions_and_uv = malloc(16*numberOfQuads*sizeof(float)); //(*2 UV and XY Positions) (*4 vertices) (*2 each x,y)
-        float* GUI_indices = malloc(6*numberOfQuads*sizeof(GLuint));
+        float* GUI_positions_and_uv = (float*)malloc(16*numberOfQuads*sizeof(float)); //(*2 UV and XY Positions) (*4 vertices) (*2 each x,y)
+        GLuint* GUI_indices = (GLuint*)malloc(6*numberOfQuads*sizeof(GLuint));
         int offsetInGuiPaUV=0;
         for(int gElmt=0;gElmt<numberOfGuiEelements;gElmt++){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
+                float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsSize=2.0f*guiElementsStorage[gElmt].screenSize;       //Transform coordinates from [0,1] to [-1,1]
                 //Positions
-                //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_x;
-                printf("Position1x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_y-guiElementsStorage[gElmt].screenSize*(5.0f/64.0f);
-                printf("Position1y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_x+((guiElementsStorage[gElmt].position*504.0f+4.0f)/512.0f)*guiElementsStorage[gElmt].screenSize;
-                printf("Position2x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_y-guiElementsStorage[gElmt].screenSize*(5.0f/64.0f);
-                printf("Position2y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_x;
-                printf("Position3x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_y-guiElementsStorage[gElmt].screenSize*(3.0f/64.0f);
-                printf("Position3y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_x+((guiElementsStorage[gElmt].position*1016.0f+4.0f)/1024.0f)*guiElementsStorage[gElmt].screenSize;
-                printf("Position4x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=guiElementsStorage[gElmt].top_left_y-guiElementsStorage[gElmt].screenSize*(3.0f/64.0f);
-                printf("Position4y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //UV
-                //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X;
-                printf("UV1x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_Y;
-                printf("UV1y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=((guiElementsStorage[gElmt].position*504.0f+4.0f)/512.0f);
-                printf("UV2x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_Y;
-                printf("UV2y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X;
-                printf("UV3x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_Y;
-                printf("UV3y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=((guiElementsStorage[gElmt].position*504.0f+4.0f)/512.0f);
-                printf("UV4x%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_Y;
-                printf("UV4y%f\n",GUI_positions_and_uv[offsetInGuiPaUV-1]);
-                //Indices
 
+                //Part 1 slider
+                //Left part slider lower left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                //Left part slider lower right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+4.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                //Left part slider upper left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+                //Left part slider upper right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+4.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+
+                //Part 2 button
+                //Left part slider lower left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+4.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(64.0f/512.0f);
+                //Left part slider lower right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+68.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(64.0f/512.0f);
+                //Left part slider upper left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+4.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
+                //Left part slider upper right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+68.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
+
+                //Part 3 slider
+                //Left part slider lower left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+68.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                //Left part slider lower right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                //Left part slider upper left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position*440.0f+68.0f)/512.0f)*glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+                //Left part slider upper right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+
+                //UV
+                //Part 1 slider
+                //Left part slider lower left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_Y;
+                //Left part slider lower right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X+((guiElementsStorage[gElmt].position*440.0f+4.0f)/1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_Y;
+                //Left part slider upper left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_Y;
+                //Left part slider upper right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X+((guiElementsStorage[gElmt].position*440.0f+4.0f)/1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_Y;
+
+                //Part 2 middle slider
+                //Left part slider lower left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_Y;
+                //Left part slider lower right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_Y;
+                //Left part slider upper left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_Y;
+                //Left part slider upper right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_Y;
+
+                //Part 3 slider
+                //Left part slider lower left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X+((guiElementsStorage[gElmt].position*440.0f+68.0f)/1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_Y;
+                //Left part slider lower right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_Y;
+                //Left part slider upper left vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_X+((guiElementsStorage[gElmt].position*440.0f+68.0f)/1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_Y;
+                //Left part slider upper right vertex
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_TOP_LEFT_Y;
             }
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON){
                 //TODO
@@ -832,31 +873,23 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
             int positionInIbo=0;
             while(positionInIbo<(numberOfQuads*6)){
                 GUI_indices[positionInIbo++]=index++; //0
-                printf("piIBO1: %d index%d\n",positionInIbo-1,index-1);
                 GUI_indices[positionInIbo++]=index++; //1
-                printf("piIBO2: %d index%d\n",positionInIbo-1,index-1);
                 GUI_indices[positionInIbo++]=index; //2
-                printf("piIBO3: %d index%d\n",positionInIbo-1,index);
                 GUI_indices[positionInIbo++]=index--; //2
-                printf("piIBO4: %d index%d\n",positionInIbo-1,index+1);
                 GUI_indices[positionInIbo++]=index; //1
-                printf("piIBO5: %d index%d\n",positionInIbo-1,index);
                 index+=2;
                 GUI_indices[positionInIbo++]=index++; //3
-                printf("piIBO6: %d index%d\n",positionInIbo-1,index-1);
             }
-            GUI_indices[0]=0;
-            GUI_indices[1]=1;
-            GUI_indices[2]=2;
-            GUI_indices[3]=2;
-            GUI_indices[4]=1;
-            GUI_indices[5]=3;
         }
-
         glBindBuffer(GL_ARRAY_BUFFER,vboVertexID);
-        glBufferData(GL_ARRAY_BUFFER,8*numberOfQuads*sizeof(float),GUI_positions_and_uv,GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER,16*numberOfQuads*sizeof(float),GUI_positions_and_uv,GL_DYNAMIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(GLuint),GUI_indices,GL_DYNAMIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*numberOfQuads*sizeof(GLuint),GUI_indices,GL_DYNAMIC_DRAW);
+        //update vao
+        glBindVertexArray(vaoID);
+        glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,0,(GLvoid*)(sizeof(float)*8*numberOfQuads));
+        glEnableVertexAttribArray(1);
+        glBindVertexArray(0);
         free(GUI_positions_and_uv);
         free(GUI_indices);
     }
