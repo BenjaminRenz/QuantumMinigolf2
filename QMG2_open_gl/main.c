@@ -112,8 +112,8 @@ struct GUI_render {
 
 //Manipulation parameters
 #define Size_start 0.1f
-#define Diameter_change 0.2f
-#define SIZE_MULTI 70.0f
+#define Diameter_change 0.1f
+#define SIZE_MULTI 200.0f
 double diameter = Size_start*2.5f;
 #define norm Resolution*Resolution
 float Movement_angle = PI/2.0f;
@@ -184,8 +184,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    MainWindow = glfwCreateWindow(1600, 900, "Quantum Minigolf 2.0", NULL, NULL);
-   // MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    //MainWindow = glfwCreateWindow(1600, 900, "Quantum Minigolf 2.0", NULL, NULL);
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
