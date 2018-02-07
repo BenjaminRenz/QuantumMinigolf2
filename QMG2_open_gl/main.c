@@ -17,7 +17,7 @@
 #include <limits.h>
 #ifdef _WIN32
 #define filepath_gui_bmp ".//GUI.bmp"
-#define filepath_potential_bmp ".//512template.bmp"
+#define filepath_potential_bmp ".//double_slit512.bmp"
 #elif __linux__
 #define filepath_gui_bmp "./GUI.bmp"
 #define filepath_potential_bmp "./double_slit512.bmp"
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
     guiElementsStorage[GUI_SLIDER_SPEED].GUI_TYPE=GUI_TYPE_SLIDER;
     //Buttons
     guiElementsStorage[GUI_BUTTON_NEW].top_left_x=0.0f;
-
+    guiElementsStorage[GUI_BUTTON_NEW].top_left_y=1.0f;
     guiElementsStorage[GUI_BUTTON_NEW].position=0.5f;
     guiElementsStorage[GUI_BUTTON_NEW].percentOfWidth=0.2f;
     guiElementsStorage[GUI_BUTTON_NEW].GUI_TYPE=GUI_TYPE_GUI_BUTTON_NEW;
@@ -184,8 +184,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-   // MainWindow = glfwCreateWindow(1600, 900, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(1600, 900, "Quantum Minigolf 2.0", NULL, NULL);
+   // MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -847,7 +847,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
             }
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_MESS||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_START){
                 float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y-0.5f);       //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsSize=2.0f*guiElementsStorage[gElmt].percentOfWidth;       //Transform coordinates from [0,1] to [-1,1]
                 GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
                 GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*0.25f;
@@ -1060,7 +1060,11 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
                     return;
                 }
             }
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
+            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON_MESS||guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON_START||guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON_NEW){
+                printf("elmnt%f yr%f\n",guiElementsStorage[gElmt].top_left_y,ypos);
+
+            }
+            if((guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW)&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
                 if(measurement==5||measurement==1){
                 draw=1;
                 measurement=2;
@@ -1381,9 +1385,9 @@ unsigned char* read_bmp(char* filepath) {
 void windows_size_callback(GLFWwindow* window, int width, int height){
     glViewport(0,0,width,height);
     printf("aspect: %f",(width/(float)height));
-    guiElementsStorage[GUI_BUTTON_NEW].top_left_y=1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height);
-    guiElementsStorage[GUI_BUTTON_START].top_left_y=1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height);
-    guiElementsStorage[GUI_BUTTON_MESS].top_left_y=1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height);
+    guiElementsStorage[GUI_BUTTON_NEW].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
+    guiElementsStorage[GUI_BUTTON_START].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
+    guiElementsStorage[GUI_BUTTON_MESS].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
 
     drawGui(G_OBJECT_UPDATE,width/(float)height);
     printf("Info: Rerender caused by window resize.\n");
