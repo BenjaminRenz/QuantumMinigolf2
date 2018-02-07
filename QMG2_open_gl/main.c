@@ -16,7 +16,7 @@
 #define PI 3.14159265358979323846
 #include <limits.h>
 #ifdef _WIN32
-#define filepath_gui_bmp ".//GUI.bmp"
+#define filepath_gui_bmp ".//GUI2.bmp"  //CHANGED!!!
 #define filepath_potential_bmp ".//double_slit512.bmp"
 #elif __linux__
 #define filepath_gui_bmp "./GUI.bmp"
@@ -80,6 +80,25 @@ struct GUI_render* guiElementsStorage;
 #define GUI_TYPE_GUI_BUTTON_NEW 2
 #define UV_GUI_BUTTON_NEW_TOP_LEFT_X   (   0.0f/1024.0f)
 #define UV_GUI_BUTTON_NEW_TOP_LEFT_Y   ( 724.0f/1024.0f)
+#define UV_GUI_BUTTON_NEW_DOWN_RIGHT_X ( 512.0f/1024.0f)
+#define UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y  ( 596.0f/1024.0f)
+
+#define GUI_TYPE_GUI_BUTTON_START 3
+#define UV_GUI_BUTTON_START_TOP_LEFT_X   (   0.0f/1024.0f)
+#define UV_GUI_BUTTON_START_TOP_LEFT_Y   ( 592.0f/1024.0f)
+#define UV_GUI_BUTTON_START_DOWN_RIGHT_X ( 512.0f/1024.0f)
+#define UV_GUI_BUTTON_START_DOWN_RIGHT_Y  ( 464.0f/1024.0f)
+
+#define GUI_TYPE_GUI_BUTTON_MESS 4
+#define UV_GUI_BUTTON_MESS_TOP_LEFT_X   (   0.0f/1024.0f)
+#define UV_GUI_BUTTON_MESS_TOP_LEFT_Y   ( 460.0f/1024.0f)
+#define UV_GUI_BUTTON_MESS_DOWN_RIGHT_X ( 512.0f/1024.0f)
+#define UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y  ( 332.0f/1024.0f)
+
+/*
+#define GUI_TYPE_GUI_BUTTON_NEW 2
+#define UV_GUI_BUTTON_NEW_TOP_LEFT_X   (   0.0f/1024.0f)
+#define UV_GUI_BUTTON_NEW_TOP_LEFT_Y   ( 724.0f/1024.0f)
 #define UV_GUI_BUTTON_NEW_DOWN_RIGHT_X ( 256.0f/1024.0f)
 #define UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y  ( 660.0f/1024.0f)
 
@@ -94,7 +113,7 @@ struct GUI_render* guiElementsStorage;
 #define UV_GUI_BUTTON_MESS_TOP_LEFT_Y   ( 588.0f/1024.0f)
 #define UV_GUI_BUTTON_MESS_DOWN_RIGHT_X ( 256.0f/1024.0f)
 #define UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y  ( 524.0f/1024.0f)
-
+*/
 #define GUI_SLIDER_SIZE 0
 #define GUI_SLIDER_SPEED 1
 #define GUI_BUTTON_NEW 2
