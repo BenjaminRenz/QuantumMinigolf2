@@ -112,7 +112,7 @@ struct GUI_render {
 
 //Manipulation parameters
 #define Size_start 0.1f
-#define Diameter_change 0.1f
+#define Diameter_change 0.2f
 #define SIZE_MULTI 70.0f
 double diameter = Size_start*2.5f;
 #define norm Resolution*Resolution
@@ -782,7 +782,6 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
     }else if(G_OBJECT_STATE==G_OBJECT_UPDATE){
-        printf("Info: GUI Updated\n");
         numberOfQuads=0;
         for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
@@ -796,7 +795,6 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
         GLuint* GUI_indices = (GLuint*)malloc(6*numberOfQuads*sizeof(GLuint));
         int offsetInGuiPaUV=0;
         for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
-            printf("Warn: gElmt%d\n",gElmt);
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
@@ -1048,7 +1046,6 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
     glfwGetWindowSize(MainWindow, &width, &height);
     xpos=xpos/width;
     ypos=ypos/width;
-    printf("Info: click at x%f y%f\n",xpos,ypos);
     if(button==GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS) {
         for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
@@ -1056,13 +1053,9 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
                 float y_offset=(guiElementsStorage[gElmt].top_left_y+guiElementsStorage[gElmt].percentOfWidth*(32.0f/512.0f))-ypos;
                 if((x_offset*x_offset+y_offset*y_offset)<((guiElementsStorage[gElmt].percentOfWidth*32.0f/512.0f)*(guiElementsStorage[gElmt].percentOfWidth*32.0f/512.0f))){
                     selectedGuiElement=gElmt;
-                    printf("Info: Grabbed on Gui Element %d",selectedGuiElement);
+                    printf("Info: Grabbed on Gui Element %d\n",selectedGuiElement);
                     return;
                 }
-            }
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON_MESS||guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON_START||guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON_NEW){
-                printf("elmnt%f yr%f\n",guiElementsStorage[gElmt].top_left_y,ypos);
-
             }
             if((guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW)&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
                 if(measurement==5||measurement==1){
@@ -1384,13 +1377,10 @@ unsigned char* read_bmp(char* filepath) {
 
 void windows_size_callback(GLFWwindow* window, int width, int height){
     glViewport(0,0,width,height);
-    printf("aspect: %f",(width/(float)height));
     guiElementsStorage[GUI_BUTTON_NEW].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
     guiElementsStorage[GUI_BUTTON_START].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
     guiElementsStorage[GUI_BUTTON_MESS].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
-
     drawGui(G_OBJECT_UPDATE,width/(float)height);
-    printf("Info: Rerender caused by window resize.\n");
 }
 
 void cursor_pos_callback(GLFWwindow* window,double xpos, double ypos){
