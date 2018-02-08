@@ -76,20 +76,17 @@ struct GUI_render* guiElementsStorage;
 #define UV_SLIDER_BUTTON_DOWN_RIGHT_Y ( 728.0f/1024.0f)
 
 //Buttons
-
-#define GUI_TYPE_GUI_BUTTON_NEW 2
+#define GUI_TYPE_BUTTON 2
 #define UV_GUI_BUTTON_NEW_TOP_LEFT_X   (   0.0f/1024.0f)
 #define UV_GUI_BUTTON_NEW_TOP_LEFT_Y   ( 724.0f/1024.0f)
 #define UV_GUI_BUTTON_NEW_DOWN_RIGHT_X ( 512.0f/1024.0f)
 #define UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y  ( 596.0f/1024.0f)
 
-#define GUI_TYPE_GUI_BUTTON_START 3
 #define UV_GUI_BUTTON_START_TOP_LEFT_X   (   0.0f/1024.0f)
 #define UV_GUI_BUTTON_START_TOP_LEFT_Y   ( 592.0f/1024.0f)
 #define UV_GUI_BUTTON_START_DOWN_RIGHT_X ( 512.0f/1024.0f)
 #define UV_GUI_BUTTON_START_DOWN_RIGHT_Y  ( 464.0f/1024.0f)
 
-#define GUI_TYPE_GUI_BUTTON_MESS 4
 #define UV_GUI_BUTTON_MESS_TOP_LEFT_X   (   0.0f/1024.0f)
 #define UV_GUI_BUTTON_MESS_TOP_LEFT_Y   ( 460.0f/1024.0f)
 #define UV_GUI_BUTTON_MESS_DOWN_RIGHT_X ( 512.0f/1024.0f)
@@ -116,9 +113,10 @@ struct GUI_render* guiElementsStorage;
 */
 #define GUI_SLIDER_SIZE 0
 #define GUI_SLIDER_SPEED 1
-#define GUI_BUTTON_NEW 2
-#define GUI_BUTTON_START 3
-#define GUI_BUTTON_MESS 4
+#define GUI_BUTTON 2
+#define GUI_STATE_BUTTON1_RESET 0.0f
+#define GUI_STATE_BUTTON1_START 0.5f
+#define GUI_STATE_BUTTON1_MESS 1.0f
 
 
 struct GUI_render {
@@ -133,7 +131,7 @@ struct GUI_render {
 #define Size_start 0.1f
 #define Diameter_change 0.1f
 #define SIZE_MULTI 200.0f
-double diameter = Size_start*2.5f;
+double diameter = 0.5*SIZE_MULTI+1.0f;
 #define norm Resolution*Resolution
 float Movement_angle = PI/2.0f;
 #define Offset_change 10
@@ -154,7 +152,7 @@ float dt = (Speed_start+1)*0.0000005f;
 int main(int argc, char* argv[]) {
     //GUI INIT
     //@numgui
-    numberOfGuiElements=5;
+    numberOfGuiElements=3;
     guiElementsStorage=malloc(numberOfGuiElements*sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
     //0 for SIZE, 1 for SPEED
@@ -170,22 +168,10 @@ int main(int argc, char* argv[]) {
     guiElementsStorage[GUI_SLIDER_SPEED].percentOfWidth=0.2f;
     guiElementsStorage[GUI_SLIDER_SPEED].GUI_TYPE=GUI_TYPE_SLIDER;
     //Buttons
-    guiElementsStorage[GUI_BUTTON_NEW].top_left_x=0.0f;
-    guiElementsStorage[GUI_BUTTON_NEW].top_left_y=1.0f;
-    guiElementsStorage[GUI_BUTTON_NEW].position=0.5f;
-    guiElementsStorage[GUI_BUTTON_NEW].percentOfWidth=0.2f;
-    guiElementsStorage[GUI_BUTTON_NEW].GUI_TYPE=GUI_TYPE_GUI_BUTTON_NEW;
-    guiElementsStorage[GUI_BUTTON_START].top_left_x=guiElementsStorage[GUI_BUTTON_NEW].percentOfWidth+0.2f;
-
-    guiElementsStorage[GUI_BUTTON_START].position=0.5f;
-    guiElementsStorage[GUI_BUTTON_START].percentOfWidth=0.2f;
-    guiElementsStorage[GUI_BUTTON_START].GUI_TYPE=GUI_TYPE_GUI_BUTTON_START;
-    guiElementsStorage[GUI_BUTTON_MESS].top_left_x=guiElementsStorage[GUI_BUTTON_NEW].percentOfWidth+0.2f+guiElementsStorage[GUI_BUTTON_START].percentOfWidth+0.2f;
-
-    guiElementsStorage[GUI_BUTTON_MESS].position=0.5f;
-    guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth=0.2f;
-    guiElementsStorage[GUI_BUTTON_MESS].GUI_TYPE=GUI_TYPE_GUI_BUTTON_MESS;
-
+    guiElementsStorage[GUI_BUTTON].top_left_x=0.8f;
+    guiElementsStorage[GUI_BUTTON].position=GUI_STATE_BUTTON1_START;
+    guiElementsStorage[GUI_BUTTON].percentOfWidth=0.2f;
+    guiElementsStorage[GUI_BUTTON].GUI_TYPE=GUI_TYPE_BUTTON;
     //If you add a gui element remember to increase "number of gui elements @numgui
 
 
@@ -203,8 +189,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(1600, 900, "Quantum Minigolf 2.0", NULL, NULL);
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
+    MainWindow = glfwCreateWindow(800, 600, "Quantum Minigolf 2.0", NULL, NULL);
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL);
     if (!MainWindow) {
         glfwTerminate();
         return -1;
@@ -235,12 +221,6 @@ int main(int argc, char* argv[]) {
     glfwSetCursorPosCallback(MainWindow,cursor_pos_callback);
     //Get window height
     {
-        int width=0;
-        int height=0;
-        glfwGetWindowSize(MainWindow,&width,&height);
-        windows_size_callback(MainWindow,width,height);
-    }
-    {
         int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
         glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);
         glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
@@ -249,7 +229,7 @@ int main(int argc, char* argv[]) {
         printf("Info: maxIndicesPerBuffer:%d\nInfo: maxVertexPerBuffer:%d\nInfo: maxTextureSize:%d\nInfo: maxBufferSize:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
     }
     //Set background color
-    glClearColor(0.4f,0.4f,0.4f,1.0f);
+    glClearColor(0.6f,0.6f,0.6f,1.0f);
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
 
@@ -319,8 +299,12 @@ int main(int argc, char* argv[]) {
 
     //Init gui
     drawGui(G_OBJECT_INIT,0);  //Initialize Gui with GL_OBJECT_INIT,aspect ratio
-    //Test remove
-    drawGui(G_OBJECT_UPDATE,VideoMode->width/(float)VideoMode->height);
+    {
+        int width=0;
+        int height=0;
+        glfwGetWindowSize(MainWindow,&width,&height);
+        windows_size_callback(MainWindow,width,height);
+    }
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
     while (!glfwWindowShouldClose(MainWindow)) {
@@ -410,6 +394,7 @@ int main(int argc, char* argv[]) {
                     psi[i][0]=sqrt(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
                     psi[i][1]=0;
                 }
+                printf("Rot=0\n");
             }
 
             for(int j=0; j<Resolution; j++) {
@@ -806,7 +791,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
             if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
                 numberOfQuads+=3;
             }
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_MESS||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_START||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW){
+            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_BUTTON){
                 numberOfQuads+=1;
             }
         }
@@ -862,7 +847,7 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
                 GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
                 GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
             }
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_MESS||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_START){
+            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON){
                 float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsSize=2.0f*guiElementsStorage[gElmt].percentOfWidth;       //Transform coordinates from [0,1] to [-1,1]
@@ -920,33 +905,35 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
                 //Left part slider upper right vertex
                 GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_X;
                 GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_TOP_LEFT_Y;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW){
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_START){
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_Y;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_MESS){
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
+            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON){
+                if(guiElementsStorage[gElmt].position==GUI_STATE_BUTTON1_RESET){
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
+                }else if(guiElementsStorage[gElmt].position==GUI_STATE_BUTTON1_START){
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_Y;
+                }else if(guiElementsStorage[gElmt].position==GUI_STATE_BUTTON1_MESS){
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
+                }
             }
         }
         {//Generate Indices for quads
@@ -1076,22 +1063,30 @@ void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) 
                     return;
                 }
             }
-            if((guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_NEW)&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
-                if(measurement==5||measurement==1){
-                draw=1;
-                measurement=2;
-                }
-                return;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_START&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
-                if(measurement==2){
+            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
+                if(guiElementsStorage[gElmt].position==GUI_STATE_BUTTON1_RESET){
+                    if(measurement==5||measurement==1){
+                        draw=1;
+                        measurement=2;
+                        guiElementsStorage[gElmt].position=GUI_STATE_BUTTON1_START;
+                        drawGui(G_OBJECT_UPDATE,width/(float)height);
+                    }
+                    return;
+                }else if(guiElementsStorage[gElmt].position==GUI_STATE_BUTTON1_START){
+                    if(measurement==2){
                         measurement=0;
-                }
-                return;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_GUI_BUTTON_MESS&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
-                if(measurement==0){
+                        guiElementsStorage[gElmt].position=GUI_STATE_BUTTON1_MESS;
+                        drawGui(G_OBJECT_UPDATE,width/(float)height);
+                    }
+                    return;
+                }else if(guiElementsStorage[gElmt].position==GUI_STATE_BUTTON1_MESS){
+                    if(measurement==0){
                         measurement=1;
+                        guiElementsStorage[gElmt].position=GUI_STATE_BUTTON1_RESET;
+                        drawGui(G_OBJECT_UPDATE,width/(float)height);
+                    }
+                    return;
                 }
-                return;
             }
         }
         selectedGuiElement=-1;
@@ -1396,9 +1391,7 @@ unsigned char* read_bmp(char* filepath) {
 
 void windows_size_callback(GLFWwindow* window, int width, int height){
     glViewport(0,0,width,height);
-    guiElementsStorage[GUI_BUTTON_NEW].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
-    guiElementsStorage[GUI_BUTTON_START].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
-    guiElementsStorage[GUI_BUTTON_MESS].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON_MESS].percentOfWidth*0.25f*(width/(float)height));
+    guiElementsStorage[GUI_BUTTON].top_left_y=(height/(float)width)*(1-guiElementsStorage[GUI_BUTTON].percentOfWidth*0.25f*(width/(float)height));
     drawGui(G_OBJECT_UPDATE,width/(float)height);
 }
 
@@ -1435,8 +1428,9 @@ void cursor_pos_callback(GLFWwindow* window,double xpos, double ypos){
             break;
     }
     drawGui(G_OBJECT_UPDATE,width/(float)height);
-
 }
+
+
 
 void write_bmp(char* filepath, unsigned int width, unsigned int height) {
     FILE* filepointer = fopen(filepath,"wb");
