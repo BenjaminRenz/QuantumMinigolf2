@@ -89,16 +89,16 @@ void JoystickControll();
 
 
 #define GUI_TYPE_JOYSTICK_MOVEMENT 3
-#define UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X   ( 260.0f/1024.0f)
-#define UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_Y   ( 984.0f/1024.0f)
-#define UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_X ( 516.0f/1024.0f)
-#define UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_Y ( 728.0f/1024.0f)
+#define UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X   ( 0.0f/1024.0f)
+#define UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_Y   ( 328.0f/1024.0f)
+#define UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_X ( 256.0f/1024.0f)
+#define UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_Y ( 72.0f/1024.0f)
 
 #define GUI_TYPE_JOYSTICK_ROTATION 4
 #define UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_X   ( 260.0f/1024.0f)
-#define UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_Y   ( 984.0f/1024.0f)
+#define UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_Y   ( 328.0f/1024.0f)
 #define UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_X ( 516.0f/1024.0f)
-#define UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_Y ( 728.0f/1024.0f)
+#define UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_Y ( 72.0f/1024.0f)
 
 //Instantiated GUI_elements
 #define GUI_SLIDER_SIZE 0
@@ -139,19 +139,16 @@ double rotation_left_right = 0;
 double position_x_axis = 0.0;
 double position_y_axis = 0.0;
 #define MovementBorder 0.5f
-#define Resolution 1024  //should be power of 2
-#define PlaneRes 1024    //must be power of 2
-#define GridRes 512        //must be power of 2
+#define PlaneRes 1024  //should be power of 2 ,vertex resolution of the rendered plane
+#define GridRes 256        //must be power of 2 ,vertex resolution of the rendered grid
 
 //Manipulation of simulation
+#define Resolution 512      //must be power of 2, size of the bmp file (512*512) and for the fft/simulation
 #define Diameter_change 0.02f
 #define SIZE_MULTI 200.0f
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolution*Resolution
 float Movement_angle = PI / 2.0f; //angle for particle
-#define Offset_change 10
-#define offset_x_start Resolution/2
-int offset_x = offset_x_start; //offset for particle
 #define offset_y_start 40
 int offset_y = offset_y_start; //offset for particle
 int measurement = 2; //mode of operation
@@ -162,6 +159,9 @@ int momentum_prop = 1;
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
 float dt = SLIDER_SPEED_START * SPEED_MULTI;
+#define Offset_change 10
+#define offset_x_start Resolution/2
+int offset_x = offset_x_start; //offset for particle
 
 int main(int argc, char* argv[]) {
     //GUI INIT
@@ -210,8 +210,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    MainWindow = glfwCreateWindow(800, 800, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed
-    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    //MainWindow = glfwCreateWindow(800, 800, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -493,6 +493,7 @@ int main(int argc, char* argv[]) {
         cent_vec[0] = position_x_axis;
         cent_vec[1] = position_y_axis;
         cent_vec[2]=0.0f;
+        vec3_add(eye_vec,eye_vec,cent_vec); //apply offset to eye to have folloging effect
         mat4x4_look_at(mvp4x4, eye_vec, cent_vec, up_vec);
         mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.5f, 10.0f);
         mat4x4_mul(mvp4x4, persp4x4, mvp4x4);
@@ -1005,7 +1006,7 @@ float update_delta_time() {             //Get the current time with glfwGetTime 
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if(key == GLFW_KEY_W) {
+    /*if(key == GLFW_KEY_W) {
         if(rotation_up_down < (3.0)) {
             rotation_up_down = rotation_up_down + delta_time;
         }
@@ -1033,6 +1034,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             rotation_left_right = -PI;
         }
     }
+    */
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(MainWindow, 1);
     }
@@ -1461,7 +1463,6 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
             guiElementsStorage[selectedGuiElement].position_y = (-1.0f);
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
-            printf("Limit reached\n");
         }
         break;
     default:
@@ -1493,7 +1494,7 @@ void JoystickControll(){
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
         rotation_up_down -= delta_time * guiElementsStorage[selectedGuiElement].position_y;
-        rotation_left_right += delta_time * guiElementsStorage[selectedGuiElement].position_x;
+        rotation_left_right -= delta_time * guiElementsStorage[selectedGuiElement].position_x;
         if(rotation_up_down > 3.0f) {
             rotation_up_down = 3.0f;
         } else if(rotation_up_down < 0.0f) {
@@ -1521,11 +1522,10 @@ void JoystickControll(){
         }
         position_x_axis += MovementBorder*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
         position_y_axis += MovementBorder*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
-        printf("Posx%f and Posy%f\n",position_x_axis,position_y_axis);
         if(position_x_axis>MovementBorder){
             position_x_axis=MovementBorder;
-        }else if(position_x_axis<-MovementBorder){
-            position_y_axis=-MovementBorder;
+        }else if(position_x_axis<(-MovementBorder)){
+            position_x_axis=(-MovementBorder);
         }
         if(position_y_axis>MovementBorder){
             position_y_axis=MovementBorder;
