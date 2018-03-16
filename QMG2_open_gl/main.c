@@ -125,7 +125,7 @@ struct GUI_render* guiElementsStorage;
     #define GUI_STATE_BUTTON1_MESS 1.0f
 #define GUI_JOYSTICK_MOVEMENT 3
 #define GUI_JOYSTICK_ROTATION 4
-    #define GUI_JOYSTICK_PROPERTY_SCALE 0.25f //how big the joystick is in relation to movement Area
+    #define GUI_JOYSTICK_PROPERTY_SCALE 0.5f //how big the joystick is in relation to movement Area
 
 
 
@@ -185,14 +185,14 @@ int main(int argc, char* argv[]) {
     //
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_x = 0.0f;
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_x = 1.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_y = 1.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth = 0.125f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_y = 0.0f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth = 0.5f;
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].GUI_TYPE = GUI_TYPE_JOYSTICK_MOVEMENT;
     //
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_x = 0.2f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_x = 0.5f;
     guiElementsStorage[GUI_JOYSTICK_ROTATION].position_x = -1.0f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].position_y = -1.0f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth = 0.125f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].position_y = 1.0f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth = 0.5f;
     guiElementsStorage[GUI_JOYSTICK_ROTATION].GUI_TYPE = GUI_TYPE_JOYSTICK_ROTATION;
 
     //If you add a gui element remember to increase "number of gui elements @numgui
@@ -892,14 +892,14 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
                 float glCoordsX = 2.0f * ((guiElementsStorage[gElmt].top_left_x) - 0.5f);     //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY = -2.0f * (guiElementsStorage[gElmt].top_left_y * aspectRatio - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsSize = 2.0f * guiElementsStorage[gElmt].percentOfWidth;   //Transform coordinates from [0,1] to [-1,1]
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + guiElementsStorage[gElmt].percentOfWidth * (positionX * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE); //LOWERLEFT
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize + aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE);
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize - guiElementsStorage[gElmt].percentOfWidth * (positionX * (-0.5f) + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE);
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize + aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE);
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + guiElementsStorage[gElmt].percentOfWidth * (positionX * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE); //UPPERLEFT
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - (aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize - guiElementsStorage[gElmt].percentOfWidth * (positionX * (-0.5f) + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE);
-                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - (aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (positionX * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE); //LOWERLEFT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (1-(1-GUI_JOYSTICK_PROPERTY_SCALE)*(positionY*(-0.5f)+0.5f));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (1-(1-GUI_JOYSTICK_PROPERTY_SCALE)*(positionX*(-0.5f)+0.5f));//LOWERRIGHT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (1-(1-GUI_JOYSTICK_PROPERTY_SCALE)*(positionY*(-0.5f)+0.5f));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (positionX * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE); //UPPERLEFT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * ((positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (1-(1-GUI_JOYSTICK_PROPERTY_SCALE)*(positionX*(-0.5f)+0.5f));//UPPERRIGHT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * ((positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE));
 
             }
         }
@@ -1128,7 +1128,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 float y_offset = (guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (32.0f / 512.0f)) - ypos;
                 if((x_offset * x_offset + y_offset * y_offset) < ((guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f) * (guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f))) {
                     selectedGuiElement = gElmt;
-                    printf("Info: Grabbed on Gui Element %d\n", selectedGuiElement);
+                    printf("Info: Grabbed on Slider %d\n", selectedGuiElement);
                     return;
                 }
             } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
@@ -1156,13 +1156,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     return;
                 }
             } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT) {
-                float x_offset = (guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth*(1-GUI_JOYSTICK_PROPERTY_SCALE)*0.5f*guiElementsStorage[gElmt].position_x+0.5f) - xpos; //Calculates the centere of the joystic and then calculates delta to pressed position
-                float y_offset = (guiElementsStorage[gElmt].top_left_y+guiElementsStorage[gElmt].percentOfWidth*(1-GUI_JOYSTICK_PROPERTY_SCALE)*0.5f*guiElementsStorage[gElmt].position_y+0.5f) - ypos;
-                printf("Debug: %f,%f\n",x_offset,guiElementsStorage[gElmt].percentOfWidth*(1-GUI_JOYSTICK_PROPERTY_SCALE)*0.5f*guiElementsStorage[gElmt].position_x+0.5f);
-                if((x_offset*x_offset+y_offset*y_offset)<(guiElementsStorage[gElmt].percentOfWidth*GUI_JOYSTICK_PROPERTY_SCALE*guiElementsStorage[gElmt].percentOfWidth*GUI_JOYSTICK_PROPERTY_SCALE)){ //if inside the tappable circle
+                float x_offset = guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth*(((1-GUI_JOYSTICK_PROPERTY_SCALE)*0.5f*guiElementsStorage[gElmt].position_x)+0.5f) - xpos; //Calculates the centere of the joystic and then calculates delta to pressed position
+                float y_offset = guiElementsStorage[gElmt].top_left_y+guiElementsStorage[gElmt].percentOfWidth*(((1-GUI_JOYSTICK_PROPERTY_SCALE)*0.5f*guiElementsStorage[gElmt].position_y)+0.5f) - ypos;
+                if((x_offset*x_offset+y_offset*y_offset)<(0.25f*guiElementsStorage[gElmt].percentOfWidth*GUI_JOYSTICK_PROPERTY_SCALE*guiElementsStorage[gElmt].percentOfWidth*GUI_JOYSTICK_PROPERTY_SCALE)){ //if inside the tappable circle 0.25f because it is GUI_JOYSTICK_PROPERT_SCALE is the diameter->*0.5f = radius
                     selectedGuiElement=gElmt;
-                    printf("Debug: %f\n",x_offset*x_offset+y_offset*y_offset);
-                    printf("Info: Grabbed on GUI Element %d\n",selectedGuiElement);
+                    printf("Info: Grabbed on Joystick %d\n",selectedGuiElement);
                     return;
                 }
             }
@@ -1170,6 +1168,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         selectedGuiElement = -1;
     }
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        if(guiElementsStorage[selectedGuiElement].GUI_TYPE==GUI_TYPE_JOYSTICK_MOVEMENT||guiElementsStorage[selectedGuiElement].GUI_TYPE==GUI_JOYSTICK_ROTATION){ //recenter joystick after released
+            guiElementsStorage[selectedGuiElement].position_x=0.0f;
+            guiElementsStorage[selectedGuiElement].position_y=0.0f;
+            drawGui(G_OBJECT_UPDATE,width / (float)height);
+        }
         selectedGuiElement = -1; //Deselect all gui elements (tracking for the dragged object like slider or joystick)
     }
 }
@@ -1432,7 +1435,8 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
             guiElementsStorage[selectedGuiElement].position_x = 1.0f;
         }
     } else if(guiElementsStorage[selectedGuiElement].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT || guiElementsStorage[selectedGuiElement].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION) { //if dragged component is one of the virtual joysticks
-        //guiElementsStorage[selectedGuiElement].position_x = (xpos - (guiElementsStorage[selectedGuiElement].percentOfWidth)); //TODO
+        guiElementsStorage[selectedGuiElement].position_x = ((xpos-(guiElementsStorage[selectedGuiElement].top_left_x+0.5f*guiElementsStorage[selectedGuiElement].percentOfWidth))/guiElementsStorage[selectedGuiElement].percentOfWidth)*(2.0f/(1-GUI_JOYSTICK_PROPERTY_SCALE));
+        guiElementsStorage[selectedGuiElement].position_y = ((ypos-(guiElementsStorage[selectedGuiElement].top_left_y+0.5f*guiElementsStorage[selectedGuiElement].percentOfWidth))/guiElementsStorage[selectedGuiElement].percentOfWidth)*(2.0f/(1-GUI_JOYSTICK_PROPERTY_SCALE));
         if(guiElementsStorage[selectedGuiElement].position_x < (-1.0f)) {
             guiElementsStorage[selectedGuiElement].position_x = (-1.0f);
         } else if(guiElementsStorage[selectedGuiElement].position_x > 1.0f) {
