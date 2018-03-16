@@ -16,11 +16,19 @@
 #define PI 3.14159265358979323846
 #include <limits.h>
 #ifdef _WIN32
-#define filepath_gui_bmp ".//GUI2.bmp"  //CHANGED!!!
-#define filepath_potential_bmp ".//double_slit512.bmp"
+ #define filepath_gui_bmp ".\\res\\textures\\GUI2.bmp"  //CHANGED!!!
+ #define filepath_potential_bmp ".\\res\\potentials\\double_slit512.bmp"
+ #define filepath_shader_vertex_gui ".\\res\\shaders\\vertex_gui.glsl"
+ #define filepath_shader_fragment_gui ".\\res\\shaders\\fragment_gui.glsl"
+ #define filepath_shader_vertex_graph ".\\res\\shaders\\vertex_graph.glsl"
+ #define filepath_shader_fragment_graph ".\\res\\shaders\\fragment_graph.glsl"
 #elif __linux__
-#define filepath_gui_bmp "./GUI.bmp"
-#define filepath_potential_bmp "./double_slit512.bmp"
+ #define filepath_gui_bmp "./res/textures/GUI2.bmp"
+ #define filepath_potential_bmp "./res/potentials/double_slit512.bmp"
+ #define filepath_shader_vertex_gui "./res/shaders/vertex_gui.glsl"
+ #define filepath_shader_fragment_gui "./res/shaders/fragment_gui.glsl"
+ #define filepath_shader_vertex_graph "./res/shaders/vertex_graph.glsl"
+ #define filepath_shader_fragment_graph "./res/shaders/fragment_graph.glsl"
 #endif
 
 
@@ -549,8 +557,8 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
     if(G_OBJECT_STATE == G_OBJECT_INIT) {
         //Compile Shaders
         gridAndPlaneShaderID = glCreateProgram();              //create program to run on GPU
-        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl", GL_VERTEX_SHADER));       //attach vertex shader to new program
-        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl", GL_FRAGMENT_SHADER));      //attach fragment shader to new program
+        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(filepath_shader_vertex_graph, GL_VERTEX_SHADER));       //attach vertex shader to new program
+        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(filepath_shader_fragment_graph, GL_FRAGMENT_SHADER));      //attach fragment shader to new program
         glLinkProgram(gridAndPlaneShaderID);
 
         //Get Shader Variables
@@ -739,8 +747,8 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
     if(G_OBJECT_STATE == G_OBJECT_INIT) {
         //Compile Shader
         guiShaderID = glCreateProgram();
-        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl", GL_VERTEX_SHADER));        //attach vertex shader to new program
-        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl", GL_FRAGMENT_SHADER));     //attach fragment shader to new program
+        glAttachShader(guiShaderID, CompileShaderFromFile(filepath_shader_vertex_gui, GL_VERTEX_SHADER));        //attach vertex shader to new program
+        glAttachShader(guiShaderID, CompileShaderFromFile(filepath_shader_fragment_gui, GL_FRAGMENT_SHADER));     //attach fragment shader to new program
         glLinkProgram(guiShaderID);
         //Set texture for gui shader
         glActiveTexture(GL_TEXTURE1);
