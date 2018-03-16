@@ -134,8 +134,11 @@ float delta_time;
 int numberOfGuiElements = 5;
 int selectedGuiElement = (-1);   //-1 == no element selected
 struct GUI_render* guiElementsStorage;
-double rotation_up_down = PI;
-double rotation_left_right = PI;
+double rotation_up_down = PI/2;
+double rotation_left_right = 0;
+double position_x_axis = 0.0;
+double position_y_axis = 0.0;
+#define MovementBorder 0.5f
 #define Resolution 1024  //should be power of 2
 #define PlaneRes 1024    //must be power of 2
 #define GridRes 512        //must be power of 2
@@ -145,16 +148,16 @@ double rotation_left_right = PI;
 #define SIZE_MULTI 200.0f
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolution*Resolution
-float Movement_angle = PI / 2.0f;
+float Movement_angle = PI / 2.0f; //angle for particle
 #define Offset_change 10
 #define offset_x_start Resolution/2
-int offset_x = offset_x_start;
+int offset_x = offset_x_start; //offset for particle
 #define offset_y_start 40
-int offset_y = offset_y_start;
-int measurement = 2;
-int particle = 0;
+int offset_y = offset_y_start; //offset for particle
+int measurement = 2; //mode of operation
+int particle = 0;  //number of simulated wavepackets
 int pos = 0;
-int draw = 1;
+int draw = 1; //render next frame?
 int momentum_prop = 1;
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
@@ -323,9 +326,7 @@ int main(int argc, char* argv[]) {
     }
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
-    while(!glfwWindowShouldClose(MainWindow)) {
-
-
+    while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         if(measurement == 0) {
             for(int i = 0; i < 1; i++) {
                 fftw_execute(fft);
@@ -489,6 +490,9 @@ int main(int argc, char* argv[]) {
         eye_vec[0] = 1.5f * sin(rotation_left_right) * cos(atan(rotation_up_down));
         eye_vec[1] = 1.5f * cos(rotation_left_right) * cos(atan(rotation_up_down));
         eye_vec[2] = 1.5f * sin(atan(rotation_up_down));
+        cent_vec[0] = position_x_axis;
+        cent_vec[1] = position_y_axis;
+        cent_vec[2]=0.0f;
         mat4x4_look_at(mvp4x4, eye_vec, cent_vec, up_vec);
         mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.5f, 10.0f);
         mat4x4_mul(mvp4x4, persp4x4, mvp4x4);
@@ -1488,8 +1492,6 @@ void JoystickControll(){
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
-        printf("Selected GUI ELement %d",selectedGuiElement);
-        printf("Joystick %f, %f \n",guiElementsStorage[selectedGuiElement].position_x,guiElementsStorage[selectedGuiElement].position_y);
         rotation_up_down -= delta_time * guiElementsStorage[selectedGuiElement].position_y;
         rotation_left_right += delta_time * guiElementsStorage[selectedGuiElement].position_x;
         if(rotation_up_down > 3.0f) {
@@ -1517,7 +1519,19 @@ void JoystickControll(){
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
-        //TODO implement functionallity
+        position_x_axis += MovementBorder*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
+        position_y_axis += MovementBorder*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
+        printf("Posx%f and Posy%f\n",position_x_axis,position_y_axis);
+        if(position_x_axis>MovementBorder){
+            position_x_axis=MovementBorder;
+        }else if(position_x_axis<-MovementBorder){
+            position_y_axis=-MovementBorder;
+        }
+        if(position_y_axis>MovementBorder){
+            position_y_axis=MovementBorder;
+        }else if(position_y_axis<-MovementBorder){
+            position_y_axis=-MovementBorder;
+        }
     }
 }
 
