@@ -30,26 +30,26 @@
 #define G_OBJECT_UPDATE 2
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void mouse_button_callback(GLFWwindow* window, int button,int action, int mods);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void drop_file_callback(GLFWwindow* window, int count, const char** paths);
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void windows_size_callback(GLFWwindow* window, int width, int height);
 void glfw_error_callback(int error, const char* description);
-void cursor_pos_callback(GLFWwindow* window,double xpos, double ypos);
+void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
-void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam);
-void drawGui(int G_OBJECT_STATE,float aspectRatio);
-void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4);
-GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType);
+void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
+void drawGui(int G_OBJECT_STATE, float aspectRatio);
+void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
+GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 //global variables section
-float FOV=0.7f;
+float FOV = 0.7f;
 GLFWwindow* MainWindow;
 GLuint psiTexture;
 float delta_time;
 int numberOfGuiElements;
-int selectedGuiElement=(-1);  //-1 == no element selected
+int selectedGuiElement = (-1);   //-1 == no element selected
 struct GUI_render* guiElementsStorage;
 #define Resolution 1024  //should be power of 2
 #define PlaneRes 1024    //must be power of 2
@@ -142,9 +142,9 @@ struct GUI_render {
 //Manipulation parameters
 #define Diameter_change 0.02f
 #define SIZE_MULTI 200.0f
-double diameter = SLIDER_SIZE_START*SIZE_MULTI+1.0f;
+double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolution*Resolution
-float Movement_angle = PI/2.0f;
+float Movement_angle = PI / 2.0f;
 #define Offset_change 10
 #define offset_x_start Resolution/2
 int offset_x = offset_x_start;
@@ -153,47 +153,47 @@ int offset_y = offset_y_start;
 int measurement = 2;
 int particle = 0;
 int pos = 0;
-int draw=1;
-int momentum_prop=1;
+int draw = 1;
+int momentum_prop = 1;
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
-float dt = SLIDER_SPEED_START*SPEED_MULTI;
+float dt = SLIDER_SPEED_START * SPEED_MULTI;
 
 int main(int argc, char* argv[]) {
     //GUI INIT
     //@numgui
-    numberOfGuiElements=5;
-    guiElementsStorage=malloc(numberOfGuiElements*sizeof(struct GUI_render));
+    numberOfGuiElements = 5;
+    guiElementsStorage = malloc(numberOfGuiElements * sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
     //0 for SIZE, 1 for SPEED
-    guiElementsStorage[GUI_SLIDER_SIZE].top_left_x=0.0f;
-    guiElementsStorage[GUI_SLIDER_SIZE].top_left_y=0.0f;
-    guiElementsStorage[GUI_SLIDER_SIZE].position_x=0.5f;
-    guiElementsStorage[GUI_SLIDER_SIZE].percentOfWidth=0.2f;
-    guiElementsStorage[GUI_SLIDER_SIZE].GUI_TYPE=GUI_TYPE_SLIDER;
+    guiElementsStorage[GUI_SLIDER_SIZE].top_left_x = 0.0f;
+    guiElementsStorage[GUI_SLIDER_SIZE].top_left_y = 0.0f;
+    guiElementsStorage[GUI_SLIDER_SIZE].position_x = 0.5f;
+    guiElementsStorage[GUI_SLIDER_SIZE].percentOfWidth = 0.2f;
+    guiElementsStorage[GUI_SLIDER_SIZE].GUI_TYPE = GUI_TYPE_SLIDER;
     //Slider for speed
-    guiElementsStorage[GUI_SLIDER_SPEED].top_left_x=0.0f;
-    guiElementsStorage[GUI_SLIDER_SPEED].top_left_y=0.05f;
-    guiElementsStorage[GUI_SLIDER_SPEED].position_x=0.5f;
-    guiElementsStorage[GUI_SLIDER_SPEED].percentOfWidth=0.2f;
-    guiElementsStorage[GUI_SLIDER_SPEED].GUI_TYPE=GUI_TYPE_SLIDER;
+    guiElementsStorage[GUI_SLIDER_SPEED].top_left_x = 0.0f;
+    guiElementsStorage[GUI_SLIDER_SPEED].top_left_y = 0.05f;
+    guiElementsStorage[GUI_SLIDER_SPEED].position_x = 0.5f;
+    guiElementsStorage[GUI_SLIDER_SPEED].percentOfWidth = 0.2f;
+    guiElementsStorage[GUI_SLIDER_SPEED].GUI_TYPE = GUI_TYPE_SLIDER;
     //Buttons
-    guiElementsStorage[GUI_BUTTON].top_left_x=0.8f;
-    guiElementsStorage[GUI_BUTTON].position_x=GUI_STATE_BUTTON1_START;
-    guiElementsStorage[GUI_BUTTON].percentOfWidth=0.2f;
-    guiElementsStorage[GUI_BUTTON].GUI_TYPE=GUI_TYPE_BUTTON;
+    guiElementsStorage[GUI_BUTTON].top_left_x = 0.8f;
+    guiElementsStorage[GUI_BUTTON].position_x = GUI_STATE_BUTTON1_START;
+    guiElementsStorage[GUI_BUTTON].percentOfWidth = 0.2f;
+    guiElementsStorage[GUI_BUTTON].GUI_TYPE = GUI_TYPE_BUTTON;
     //
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_x=0.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_x=0.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_y=0.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth=1.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].GUI_TYPE=GUI_TYPE_JOYSTICK_MOVEMENT;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_x = 0.0f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_x = 0.5f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_y = 0.0f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth = 0.125f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].GUI_TYPE = GUI_TYPE_JOYSTICK_MOVEMENT;
     //
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_x=0.2f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].position_x=0.0f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].position_y=0.0f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth=0.125f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].GUI_TYPE=GUI_TYPE_JOYSTICK_ROTATION;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_x = 0.2f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].position_x = -1.0f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].position_y = 0.0f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth = 0.125f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].GUI_TYPE = GUI_TYPE_JOYSTICK_ROTATION;
 
     //If you add a gui element remember to increase "number of gui elements @numgui
 
@@ -202,57 +202,57 @@ int main(int argc, char* argv[]) {
 
     //GLFW init
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()) {
+    if(!glfwInit()) {
         return -1;
     }
 
     //Set window creation hints
     //glfwWindowHint(GLFW_RESIZABLE,GL_FALSE); //Uncomment to disable resizing
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT,GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(800, 600, "Quantum Minigolf 2.0", NULL, NULL); //Windowed
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
-    if (!MainWindow) {
+    MainWindow = glfwCreateWindow(800, 800, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    if(!MainWindow) {
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(MainWindow);
     //GLEW init
-    glewExperimental=GL_TRUE;
+    glewExperimental = GL_TRUE;
     GLenum err = glewInit();
     if(GLEW_OK != err) {
         printf("Error: glewInit() failed.");
     }
     printf("QuantumMinigolf2\n");
-    printf("Info: Using OpenGl Version: %s\n",glGetString(GL_VERSION));
+    printf("Info: Using OpenGl Version: %s\n", glGetString(GL_VERSION));
     //enable v-sync
     //glfwSwapInterval(1);
     //Refister Callback for errors (debugging)
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glDebugMessageCallback(openglCallbackFunction,0);
-    glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE,0,NULL,GL_TRUE); //Dont filter messages
+    glDebugMessageCallback(openglCallbackFunction, 0);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);   //Dont filter messages
 
     //Register Callbacks for user input
-    glfwSetKeyCallback(MainWindow,key_callback);
+    glfwSetKeyCallback(MainWindow, key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
-    glfwSetDropCallback(MainWindow,drop_file_callback);
-    glfwSetScrollCallback(MainWindow,mouse_scroll_callback);
-    glfwSetWindowSizeCallback(MainWindow,windows_size_callback);
-    glfwSetCursorPosCallback(MainWindow,cursor_pos_callback);
+    glfwSetDropCallback(MainWindow, drop_file_callback);
+    glfwSetScrollCallback(MainWindow, mouse_scroll_callback);
+    glfwSetWindowSizeCallback(MainWindow, windows_size_callback);
+    glfwSetCursorPosCallback(MainWindow, cursor_pos_callback);
     //Get window height
     {
-        int maxIndices,maxVertices,maxTexSize,maxTexBufferSize;
-        glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxIndices);
-        glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxVertices);
+        int maxIndices, maxVertices, maxTexSize, maxTexBufferSize;
+        glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &maxIndices);
+        glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &maxVertices);
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
         glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTexBufferSize);
-        printf("Info: maxIndicesPerBuffer:%d\nInfo: maxVertexPerBuffer:%d\nInfo: maxTextureSize:%d\nInfo: maxBufferSize:%d\n",maxIndices,maxVertices,maxTexSize,maxTexBufferSize);
+        printf("Info: maxIndicesPerBuffer:%d\nInfo: maxVertexPerBuffer:%d\nInfo: maxTextureSize:%d\nInfo: maxBufferSize:%d\n", maxIndices, maxVertices, maxTexSize, maxTexBufferSize);
     }
     //Set background color
-    glClearColor(0.6f,0.6f,0.6f,1.0f);
+    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
 
@@ -276,170 +276,168 @@ int main(int argc, char* argv[]) {
     */
     //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
 
-    double rotation_up_down=PI;
-    double rotation_left_right=PI;
+    double rotation_up_down = PI;
+    double rotation_left_right = PI;
     mat4x4 mvp4x4;
     mat4x4 persp4x4; //remove?? TODO
-    vec3 eye_vec= {1.0f,1.0f,1.0f};
-    vec3 cent_vec= {0.0f,0.0f,0.0f};
-    vec3 up_vec= {0.0f,0.0f,1.0f};
+    vec3 eye_vec = {1.0f, 1.0f, 1.0f};
+    vec3 cent_vec = {0.0f, 0.0f, 0.0f};
+    vec3 up_vec = {0.0f, 0.0f, 1.0f};
 
     fftw_complex *psi;
     fftw_complex *psi_transform;
     fftw_complex *prop;
-    psi = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
-    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
-    prop = (fftw_complex*) fftw_alloc_complex(Resolution*Resolution);
-    fftw_plan fft = fftw_plan_dft_2d (Resolution, Resolution, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
-    fftw_plan ifft = fftw_plan_dft_2d (Resolution, Resolution, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
+    psi = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+    prop = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+    fftw_plan fft = fftw_plan_dft_2d(Resolution, Resolution, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
+    fftw_plan ifft = fftw_plan_dft_2d(Resolution, Resolution, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
     //GUI
-    unsigned char* speicher = calloc(Resolution*Resolution*4,1);
-    unsigned char* pot=read_bmp(filepath_potential_bmp);
-    double* potential=malloc(Resolution*Resolution*sizeof(double));
+    unsigned char* speicher = calloc(Resolution * Resolution * 4, 1);
+    unsigned char* pot = read_bmp(filepath_potential_bmp);
+    double* potential = malloc(Resolution * Resolution * sizeof(double));
 
-    for(int i=0; i<Resolution*Resolution; i++) {
-        potential[i]=(255-pot[4*i+1])/255.0f;
+    for(int i = 0; i < Resolution * Resolution; i++) {
+        potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
     }
     //Create wave
     delta_time = update_delta_time();
 
-    unsigned int measure_win_x=Resolution/2;
-    unsigned int measure_win_y=Resolution-100;
+    unsigned int measure_win_x = Resolution / 2;
+    unsigned int measure_win_y = Resolution - 100;
     //@@Graphics
     //init texture for Psi because its dynamic
     glActiveTexture(GL_TEXTURE0);
-    glGenTextures(1,&psiTexture);
-    glBindTexture(GL_TEXTURE_2D,psiTexture);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenTextures(1, &psiTexture);
+    glBindTexture(GL_TEXTURE_2D, psiTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     //Init plane and grid
-    drawPlaneAndGrid(G_OBJECT_INIT,PlaneRes,GridRes,NULL); //mvp4x4 useless here
+    drawPlaneAndGrid(G_OBJECT_INIT, PlaneRes, GridRes, NULL);   //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
 
     //Init gui
-    drawGui(G_OBJECT_INIT,0);  //Initialize Gui with GL_OBJECT_INIT,aspect ratio
+    drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
     {
-        int width=0;
-        int height=0;
-        glfwGetWindowSize(MainWindow,&width,&height);
-        windows_size_callback(MainWindow,width,height); //Init y coordinates for Gui elements which depend on border
+        int width = 0;
+        int height = 0;
+        glfwGetWindowSize(MainWindow, &width, &height);
+        windows_size_callback(MainWindow, width, height);   //Init y coordinates for Gui elements which depend on border
     }
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
-    while (!glfwWindowShouldClose(MainWindow)) {
-        if(glfwGetKey(MainWindow,GLFW_KEY_W)==GLFW_PRESS) {
-            if(rotation_up_down<(3.0)) {
-                rotation_up_down=rotation_up_down+delta_time;
+    while(!glfwWindowShouldClose(MainWindow)) {
+        if(glfwGetKey(MainWindow, GLFW_KEY_W) == GLFW_PRESS) {
+            if(rotation_up_down < (3.0)) {
+                rotation_up_down = rotation_up_down + delta_time;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_S)==GLFW_PRESS) {
-            if(rotation_up_down>(-0.0)) {
-                rotation_up_down=rotation_up_down-delta_time;
+        if(glfwGetKey(MainWindow, GLFW_KEY_S) == GLFW_PRESS) {
+            if(rotation_up_down > (-0.0)) {
+                rotation_up_down = rotation_up_down - delta_time;
             }
-            if(rotation_up_down<(-0.0)){
-                rotation_up_down=0.0;
+            if(rotation_up_down < (-0.0)) {
+                rotation_up_down = 0.0;
             }
         }
         //atan(rotation_up_down);
-        if(glfwGetKey(MainWindow,GLFW_KEY_D)==GLFW_PRESS) {
-            if(rotation_left_right>(-PI)) {
-                rotation_left_right=rotation_left_right-delta_time;
+        if(glfwGetKey(MainWindow, GLFW_KEY_D) == GLFW_PRESS) {
+            if(rotation_left_right > (-PI)) {
+                rotation_left_right = rotation_left_right - delta_time;
             } else {
-                rotation_left_right=PI;
+                rotation_left_right = PI;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_A)==GLFW_PRESS) {
-            if(rotation_left_right<PI) {
-                rotation_left_right=rotation_left_right+delta_time;
+        if(glfwGetKey(MainWindow, GLFW_KEY_A) == GLFW_PRESS) {
+            if(rotation_left_right < PI) {
+                rotation_left_right = rotation_left_right + delta_time;
             } else {
-                rotation_left_right=-PI;
+                rotation_left_right = -PI;
             }
         }
 
         if(measurement == 0) {
-            for(int i=0;i<1;i++){
+            for(int i = 0; i < 1; i++) {
                 fftw_execute(fft);
                 //momentum space
-                for(int i=0; i<Resolution*Resolution; i++) {
+                for(int i = 0; i < Resolution * Resolution; i++) {
                     double psi_re_temp = psi_transform[i][0];
-                    psi_transform[i][0] = psi_re_temp*prop[i][0]-psi_transform[i][1]*prop[i][1];
-                    psi_transform[i][1] = psi_re_temp*prop[i][1]+psi_transform[i][1]*prop[i][0];
+                    psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
+                    psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
                 }
                 fftw_execute(ifft);
-                for(int i=0; i<Resolution*Resolution; i++) {
-                    psi[i][0]=psi[i][0]/(double)(norm);
-                    psi[i][1]=psi[i][1]/(double)(norm);
+                for(int i = 0; i < Resolution * Resolution; i++) {
+                    psi[i][0] = psi[i][0] / (double)(norm);
+                    psi[i][1] = psi[i][1] / (double)(norm);
                 }
-                for(int i=0; i<Resolution*Resolution; i++) {
+                for(int i = 0; i < Resolution * Resolution; i++) {
                     double psi_re_temp = psi[i][0];
-                    psi[i][0] = psi_re_temp*cos(potential[i])-psi[i][1]*sin(potential[i]);
-                    psi[i][1] = psi_re_temp*sin(potential[i])+psi[i][1]*cos(potential[i]);
+                    psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
+                    psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
                 }
 
-                for(int i=0; i<Resolution; i++) {
-                    psi[i][0]=0;
-                    psi[i][1]=0;
-                    psi[i+(Resolution-1)*Resolution][0]=0;
-                    psi[i+(Resolution-1)*Resolution][1]=0;
+                for(int i = 0; i < Resolution; i++) {
+                    psi[i][0] = 0;
+                    psi[i][1] = 0;
+                    psi[i + (Resolution - 1)*Resolution][0] = 0;
+                    psi[i + (Resolution - 1)*Resolution][1] = 0;
                 }
 
-                for(int i=0; i<Resolution; i++) {
-                    psi[1+i*Resolution][0]=0;
-                    psi[1+i*Resolution][1]=0;
-                    psi[Resolution-1+i*Resolution][0]=0;
-                    psi[Resolution-1+i*Resolution][1]=0;
+                for(int i = 0; i < Resolution; i++) {
+                    psi[1 + i * Resolution][0] = 0;
+                    psi[1 + i * Resolution][1] = 0;
+                    psi[Resolution - 1 + i * Resolution][0] = 0;
+                    psi[Resolution - 1 + i * Resolution][1] = 0;
                 }
             }
         }
 
-        if(measurement==1) {
-            if(particle==0){
-                srand((long)10000.0f*glfwGetTime());
-                double random=(rand()%1001)/1000.0f;
-                double sum=0;
-                double norm_sum=0;
-                for(int i=0; i<Resolution*Resolution; i++) {
-                    norm_sum=norm_sum+(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
+        if(measurement == 1) {
+            if(particle == 0) {
+                srand((long)10000.0f * glfwGetTime());
+                double random = (rand() % 1001) / 1000.0f;
+                double sum = 0;
+                double norm_sum = 0;
+                for(int i = 0; i < Resolution * Resolution; i++) {
+                    norm_sum = norm_sum + (psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
                 }
-                for(pos=0; pos<Resolution*Resolution; pos++) {
-                    sum=sum+((psi[pos][0]*psi[pos][0]+psi[pos][1]*psi[pos][1])/norm_sum);
-                    if(sum>random) {
+                for(pos = 0; pos < Resolution * Resolution; pos++) {
+                    sum = sum + ((psi[pos][0] * psi[pos][0] + psi[pos][1] * psi[pos][1]) / norm_sum);
+                    if(sum > random) {
                         //printf("sum%f\n",sum);
                         //printf("rand: %f\n",random);
                         break;
                     }
                 }
-                for(int i=0;i<Resolution*Resolution;i++){
-                    psi[i][0]=sqrt(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]);
-                    psi[i][1]=0;
+                for(int i = 0; i < Resolution * Resolution; i++) {
+                    psi[i][0] = sqrt(psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
+                    psi[i][1] = 0;
                 }
                 printf("Rot=0\n");
             }
 
-            for(int j=0; j<Resolution; j++) {
+            for(int j = 0; j < Resolution; j++) {
                 double radius_squared;
-                for(int k=0; k<Resolution;k++){
+                for(int k = 0; k < Resolution; k++) {
                     //psi[k+j*Resolution][0]=psi[k+j*Resolution][0]*exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/1000.0f);
-                    radius_squared=((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j);
-                    if(particle>20){
-                        if(radius_squared<3){
-                            psi[k+j*Resolution][0]+=exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/100.0f)/*(1.0-psi[k+j*Resolution][0])*(1.0-psi[k+j*Resolution][0])*/*0.01;
+                    radius_squared = ((pos % Resolution) - k) * ((pos % Resolution) - k) + ((pos / Resolution) - j) * ((pos / Resolution) - j);
+                    if(particle > 20) {
+                        if(radius_squared < 3) {
+                            psi[k + j * Resolution][0] += exp(-(((pos % Resolution) - k) * ((pos % Resolution) - k) + ((pos / Resolution) - j) * ((pos / Resolution) - j)) / 100.0f)/*(1.0-psi[k+j*Resolution][0])*(1.0-psi[k+j*Resolution][0])*/ * 0.01;
+                        } else {
+                            psi[k + j * Resolution][0] = 0.99 * psi[k + j * Resolution][0];
                         }
-                        else{
-                            psi[k+j*Resolution][0]=0.99*psi[k+j*Resolution][0];
-                        }
-                    }
-                    else{
-                        psi[k+j*Resolution][0]=0.99*psi[k+j*Resolution][0];
+                    } else {
+                        psi[k + j * Resolution][0] = 0.99 * psi[k + j * Resolution][0];
                     }
                 }
             }
             particle++;
-            if(particle==300){
+            if(particle == 300) {
                 /*for(int j=0; j<Resolution; j++) {
                     for(int k=0; k<Resolution;k++){
                         if(sqrt(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))<3){
@@ -463,70 +461,70 @@ int main(int argc, char* argv[]) {
             //measurement=5;
         }
 
-        int biggest=0;
-        biggest=0;
+        int biggest = 0;
+        biggest = 0;
 
-        for(int i=0; i<Resolution*Resolution; i++) {
-            if(psi[i][0]*psi[i][0]+psi[i][1]*psi[i][1]>psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1])
-                biggest=i;
+        for(int i = 0; i < Resolution * Resolution; i++) {
+            if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])
+                biggest = i;
         }
 
-        double norming=sqrt(1.0f/(psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1]));
+        double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
 
-        for(int i=0; i<Resolution*Resolution; i++) {
-            speicher[i*4+2]=(unsigned char) (0.5f*255*(psi[i][0]*norming+1.0f));
-            speicher[i*4+1]=(unsigned char) (0.5f*255*(psi[i][1]*norming+1.0f));
-            speicher[i*4+3]=pot[i*4+1];
+        for(int i = 0; i < Resolution * Resolution; i++) {
+            speicher[i * 4 + 2] = (unsigned char)(0.5f * 255 * (psi[i][0] * norming + 1.0f));
+            speicher[i * 4 + 1] = (unsigned char)(0.5f * 255 * (psi[i][1] * norming + 1.0f));
+            speicher[i * 4 + 3] = pot[i * 4 + 1];
         }
         //@@Graphics
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D,psiTexture);
-        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,Resolution,Resolution,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
+        glBindTexture(GL_TEXTURE_2D, psiTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolution, Resolution, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
 
         delta_time = update_delta_time();
 
-        if(draw==1){
-            for(int j=0; j<Resolution; j++) {
-                for(int i=0; i<Resolution; i++) {
-                    psi[i+j*Resolution][0]=exp(-((i-offset_x)*(i-offset_x)+(j-offset_y)*(j-offset_y))/diameter)*cos(((i-Resolution/(float)2)*cos(Movement_angle)+(j-Resolution/(float)2)*sin(Movement_angle))*8.0f);
-                    psi[i+j*Resolution][1]=exp(-((i-offset_x)*(i-offset_x)+(j-offset_y)*(j-offset_y))/diameter)*sin(((i-Resolution/(float)2)*cos(Movement_angle)+(j-Resolution/(float)2)*sin(Movement_angle))*8.0f);
+        if(draw == 1) {
+            for(int j = 0; j < Resolution; j++) {
+                for(int i = 0; i < Resolution; i++) {
+                    psi[i + j * Resolution][0] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / diameter) * cos(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
+                    psi[i + j * Resolution][1] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / diameter) * sin(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
                 }
             }
-            draw=0;
+            draw = 0;
         }
 
-        if(momentum_prop==1){
-            for(int x=0; x<Resolution/2; x++) {
-                for(int y=0; y<Resolution/2; y++) {
-                    prop[x*Resolution+y][0] = cos(dt*(-x*x - y*y));
-                    prop[x*Resolution+y][1] = sin(dt*(-x*x - y*y));
+        if(momentum_prop == 1) {
+            for(int x = 0; x < Resolution / 2; x++) {
+                for(int y = 0; y < Resolution / 2; y++) {
+                    prop[x * Resolution + y][0] = cos(dt * (-x * x - y * y));
+                    prop[x * Resolution + y][1] = sin(dt * (-x * x - y * y));
                 }
-                for(int y=Resolution/2; y<Resolution; y++) {
-                    prop[x*Resolution+y][0] = cos(dt*(-x*x - (y-Resolution)*(y-Resolution)));
-                    prop[x*Resolution+y][1] = sin(dt*(-x*x - (y-Resolution)*(y-Resolution)));
-                }
-            }
-            for(int x=Resolution/2; x<Resolution; x++) {
-                for(int y=0; y<Resolution/2; y++) {
-                    prop[x*Resolution+y][0] = cos(dt*(-(x-Resolution)*(x-Resolution) - y*y));
-                    prop[x*Resolution+y][1] = sin(dt*(-(x-Resolution)*(x-Resolution) - y*y));
-                }
-                for(int y=Resolution/2; y<Resolution; y++) {
-                    prop[x*Resolution+y][0] = cos(dt*(-(x-Resolution)*(x-Resolution) - (y-Resolution)*(y-Resolution)));
-                    prop[x*Resolution+y][1] = sin(dt*(-(x-Resolution)*(x-Resolution) - (y-Resolution)*(y-Resolution)));
+                for(int y = Resolution / 2; y < Resolution; y++) {
+                    prop[x * Resolution + y][0] = cos(dt * (-x * x - (y - Resolution) * (y - Resolution)));
+                    prop[x * Resolution + y][1] = sin(dt * (-x * x - (y - Resolution) * (y - Resolution)));
                 }
             }
-            momentum_prop=0;
+            for(int x = Resolution / 2; x < Resolution; x++) {
+                for(int y = 0; y < Resolution / 2; y++) {
+                    prop[x * Resolution + y][0] = cos(dt * (-(x - Resolution) * (x - Resolution) - y * y));
+                    prop[x * Resolution + y][1] = sin(dt * (-(x - Resolution) * (x - Resolution) - y * y));
+                }
+                for(int y = Resolution / 2; y < Resolution; y++) {
+                    prop[x * Resolution + y][0] = cos(dt * (-(x - Resolution) * (x - Resolution) - (y - Resolution) * (y - Resolution)));
+                    prop[x * Resolution + y][1] = sin(dt * (-(x - Resolution) * (x - Resolution) - (y - Resolution) * (y - Resolution)));
+                }
+            }
+            momentum_prop = 0;
         }
 
         //camera projection an transformation matrix calculation
-        eye_vec[0]=1.5f*sin(rotation_left_right)*cos(atan(rotation_up_down));
-        eye_vec[1]=1.5f*cos(rotation_left_right)*cos(atan(rotation_up_down));
-        eye_vec[2]=1.5f*sin(atan(rotation_up_down));
-        mat4x4_look_at(mvp4x4,eye_vec,cent_vec,up_vec);
-        mat4x4_perspective(persp4x4,FOV,16.0f/9.0f,0.5f,10.0f);
-        mat4x4_mul(mvp4x4,persp4x4,mvp4x4);
+        eye_vec[0] = 1.5f * sin(rotation_left_right) * cos(atan(rotation_up_down));
+        eye_vec[1] = 1.5f * cos(rotation_left_right) * cos(atan(rotation_up_down));
+        eye_vec[2] = 1.5f * sin(atan(rotation_up_down));
+        mat4x4_look_at(mvp4x4, eye_vec, cent_vec, up_vec);
+        mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.5f, 10.0f);
+        mat4x4_mul(mvp4x4, persp4x4, mvp4x4);
 
 
         /*concept for async texture upload
@@ -547,9 +545,9 @@ int main(int argc, char* argv[]) {
             PBO2=temp;
         }*/
 
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        drawPlaneAndGrid(G_OBJECT_DRAW,PlaneRes,GridRes,mvp4x4);
-        drawGui(G_OBJECT_DRAW,0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
+        drawGui(G_OBJECT_DRAW, 0);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -561,44 +559,44 @@ int main(int argc, char* argv[]) {
     fftw_free(psi);
     return 0;
 }
-void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned int GridResolution, mat4x4 mvp4x4){
+void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4) {
     //3d object info
     //uses Texture0 which is constantly updated
-    static GLint maxSupportedIndices=0;
-    static unsigned long indexBufferCountPlane=0;
-    static unsigned long indexBufferCountGrid=0;
-    static GLuint VboVerticesId=0;
-    static GLuint* iboPlanePointer=0;
-    static GLuint* iboGridPointer=0;
-    static long indicesInLastPlaneBuffer=0;
-    static long indicesInLastGridBuffer=0;
-    static GLuint mvpMatrixUniform=0;
-    static GLuint renderGridOrPlaneUniform=0;
-    static GLuint gridAndPlaneShaderID=0;
-    if(G_OBJECT_STATE==G_OBJECT_INIT){
+    static GLint maxSupportedIndices = 0;
+    static unsigned long indexBufferCountPlane = 0;
+    static unsigned long indexBufferCountGrid = 0;
+    static GLuint VboVerticesId = 0;
+    static GLuint* iboPlanePointer = 0;
+    static GLuint* iboGridPointer = 0;
+    static long indicesInLastPlaneBuffer = 0;
+    static long indicesInLastGridBuffer = 0;
+    static GLuint mvpMatrixUniform = 0;
+    static GLuint renderGridOrPlaneUniform = 0;
+    static GLuint gridAndPlaneShaderID = 0;
+    if(G_OBJECT_STATE == G_OBJECT_INIT) {
         //Compile Shaders
         gridAndPlaneShaderID = glCreateProgram();              //create program to run on GPU
-        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl",GL_VERTEX_SHADER));        //attach vertex shader to new program
-        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl",GL_FRAGMENT_SHADER));       //attach fragment shader to new program
+        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_graph.glsl", GL_VERTEX_SHADER));       //attach vertex shader to new program
+        glAttachShader(gridAndPlaneShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_graph.glsl", GL_FRAGMENT_SHADER));      //attach fragment shader to new program
         glLinkProgram(gridAndPlaneShaderID);
 
         //Get Shader Variables
         glUseProgram(gridAndPlaneShaderID);
-        mvpMatrixUniform=glGetUniformLocation(gridAndPlaneShaderID,"MVPmatrix");//only callable after glUseProgramm has been called once
-        renderGridOrPlaneUniform=glGetUniformLocation(gridAndPlaneShaderID,"potential_true");
+        mvpMatrixUniform = glGetUniformLocation(gridAndPlaneShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
+        renderGridOrPlaneUniform = glGetUniformLocation(gridAndPlaneShaderID, "potential_true");
 
         //Texture initialisation for GL_TEXTURE0 (texture is generated outside because we need its address elsewhere
-        glUniform1i(glGetUniformLocation(gridAndPlaneShaderID,"texture0"),0);
+        glUniform1i(glGetUniformLocation(gridAndPlaneShaderID, "texture0"), 0);
 
         //input checking
-        if(((PlaneResolution&(PlaneResolution-1))!=0)||((GridResolution&(GridResolution-1))!=0)) {      //Check if plane resolution/grid resolution is power of 2
+        if(((PlaneResolution & (PlaneResolution - 1)) != 0) || ((GridResolution & (GridResolution - 1)) != 0)) {               //Check if plane resolution/grid resolution is power of 2
             printf("Error: Resolution of plane or grid is not a power of 2.\nError: Initialization failed!");
             return;
         }
         {
-            GLint maxSupportedVertices=0;
-            glGetIntegerv(GL_MAX_ELEMENTS_VERTICES,&maxSupportedVertices);
-            if(maxSupportedVertices<1048576){
+            GLint maxSupportedVertices = 0;
+            glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &maxSupportedVertices);
+            if(maxSupportedVertices < 1048576) {
                 printf("Error: Vertex Resolution of your Graphic Card are to low. (Required Minimum 1024*1024)\nError: Initialization failed!");
                 return;
             }
@@ -606,139 +604,139 @@ void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned i
 
 
         //update Value of max supported indices
-        glGetIntegerv(GL_MAX_ELEMENTS_INDICES,&maxSupportedIndices);
+        glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &maxSupportedIndices);
 
         //Calculate requiered buffercount
-        if(((PlaneResolution-1)*(PlaneResolution-1)*6)%((maxSupportedIndices/3)*3)==0) {   //
-            indexBufferCountPlane=(((PlaneResolution-1)*(PlaneResolution-1)*6)/((maxSupportedIndices/3)*3));
+        if(((PlaneResolution - 1) * (PlaneResolution - 1) * 6) % ((maxSupportedIndices / 3) * 3) == 0) {             //
+            indexBufferCountPlane = (((PlaneResolution - 1) * (PlaneResolution - 1) * 6) / ((maxSupportedIndices / 3) * 3));
         } else {
-            indexBufferCountPlane=(((PlaneResolution-1)*(PlaneResolution-1)*6)/((maxSupportedIndices/3)*3))+1;
+            indexBufferCountPlane = (((PlaneResolution - 1) * (PlaneResolution - 1) * 6) / ((maxSupportedIndices / 3) * 3)) + 1;
         }
-        if(((GridResolution-1)*(GridResolution-1)*8)%((maxSupportedIndices/2)*2)==0) {
-            indexBufferCountGrid=(((GridResolution-1)*(GridResolution-1)*8)/((maxSupportedIndices/2)*2));
+        if(((GridResolution - 1) * (GridResolution - 1) * 8) % ((maxSupportedIndices / 2) * 2) == 0) {
+            indexBufferCountGrid = (((GridResolution - 1) * (GridResolution - 1) * 8) / ((maxSupportedIndices / 2) * 2));
         } else {
-            indexBufferCountGrid=(((GridResolution-1)*(GridResolution-1)*8)/((maxSupportedIndices/2)*2))+1;
+            indexBufferCountGrid = (((GridResolution - 1) * (GridResolution - 1) * 8) / ((maxSupportedIndices / 2) * 2)) + 1;
         }
         //generate arrays
-        iboPlanePointer=malloc(indexBufferCountPlane*sizeof(GLuint));
-        iboGridPointer=malloc(indexBufferCountGrid*sizeof(GLuint));
+        iboPlanePointer = malloc(indexBufferCountPlane * sizeof(GLuint));
+        iboGridPointer = malloc(indexBufferCountGrid * sizeof(GLuint));
         //calculate vertex count and offset if grid- and plane-resolution are different
-        unsigned int finalVertexResolution=0;
-        unsigned int gridOffsetMultiplier=0;
-        unsigned int planeOffsetMultiplier=0;
-        if(PlaneResolution>GridResolution) {
-            finalVertexResolution=PlaneResolution;
-            gridOffsetMultiplier=PlaneResolution/GridResolution;
-            planeOffsetMultiplier=1;
+        unsigned int finalVertexResolution = 0;
+        unsigned int gridOffsetMultiplier = 0;
+        unsigned int planeOffsetMultiplier = 0;
+        if(PlaneResolution > GridResolution) {
+            finalVertexResolution = PlaneResolution;
+            gridOffsetMultiplier = PlaneResolution / GridResolution;
+            planeOffsetMultiplier = 1;
         } else {
-            finalVertexResolution=GridResolution;
-            planeOffsetMultiplier=GridResolution/PlaneResolution;
-            gridOffsetMultiplier=1;
+            finalVertexResolution = GridResolution;
+            planeOffsetMultiplier = GridResolution / PlaneResolution;
+            gridOffsetMultiplier = 1;
         }
-        printf("Info: gridMul %d\nInfo: planeMul %d\n",gridOffsetMultiplier,planeOffsetMultiplier);
+        printf("Info: gridMul %d\nInfo: planeMul %d\n", gridOffsetMultiplier, planeOffsetMultiplier);
         //Generate Vertices for grid and plane
-        float* plane_vertex_data=malloc(2*finalVertexResolution*finalVertexResolution*sizeof(float));
-        unsigned long tempVertIndex=0;
-        for(int y=0; y<finalVertexResolution; y++) {
-            for(int x=0; x<finalVertexResolution; x++) {
+        float* plane_vertex_data = malloc(2 * finalVertexResolution * finalVertexResolution * sizeof(float));
+        unsigned long tempVertIndex = 0;
+        for(int y = 0; y < finalVertexResolution; y++) {
+            for(int x = 0; x < finalVertexResolution; x++) {
                 //Vector coordinates (x,y,z)
-                plane_vertex_data[tempVertIndex++]=(((float)x)/(finalVertexResolution-1))-0.5f;
-                plane_vertex_data[tempVertIndex++]=(((float)y)/(finalVertexResolution-1))-0.5f; //Set height (y) to zero
+                plane_vertex_data[tempVertIndex++] = (((float)x) / (finalVertexResolution - 1)) - 0.5f;
+                plane_vertex_data[tempVertIndex++] = (((float)y) / (finalVertexResolution - 1)) - 0.5f;         //Set height (y) to zero
             }
         }
         glGenBuffers(1, &VboVerticesId);                                                          //create buffer
         glBindBuffer(GL_ARRAY_BUFFER, VboVerticesId);                                            //Link buffer
-        glBufferData(GL_ARRAY_BUFFER, 2*finalVertexResolution*finalVertexResolution*sizeof(float),plane_vertex_data,GL_STATIC_DRAW);    //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
+        glBufferData(GL_ARRAY_BUFFER, 2 * finalVertexResolution * finalVertexResolution * sizeof(float), plane_vertex_data, GL_STATIC_DRAW);     //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
         free(plane_vertex_data);    //we no longer need plane_vertex_data because it has been uploaded to gpu memory
         printf("Info: vertices for plane/grid successfully generated\n");
 
         //Generate Vertex Indices for Plane
-        GLuint* plane_indices = malloc((finalVertexResolution-1)*(finalVertexResolution-1)*8*sizeof(GLuint)); //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
-        tempVertIndex=0;
-        for(unsigned int y=0; y<(finalVertexResolution-planeOffsetMultiplier); y+=planeOffsetMultiplier) {
-            for(unsigned int x=0; x<(finalVertexResolution-planeOffsetMultiplier); x+=planeOffsetMultiplier) {
+        GLuint* plane_indices = malloc((finalVertexResolution - 1) * (finalVertexResolution - 1) * 8 * sizeof(GLuint));         //6 from the points of two triangles, 8 from 4 lines per gridcell max(6,8)=8
+        tempVertIndex = 0;
+        for(unsigned int y = 0; y < (finalVertexResolution - planeOffsetMultiplier); y += planeOffsetMultiplier) {
+            for(unsigned int x = 0; x < (finalVertexResolution - planeOffsetMultiplier); x += planeOffsetMultiplier) {
                 //Generate first triangle
-                plane_indices[tempVertIndex++]=x+(y*finalVertexResolution);   //Vertex lower left first triangle
-                plane_indices[tempVertIndex++]=x+planeOffsetMultiplier+(y*finalVertexResolution);//Vertex upper right first triangle
-                plane_indices[tempVertIndex++]=x+((y+planeOffsetMultiplier)*finalVertexResolution); //Vertex upper left first triangle
+                plane_indices[tempVertIndex++] = x + (y * finalVertexResolution);   //Vertex lower left first triangle
+                plane_indices[tempVertIndex++] = x + planeOffsetMultiplier + (y * finalVertexResolution);   //Vertex upper right first triangle
+                plane_indices[tempVertIndex++] = x + ((y + planeOffsetMultiplier) * finalVertexResolution);     //Vertex upper left first triangle
                 //Generate second triangle
-                plane_indices[tempVertIndex++]=x+planeOffsetMultiplier+(y*finalVertexResolution);   //Vertex lower left second triangle
-                plane_indices[tempVertIndex++]=x+planeOffsetMultiplier+((y+planeOffsetMultiplier)*finalVertexResolution); //Vertex lower right second triangle
-                plane_indices[tempVertIndex++]=x+((y+planeOffsetMultiplier)*finalVertexResolution); //Vertex upper right first triangle
+                plane_indices[tempVertIndex++] = x + planeOffsetMultiplier + (y * finalVertexResolution);   //Vertex lower left second triangle
+                plane_indices[tempVertIndex++] = x + planeOffsetMultiplier + ((y + planeOffsetMultiplier) * finalVertexResolution);     //Vertex lower right second triangle
+                plane_indices[tempVertIndex++] = x + ((y + planeOffsetMultiplier) * finalVertexResolution);     //Vertex upper right first triangle
                 //printf("vert%d,%d,%d,%d,%d,%d\n",plane_indices[vert_index-6],plane_indices[vert_index-5],plane_indices[vert_index-4],plane_indices[vert_index-3],plane_indices[vert_index-2],plane_indices[vert_index-1]);
             }
         }
 
-        glGenBuffers(indexBufferCountPlane,iboPlanePointer);
+        glGenBuffers(indexBufferCountPlane, iboPlanePointer);
         //Now upload this data to GPU
-        unsigned int bufferNumber=0;
-        for(; bufferNumber<(indexBufferCountPlane-1); bufferNumber++) { //Upload all but the last buffer
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboPlanePointer[bufferNumber]);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,(maxSupportedIndices/3)*3*sizeof(GLuint),plane_indices+(maxSupportedIndices/3)*3*bufferNumber,GL_STATIC_DRAW);
+        unsigned int bufferNumber = 0;
+        for(; bufferNumber < (indexBufferCountPlane - 1); bufferNumber++) {     //Upload all but the last buffer
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboPlanePointer[bufferNumber]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (maxSupportedIndices / 3) * 3 * sizeof(GLuint), plane_indices + (maxSupportedIndices / 3) * 3 * bufferNumber, GL_STATIC_DRAW);
         }
         //Upload the last Buffer for plane
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboPlanePointer[bufferNumber]);
-        if(tempVertIndex%((maxSupportedIndices/3)*3)!=0) {
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,(tempVertIndex%((maxSupportedIndices/3)*3))*sizeof(GLuint),plane_indices+((maxSupportedIndices/3)*3)*bufferNumber,GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboPlanePointer[bufferNumber]);
+        if(tempVertIndex % ((maxSupportedIndices / 3) * 3) != 0) {
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (tempVertIndex % ((maxSupportedIndices / 3) * 3))*sizeof(GLuint), plane_indices + ((maxSupportedIndices / 3) * 3)*bufferNumber, GL_STATIC_DRAW);
         } else {
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxSupportedIndices/3)*3)*sizeof(GLuint),plane_indices+((maxSupportedIndices/3)*3)*bufferNumber,GL_STATIC_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, ((maxSupportedIndices / 3) * 3)*sizeof(GLuint), plane_indices + ((maxSupportedIndices / 3) * 3)*bufferNumber, GL_STATIC_DRAW);
         }
-        indicesInLastPlaneBuffer=tempVertIndex%((maxSupportedIndices/3)*3);
+        indicesInLastPlaneBuffer = tempVertIndex % ((maxSupportedIndices / 3) * 3);
         printf("Info: indices for plane successfully generated\n");
 
         //Generate Vertex Indices for Grid
-        tempVertIndex=0;
-        for(unsigned int y=0; y<(finalVertexResolution-gridOffsetMultiplier); y+=gridOffsetMultiplier) {
-            for(unsigned int x=0; x<(finalVertexResolution-gridOffsetMultiplier); x+=gridOffsetMultiplier) {
+        tempVertIndex = 0;
+        for(unsigned int y = 0; y < (finalVertexResolution - gridOffsetMultiplier); y += gridOffsetMultiplier) {
+            for(unsigned int x = 0; x < (finalVertexResolution - gridOffsetMultiplier); x += gridOffsetMultiplier) {
                 //Generate first line
-                plane_indices[tempVertIndex++]=x+(y*finalVertexResolution);
-                plane_indices[tempVertIndex++]=x+gridOffsetMultiplier+(y*finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + (y * finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + gridOffsetMultiplier + (y * finalVertexResolution);
                 //Generate second line
-                plane_indices[tempVertIndex++]=x+(y*finalVertexResolution);
-                plane_indices[tempVertIndex++]=x+((y+gridOffsetMultiplier)*finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + (y * finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + ((y + gridOffsetMultiplier) * finalVertexResolution);
                 //Generate third line
-                plane_indices[tempVertIndex++]=x+((y+gridOffsetMultiplier)*finalVertexResolution);
-                plane_indices[tempVertIndex++]=x+gridOffsetMultiplier+((y+gridOffsetMultiplier)*finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + ((y + gridOffsetMultiplier) * finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + gridOffsetMultiplier + ((y + gridOffsetMultiplier) * finalVertexResolution);
                 //Generate fourth line
-                plane_indices[tempVertIndex++]=x+gridOffsetMultiplier+(y*finalVertexResolution);
-                plane_indices[tempVertIndex++]=x+gridOffsetMultiplier+((y+gridOffsetMultiplier)*finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + gridOffsetMultiplier + (y * finalVertexResolution);
+                plane_indices[tempVertIndex++] = x + gridOffsetMultiplier + ((y + gridOffsetMultiplier) * finalVertexResolution);
             }
         }
 
-        glGenBuffers(indexBufferCountGrid,iboGridPointer);   //Skip over 2*int+(2*long==4*int)=6
-        bufferNumber=0;
-        for(; bufferNumber<(indexBufferCountGrid-1); bufferNumber++) { //Upload all but the last buffer
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboGridPointer[bufferNumber]);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxSupportedIndices/2)*2)*sizeof(GLuint),plane_indices+((maxSupportedIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
+        glGenBuffers(indexBufferCountGrid, iboGridPointer);   //Skip over 2*int+(2*long==4*int)=6
+        bufferNumber = 0;
+        for(; bufferNumber < (indexBufferCountGrid - 1); bufferNumber++) {     //Upload all but the last buffer
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboGridPointer[bufferNumber]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, ((maxSupportedIndices / 2) * 2)*sizeof(GLuint), plane_indices + ((maxSupportedIndices / 2) * 2)*bufferNumber, GL_STATIC_DRAW);
         }
         //Upload the last Buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboGridPointer[bufferNumber]);
-        if(tempVertIndex%((maxSupportedIndices/2)*2)!=0) {
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,(tempVertIndex%((maxSupportedIndices/2)*2))*sizeof(GLuint),plane_indices+((maxSupportedIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboGridPointer[bufferNumber]);
+        if(tempVertIndex % ((maxSupportedIndices / 2) * 2) != 0) {
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (tempVertIndex % ((maxSupportedIndices / 2) * 2))*sizeof(GLuint), plane_indices + ((maxSupportedIndices / 2) * 2)*bufferNumber, GL_STATIC_DRAW);
         } else {
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,((maxSupportedIndices/2)*2)*sizeof(GLuint),plane_indices+((maxSupportedIndices/2)*2)*bufferNumber,GL_STATIC_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, ((maxSupportedIndices / 2) * 2)*sizeof(GLuint), plane_indices + ((maxSupportedIndices / 2) * 2)*bufferNumber, GL_STATIC_DRAW);
         }
-        indicesInLastGridBuffer=tempVertIndex%((maxSupportedIndices/2)*2);
+        indicesInLastGridBuffer = tempVertIndex % ((maxSupportedIndices / 2) * 2);
         printf("Info: indices for grid successfully generated\n");
         free(plane_indices);                //Cleanup Array for indices
-    }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
+    } else if(G_OBJECT_STATE == G_OBJECT_DRAW) {
         //Draw Call for Grid and Plane, this does not use vao because we have multiple GL_ELEMENT_ARRAY_BUFFER to draw only one object
-        glBindBuffer(GL_ARRAY_BUFFER,VboVerticesId);
-        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
-        glEnableVertexAttribArray(0);//x,y
+        glBindBuffer(GL_ARRAY_BUFFER, VboVerticesId);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);   //x,y
         //Enabler Shader
         glUseProgram(gridAndPlaneShaderID);
         //Set Shader Uniforms to render Grid
-        glUniformMatrix4fv(mvpMatrixUniform,1,GL_FALSE,(GLfloat*)mvp4x4);
-        glUniform1f(renderGridOrPlaneUniform,1.0f);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
+        glUniform1f(renderGridOrPlaneUniform, 1.0f);
         unsigned int buffernumber;
         //Draw all vertices but those in the last index buffer
-        for(buffernumber=0; buffernumber<(indexBufferCountGrid-1); buffernumber++) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboGridPointer[buffernumber]);
-            glDrawElements(GL_LINES,(maxSupportedIndices/2)*2,GL_UNSIGNED_INT,0);
+        for(buffernumber = 0; buffernumber < (indexBufferCountGrid - 1); buffernumber++) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboGridPointer[buffernumber]);
+            glDrawElements(GL_LINES, (maxSupportedIndices / 2) * 2, GL_UNSIGNED_INT, 0);
         }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboGridPointer[buffernumber]);
-        glDrawElements(GL_LINES,indicesInLastGridBuffer,GL_UNSIGNED_INT,0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboGridPointer[buffernumber]);
+        glDrawElements(GL_LINES, indicesInLastGridBuffer, GL_UNSIGNED_INT, 0);
 
         //enable Transparency TODO remove?
         //glEnable(GL_BLEND);
@@ -746,278 +744,279 @@ void drawPlaneAndGrid(int G_OBJECT_STATE,unsigned int PlaneResolution,unsigned i
         //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
         //Render Plane
-        glUniform1f(renderGridOrPlaneUniform,0.0f);
-        for(buffernumber=0; buffernumber<(indexBufferCountPlane-1); buffernumber++) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboPlanePointer[buffernumber]);
-            glDrawElements(GL_TRIANGLES,(maxSupportedIndices/3)*3,GL_UNSIGNED_INT,0);
+        glUniform1f(renderGridOrPlaneUniform, 0.0f);
+        for(buffernumber = 0; buffernumber < (indexBufferCountPlane - 1); buffernumber++) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboPlanePointer[buffernumber]);
+            glDrawElements(GL_TRIANGLES, (maxSupportedIndices / 3) * 3, GL_UNSIGNED_INT, 0);
         }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,iboPlanePointer[buffernumber]);
-        glDrawElements(GL_TRIANGLES,indicesInLastPlaneBuffer,GL_UNSIGNED_INT,0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboPlanePointer[buffernumber]);
+        glDrawElements(GL_TRIANGLES, indicesInLastPlaneBuffer, GL_UNSIGNED_INT, 0);
     }
 }
 
-void drawGui(int G_OBJECT_STATE,float aspectRatio){
+void drawGui(int G_OBJECT_STATE, float aspectRatio) {
     //create and activate vertexArrayObject
 
-    static GLuint vaoID=0;
-    static GLuint vboIndicesID=0;
-    static GLuint vboVertexID=0;
-    static GLuint guiShaderID=0;
-    static GLuint textureId=0;
-    static int numberOfQuads=3;
-    if(G_OBJECT_STATE==G_OBJECT_INIT){
+    static GLuint vaoID = 0;
+    static GLuint vboIndicesID = 0;
+    static GLuint vboVertexID = 0;
+    static GLuint guiShaderID = 0;
+    static GLuint textureId = 0;
+    static int numberOfQuads = 3;
+    if(G_OBJECT_STATE == G_OBJECT_INIT) {
         //Compile Shader
         guiShaderID = glCreateProgram();
-        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl",GL_VERTEX_SHADER));         //attach vertex shader to new program
-        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl",GL_FRAGMENT_SHADER));     //attach fragment shader to new program
+        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl", GL_VERTEX_SHADER));        //attach vertex shader to new program
+        glAttachShader(guiShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl", GL_FRAGMENT_SHADER));     //attach fragment shader to new program
         glLinkProgram(guiShaderID);
         //Set texture for gui shader
         glActiveTexture(GL_TEXTURE1);
-        glGenTextures(1,&textureId);
-        glBindTexture(GL_TEXTURE_2D,textureId);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        void* tempClientGuiTexture=read_bmp(filepath_gui_bmp);
-        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,1024,1024,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,tempClientGuiTexture);
+        glGenTextures(1, &textureId);
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        void* tempClientGuiTexture = read_bmp(filepath_gui_bmp);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, tempClientGuiTexture);
         free(tempClientGuiTexture);
 
         glUseProgram(guiShaderID);
-        glUniform1i(glGetUniformLocation(guiShaderID,"texture1"),1);
-        glGenVertexArrays(1,&vaoID);
+        glUniform1i(glGetUniformLocation(guiShaderID, "texture1"), 1);
+        glGenVertexArrays(1, &vaoID);
         glBindVertexArray(vaoID);
-        glGenBuffers(1,&vboVertexID);
-        glBindBuffer(GL_ARRAY_BUFFER,vboVertexID);
-        glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,0);
+        glGenBuffers(1, &vboVertexID);
+        glBindBuffer(GL_ARRAY_BUFFER, vboVertexID);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);
-        glGenBuffers(1,&vboIndicesID);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
+        glGenBuffers(1, &vboIndicesID);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndicesID);
         glBindVertexArray(0);
 
-    }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
-        glBindVertexArray(vaoID); //This binds all buffers (vertices, indicesAndUVs)
+    } else if(G_OBJECT_STATE == G_OBJECT_DRAW) {
+        glBindVertexArray(vaoID);   //This binds all buffers (vertices, indicesAndUVs)
         glUseProgram(guiShaderID);
         glActiveTexture(GL_TEXTURE1);
         glDisable(GL_DEPTH_TEST);
         //TODO transparency
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        glDrawElements(GL_TRIANGLES,6*numberOfQuads,GL_UNSIGNED_INT,0); //TODO dynamic
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDrawElements(GL_TRIANGLES, 6 * numberOfQuads, GL_UNSIGNED_INT, 0);   //TODO dynamic
         glDisable(GL_BLEND);
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
-    }else if(G_OBJECT_STATE==G_OBJECT_UPDATE){
-        numberOfQuads=0;
-        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
-            switch(guiElementsStorage[gElmt].GUI_TYPE){
+    } else if(G_OBJECT_STATE == G_OBJECT_UPDATE) {
+        numberOfQuads = 0;
+        for(int gElmt = 0; gElmt < numberOfGuiElements; gElmt++) {
+            switch(guiElementsStorage[gElmt].GUI_TYPE) {
             case GUI_TYPE_SLIDER:
-                numberOfQuads+=3;
+                numberOfQuads += 3;
                 break;
             case GUI_TYPE_BUTTON:
-                numberOfQuads+=1;
+                numberOfQuads += 1;
                 break;
             case GUI_TYPE_JOYSTICK_ROTATION:
             case GUI_TYPE_JOYSTICK_MOVEMENT:
-                numberOfQuads+=1;
+                numberOfQuads += 1;
                 break;
             }
         }
-        float* GUI_positions_and_uv = (float*)malloc(16*numberOfQuads*sizeof(float)); //(*2 UV and XY Positions) (*4 vertices) (*2 each x,y)
-        GLuint* GUI_indices = (GLuint*)malloc(6*numberOfQuads*sizeof(GLuint));
-        int offsetInGuiPaUV=0;
-        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
-                float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsSize=2.0f*guiElementsStorage[gElmt].percentOfWidth;       //Transform coordinates from [0,1] to [-1,1]
+        float* GUI_positions_and_uv = (float*)malloc(16 * numberOfQuads * sizeof(float));       //(*2 UV and XY Positions) (*4 vertices) (*2 each x,y)
+        GLuint* GUI_indices = (GLuint*)malloc(6 * numberOfQuads * sizeof(GLuint));
+        int offsetInGuiPaUV = 0;
+        for(int gElmt = 0; gElmt < numberOfGuiElements; gElmt++) {
+            if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_SLIDER) {
+                float glCoordsX = 2.0f * (guiElementsStorage[gElmt].top_left_x - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsY = -2.0f * (guiElementsStorage[gElmt].top_left_y * aspectRatio - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsSize = 2.0f * guiElementsStorage[gElmt].percentOfWidth;   //Transform coordinates from [0,1] to [-1,1]
                 //Positions
 
                 //Part 1 slider
                 //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (40.0f / 512.0f);
                 //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+4.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 4.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (40.0f / 512.0f);
                 //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (24.0f / 512.0f);
                 //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+4.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 4.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (24.0f / 512.0f);
 
                 //Part 2 button
                 //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+4.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(64.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 4.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (64.0f / 512.0f);
                 //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+68.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(64.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 68.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (64.0f / 512.0f);
                 //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+4.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 4.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY;
                 //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+68.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 68.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY;
 
                 //Part 3 slider
                 //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+68.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 68.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (40.0f / 512.0f);
                 //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(40.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (40.0f / 512.0f);
                 //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+((guiElementsStorage[gElmt].position_x*440.0f+68.0f)/512.0f)*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + ((guiElementsStorage[gElmt].position_x * 440.0f + 68.0f) / 512.0f) * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (24.0f / 512.0f);
                 //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*(24.0f/512.0f);
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON){
-                float glCoordsX=2.0f*(guiElementsStorage[gElmt].top_left_x-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsSize=2.0f*guiElementsStorage[gElmt].percentOfWidth;       //Transform coordinates from [0,1] to [-1,1]
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*0.25f;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize*0.25f;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_JOYSTICK_MOVEMENT || guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_JOYSTICK_ROTATION){
-                float positionX=guiElementsStorage[gElmt].position_x;
-                float positionY=guiElementsStorage[gElmt].position_y;
-                float glCoordsX=2.0f*((guiElementsStorage[gElmt].top_left_x)-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsY=-2.0f*(guiElementsStorage[gElmt].top_left_y*aspectRatio-0.5f);       //Transform coordinates from [0,1] to [-1,1]
-                float glCoordsSize=2.0f*guiElementsStorage[gElmt].percentOfWidth;       //Transform coordinates from [0,1] to [-1,1]
-
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY-aspectRatio*glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsX+glCoordsSize;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=glCoordsY;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (24.0f / 512.0f);
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON) {
+                float glCoordsX = 2.0f * (guiElementsStorage[gElmt].top_left_x - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsY = -2.0f * (guiElementsStorage[gElmt].top_left_y * aspectRatio - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsSize = 2.0f * guiElementsStorage[gElmt].percentOfWidth;   //Transform coordinates from [0,1] to [-1,1]
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * 0.25f;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * 0.25f;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY;
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION) {
+#define buttonscale_intern 0.25f
+                float positionX = guiElementsStorage[gElmt].position_x;
+                float positionY = guiElementsStorage[gElmt].position_y;
+                float glCoordsX = 2.0f * ((guiElementsStorage[gElmt].top_left_x) - 0.5f);     //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsY = -2.0f * (guiElementsStorage[gElmt].top_left_y * aspectRatio - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
+                float glCoordsSize = 2.0f * guiElementsStorage[gElmt].percentOfWidth;   //Transform coordinates from [0,1] to [-1,1]
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + guiElementsStorage[gElmt].percentOfWidth * (positionX * 0.5f + 0.5f) * (1 - buttonscale_intern); //LOWERLEFT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize + (aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * (-0.5f) + 0.5f) * (1 - buttonscale_intern));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize - guiElementsStorage[gElmt].percentOfWidth * (positionX * (-0.5f) + 0.5f) * (1 - buttonscale_intern);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize + (aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * (-0.5f) + 0.5f) * (1 - buttonscale_intern));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + guiElementsStorage[gElmt].percentOfWidth * (positionX * 0.5f + 0.5f) * (1 - buttonscale_intern); //UPPERLEFT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - (aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * 0.5f + 0.5f) * (1 - buttonscale_intern));
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize - guiElementsStorage[gElmt].percentOfWidth * (positionX * (-0.5f) + 0.5f) * (1 - buttonscale_intern);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - (aspectRatio * guiElementsStorage[gElmt].percentOfWidth * (positionY * 0.5f + 0.5f) * (1 - buttonscale_intern));
 
             }
         }
-        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
+        for(int gElmt = 0; gElmt < numberOfGuiElements; gElmt++) {
+            if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_SLIDER) {
                 //UV
                 //Part 1 slider
                 //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_DOWN_RIGHT_Y;
                 //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X+((guiElementsStorage[gElmt].position_x*440.0f+4.0f)/1024.0f);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X + ((guiElementsStorage[gElmt].position_x * 440.0f + 4.0f) / 1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_DOWN_RIGHT_Y;
                 //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_TOP_LEFT_Y;
                 //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X+((guiElementsStorage[gElmt].position_x*440.0f+4.0f)/1024.0f);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_ACTIVE_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_TOP_LEFT_X + ((guiElementsStorage[gElmt].position_x * 440.0f + 4.0f) / 1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_ACTIVE_TOP_LEFT_Y;
 
                 //Part 2 middle slider
                 //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_DOWN_RIGHT_Y;
                 //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_DOWN_RIGHT_Y;
                 //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_TOP_LEFT_Y;
                 //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BUTTON_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BUTTON_TOP_LEFT_Y;
 
                 //Part 3 slider (inactive)
                 //Left part slider lower left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_TOP_LEFT_X+((guiElementsStorage[gElmt].position_x*440.0f+68.0f)/1024.0f);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_TOP_LEFT_X + ((guiElementsStorage[gElmt].position_x * 440.0f + 68.0f) / 1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_Y;
                 //Left part slider lower right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_Y;
                 //Left part slider upper left vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_TOP_LEFT_X+((guiElementsStorage[gElmt].position_x*440.0f+68.0f)/1024.0f);
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_TOP_LEFT_X + ((guiElementsStorage[gElmt].position_x * 440.0f + 68.0f) / 1024.0f);
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_TOP_LEFT_Y;
                 //Left part slider upper right vertex
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_X;
-                GUI_positions_and_uv[offsetInGuiPaUV++]=UV_SLIDER_BAR_INACTIVE_TOP_LEFT_Y;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON){
-                if(guiElementsStorage[gElmt].position_x==GUI_STATE_BUTTON1_RESET){
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
-                }else if(guiElementsStorage[gElmt].position_x==GUI_STATE_BUTTON1_START){
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_DOWN_RIGHT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_START_TOP_LEFT_Y;
-                }else if(guiElementsStorage[gElmt].position_x==GUI_STATE_BUTTON1_MESS){
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
-                    GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_SLIDER_BAR_INACTIVE_TOP_LEFT_Y;
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON) {
+                if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_NEW_TOP_LEFT_Y;
+                } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_TOP_LEFT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_START_TOP_LEFT_Y;
+                } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_DOWN_RIGHT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_TOP_LEFT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_DOWN_RIGHT_X;
+                    GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_BUTTON_MESS_TOP_LEFT_Y;
                 }
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_JOYSTICK_MOVEMENT){
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_Y;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_Y;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_Y;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_Y;
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_JOYSTICK_ROTATION){
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_Y;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_Y;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_Y;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_X;
-              GUI_positions_and_uv[offsetInGuiPaUV++]=UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_Y;
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT) {
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_Y;
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION) {
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_ROTATION_TOP_LEFT_Y;
             }
         }
-        {//Generate Indices for quads
-            unsigned int index=0;
-            int positionInIbo=0;
-            while(positionInIbo<(numberOfQuads*6)){
-                GUI_indices[positionInIbo++]=index++; //0
-                GUI_indices[positionInIbo++]=index++; //1
-                GUI_indices[positionInIbo++]=index; //2
-                GUI_indices[positionInIbo++]=index--; //2
-                GUI_indices[positionInIbo++]=index; //1
-                index+=2;
-                GUI_indices[positionInIbo++]=index++; //3
+        {
+            //Generate Indices for quads
+            unsigned int index = 0;
+            int positionInIbo = 0;
+            while(positionInIbo < (numberOfQuads * 6)) {
+                GUI_indices[positionInIbo++] = index++; //0
+                GUI_indices[positionInIbo++] = index++; //1
+                GUI_indices[positionInIbo++] = index; //2
+                GUI_indices[positionInIbo++] = index--; //2
+                GUI_indices[positionInIbo++] = index; //1
+                index += 2;
+                GUI_indices[positionInIbo++] = index++; //3
             }
         }
-        glBindBuffer(GL_ARRAY_BUFFER,vboVertexID);
-        glBufferData(GL_ARRAY_BUFFER,16*numberOfQuads*sizeof(float),GUI_positions_and_uv,GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboIndicesID);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*numberOfQuads*sizeof(GLuint),GUI_indices,GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, vboVertexID);
+        glBufferData(GL_ARRAY_BUFFER, 16 * numberOfQuads * sizeof(float), GUI_positions_and_uv, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndicesID);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * numberOfQuads * sizeof(GLuint), GUI_indices, GL_DYNAMIC_DRAW);
         //update vao
         glBindVertexArray(vaoID);
-        glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,0,(GLvoid*)(sizeof(float)*8*numberOfQuads));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 8 * numberOfQuads));
         glEnableVertexAttribArray(1);
         glBindVertexArray(0);
         free(GUI_positions_and_uv);
@@ -1026,194 +1025,194 @@ void drawGui(int G_OBJECT_STATE,float aspectRatio){
 }
 
 float update_delta_time() {             //Get the current time with glfwGetTime and subtract last time to return deltatime
-    static double last_glfw_time=0.0f;
+    static double last_glfw_time = 0.0f;
     static double current_glfw_time;
     current_glfw_time = glfwGetTime();
-    float delta = (float) (current_glfw_time-last_glfw_time);
+    float delta = (float)(current_glfw_time - last_glfw_time);
     last_glfw_time = current_glfw_time;
     return delta;
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if(key==GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(MainWindow,1);
+    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(MainWindow, 1);
     }
-    if(glfwGetKey(MainWindow,GLFW_KEY_M)==GLFW_PRESS) {
-        if(measurement==0)
-            measurement=1;
+    if(glfwGetKey(MainWindow, GLFW_KEY_M) == GLFW_PRESS) {
+        if(measurement == 0)
+            measurement = 1;
     }
-    if(measurement==2) {
-        if(glfwGetKey(MainWindow,GLFW_KEY_SPACE)==GLFW_PRESS) {
-            measurement=0;
+    if(measurement == 2) {
+        if(glfwGetKey(MainWindow, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            measurement = 0;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_RIGHT)==GLFW_PRESS) {
-            offset_x=offset_x+Offset_change;
-            draw=1;
+        if(glfwGetKey(MainWindow, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+            offset_x = offset_x + Offset_change;
+            draw = 1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_LEFT)==GLFW_PRESS) {
-            offset_x=offset_x-Offset_change;
-            draw=1;
+        if(glfwGetKey(MainWindow, GLFW_KEY_LEFT) == GLFW_PRESS) {
+            offset_x = offset_x - Offset_change;
+            draw = 1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_UP)==GLFW_PRESS) {
-            offset_y=offset_y+Offset_change;
-            draw=1;
+        if(glfwGetKey(MainWindow, GLFW_KEY_UP) == GLFW_PRESS) {
+            offset_y = offset_y + Offset_change;
+            draw = 1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_DOWN)==GLFW_PRESS) {
-            offset_y=offset_y-Offset_change;
-            draw=1;
+        if(glfwGetKey(MainWindow, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            offset_y = offset_y - Offset_change;
+            draw = 1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_R)==GLFW_PRESS) {
+        if(glfwGetKey(MainWindow, GLFW_KEY_R) == GLFW_PRESS) {
             offset_x = offset_x_start;
             offset_y = offset_y_start;
-            guiElementsStorage[GUI_SLIDER_SIZE].position_x=SLIDER_SIZE_START;
-            diameter=guiElementsStorage[GUI_SLIDER_SIZE].position_x*SIZE_MULTI;
+            guiElementsStorage[GUI_SLIDER_SIZE].position_x = SLIDER_SIZE_START;
+            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI;
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
-            dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x*SPEED_MULTI;
-            momentum_prop=1;
-            draw=1;
+            dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
+            momentum_prop = 1;
+            draw = 1;
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_O)==GLFW_PRESS) {
-            if(guiElementsStorage[GUI_SLIDER_SIZE].position_x>Diameter_change) {
-                guiElementsStorage[GUI_SLIDER_SIZE].position_x=guiElementsStorage[GUI_SLIDER_SIZE].position_x-Diameter_change;
-                diameter=guiElementsStorage[GUI_SLIDER_SIZE].position_x*SIZE_MULTI;
-                draw=1;
+        if(glfwGetKey(MainWindow, GLFW_KEY_O) == GLFW_PRESS) {
+            if(guiElementsStorage[GUI_SLIDER_SIZE].position_x > Diameter_change) {
+                guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x - Diameter_change;
+                diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI;
+                draw = 1;
             }
         }
-        if(glfwGetKey(MainWindow,GLFW_KEY_P)==GLFW_PRESS) {
-            if(guiElementsStorage[GUI_SLIDER_SIZE].position_x<1.0f-Diameter_change) {
-                guiElementsStorage[GUI_SLIDER_SIZE].position_x=guiElementsStorage[GUI_SLIDER_SIZE].position_x+Diameter_change;
-                diameter=guiElementsStorage[GUI_SLIDER_SIZE].position_x*50.0f;
-                draw=1;
+        if(glfwGetKey(MainWindow, GLFW_KEY_P) == GLFW_PRESS) {
+            if(guiElementsStorage[GUI_SLIDER_SIZE].position_x < 1.0f - Diameter_change) {
+                guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x + Diameter_change;
+                diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
+                draw = 1;
             }
         }
     }
-    if(measurement==5||measurement==1){
-        if(glfwGetKey(MainWindow,GLFW_KEY_N)==GLFW_PRESS) {
+    if(measurement == 5 || measurement == 1) {
+        if(glfwGetKey(MainWindow, GLFW_KEY_N) == GLFW_PRESS) {
             measurement = 2;
-            diameter=guiElementsStorage[GUI_SLIDER_SIZE].position_x*50.0f;
-            draw=1;
+            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
+            draw = 1;
         }
     }
-    if(glfwGetKey(MainWindow,GLFW_KEY_X)==GLFW_PRESS) {
-        if(guiElementsStorage[GUI_SLIDER_SPEED].position_x<1.0f-Speed_change) {
-            guiElementsStorage[GUI_SLIDER_SPEED].position_x+=Speed_change;
+    if(glfwGetKey(MainWindow, GLFW_KEY_X) == GLFW_PRESS) {
+        if(guiElementsStorage[GUI_SLIDER_SPEED].position_x < 1.0f - Speed_change) {
+            guiElementsStorage[GUI_SLIDER_SPEED].position_x += Speed_change;
             dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
-            momentum_prop=1;
+            momentum_prop = 1;
         }
     }
-    if(glfwGetKey(MainWindow,GLFW_KEY_Y)==GLFW_PRESS) {
-        if(guiElementsStorage[GUI_SLIDER_SPEED].position_x>Speed_change) {
-            guiElementsStorage[GUI_SLIDER_SPEED].position_x-=Speed_change;
+    if(glfwGetKey(MainWindow, GLFW_KEY_Y) == GLFW_PRESS) {
+        if(guiElementsStorage[GUI_SLIDER_SPEED].position_x > Speed_change) {
+            guiElementsStorage[GUI_SLIDER_SPEED].position_x -= Speed_change;
             dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
-            momentum_prop=1;
+            momentum_prop = 1;
         }
     }
-    int width=0;
-    int height=0;
+    int width = 0;
+    int height = 0;
     glfwGetWindowSize(MainWindow, &width, &height);
-    drawGui(G_OBJECT_UPDATE,width/(float)height);
+    drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
-void mouse_button_callback(GLFWwindow* window, int button,int action, int mods) {
-    double xpos=0;
-    double ypos=0;
-    int width=0;
-    int height=0;
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    double xpos = 0;
+    double ypos = 0;
+    int width = 0;
+    int height = 0;
     glfwGetCursorPos(MainWindow, &xpos, &ypos);
     glfwGetWindowSize(MainWindow, &width, &height);
-    xpos=xpos/width;
-    ypos=ypos/width;
-    if(button==GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_PRESS) {
-        for(int gElmt=0;gElmt<numberOfGuiElements;gElmt++){
-            if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_SLIDER){
-                float x_offset=(guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth*((36.0f)+guiElementsStorage[gElmt].position_x*440.0f)/512.0f)-xpos;
-                float y_offset=(guiElementsStorage[gElmt].top_left_y+guiElementsStorage[gElmt].percentOfWidth*(32.0f/512.0f))-ypos;
-                if((x_offset*x_offset+y_offset*y_offset)<((guiElementsStorage[gElmt].percentOfWidth*32.0f/512.0f)*(guiElementsStorage[gElmt].percentOfWidth*32.0f/512.0f))){
-                    selectedGuiElement=gElmt;
-                    printf("Info: Grabbed on Gui Element %d\n",selectedGuiElement);
+    xpos = xpos / width;
+    ypos = ypos / width;
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        for(int gElmt = 0; gElmt < numberOfGuiElements; gElmt++) {
+            if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_SLIDER) {
+                float x_offset = (guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * ((36.0f) + guiElementsStorage[gElmt].position_x * 440.0f) / 512.0f) - xpos;
+                float y_offset = (guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (32.0f / 512.0f)) - ypos;
+                if((x_offset * x_offset + y_offset * y_offset) < ((guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f) * (guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f))) {
+                    selectedGuiElement = gElmt;
+                    printf("Info: Grabbed on Gui Element %d\n", selectedGuiElement);
                     return;
                 }
-            }else if(guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_BUTTON&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+0.25f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
-                if(guiElementsStorage[gElmt].position_x==GUI_STATE_BUTTON1_RESET){
-                    if(measurement==5||measurement==1){
-                        draw=1;
-                        measurement=2;
-                        guiElementsStorage[gElmt].position_x=GUI_STATE_BUTTON1_START;
-                        drawGui(G_OBJECT_UPDATE,width/(float)height);
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
+                if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
+                    if(measurement == 5 || measurement == 1) {
+                        draw = 1;
+                        measurement = 2;
+                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
+                        drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
                     return;
-                }else if(guiElementsStorage[gElmt].position_x==GUI_STATE_BUTTON1_START){
-                    if(measurement==2){
-                        measurement=0;
-                        guiElementsStorage[gElmt].position_x=GUI_STATE_BUTTON1_MESS;
-                        drawGui(G_OBJECT_UPDATE,width/(float)height);
+                } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
+                    if(measurement == 2) {
+                        measurement = 0;
+                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
+                        drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
                     return;
-                }else if(guiElementsStorage[gElmt].position_x==GUI_STATE_BUTTON1_MESS){
-                    if(measurement==0){
-                        measurement=1;
-                        guiElementsStorage[gElmt].position_x=GUI_STATE_BUTTON1_RESET;
-                        drawGui(G_OBJECT_UPDATE,width/(float)height);
+                } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
+                    if(measurement == 0) {
+                        measurement = 1;
+                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_RESET;
+                        drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
                     return;
                 }
-            }else if((guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_JOYSTICK_ROTATION||guiElementsStorage[gElmt].GUI_TYPE==GUI_TYPE_JOYSTICK_MOVEMENT)&&(guiElementsStorage[gElmt].top_left_x<xpos&&((guiElementsStorage[gElmt].top_left_x+guiElementsStorage[gElmt].percentOfWidth)>xpos))&&(guiElementsStorage[gElmt].top_left_y<ypos&&((guiElementsStorage[gElmt].top_left_y+1.0f*guiElementsStorage[gElmt].percentOfWidth)>ypos))){
-                //TODO now
+            } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT) {
+                //TODO if()
             }
         }
-        selectedGuiElement=-1;
+        selectedGuiElement = -1;
     }
-    if(button== GLFW_MOUSE_BUTTON_LEFT&&action==GLFW_RELEASE) {
-        selectedGuiElement=-1;  //Deselect all gui elements
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        selectedGuiElement = -1; //Deselect all gui elements
     }
 }
 
-GLuint CompileShaderFromFile(char FilePath[],GLuint shaderType) {
+GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType) {
     //read from file into heap memory
-    FILE* filepointer=fopen(FilePath,"rb");                  //open specified file in read only mode
-    if(filepointer==NULL) {
-        printf("Error: Filepointer to shaderfile at %s of type %d could not be loaded.",FilePath,shaderType);
+    FILE* filepointer = fopen(FilePath, "rb");               //open specified file in read only mode
+    if(filepointer == NULL) {
+        printf("Error: Filepointer to shaderfile at %s of type %d could not be loaded.", FilePath, shaderType);
         //return;
     }
-    fseek(filepointer,0,SEEK_END);                          //shift filePointer to EndOfFile Position to get filelength
+    fseek(filepointer, 0, SEEK_END);                        //shift filePointer to EndOfFile Position to get filelength
     long filelength = ftell(filepointer);                   //get filePointer position
-    fseek(filepointer,0,SEEK_SET);                          //move file Pointer back to first line of file
-    char* filestring = (char*)malloc(filelength+1);         //
-    if(fread(filestring,sizeof(char),filelength,filepointer) != filelength) {
+    fseek(filepointer, 0, SEEK_SET);                        //move file Pointer back to first line of file
+    char* filestring = (char*)malloc(filelength + 1);       //
+    if(fread(filestring, sizeof(char), filelength, filepointer) != filelength) {
         printf("Error: Missing characters in input string");
         //return;
     }
-    if(filestring[0]==0xEF&&filestring[1]==0xBB&&filestring[2]==0xBF) {  //Detect if file is utf8 with bom
+    if(filestring[0] == 0xEF && filestring[1] == 0xBB && filestring[2] == 0xBF) {   //Detect if file is utf8 with bom
         printf("Error: Remove the bom from your utf8 shader file");
     }
-    filestring[filelength]=0;                             //Set end of string
+    filestring[filelength] = 0;                           //Set end of string
     fclose(filepointer);                                  //Close File
     const char* ConstFilePointer = filestring;            //opengl wants const pointer
     //compile shader with opengl
-    GLuint ShaderId= glCreateShader(shaderType);
-    glShaderSource(ShaderId,1,&ConstFilePointer,NULL);
+    GLuint ShaderId = glCreateShader(shaderType);
+    glShaderSource(ShaderId, 1, &ConstFilePointer, NULL);
     glCompileShader(ShaderId);
     GLint compStatus = 0;
-    glGetShaderiv(ShaderId,GL_COMPILE_STATUS,&compStatus);
-    if(compStatus!=GL_TRUE) {
-        printf("Error: Compilation of shader %d failed!\n",ShaderId);
+    glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &compStatus);
+    if(compStatus != GL_TRUE) {
+        printf("Error: Compilation of shader %d failed!\n", ShaderId);
         //TODO free resources
         //return;
     }
-    printf("Info: Shader %d sucessfully compiled.\n",ShaderId);
+    printf("Info: Shader %d sucessfully compiled.\n", ShaderId);
     free(filestring);                                   //Delete Shader string from heap
     fclose(filepointer);
     return ShaderId;
 }
 
 void glfw_error_callback(int error, const char* description) {
-    printf("Error: GLFW-Error type: %d occurred.\nDescription: %s\n",error,description);
+    printf("Error: GLFW-Error type: %d occurred.\nDescription: %s\n", error, description);
 }
 
-void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar* message,const void* userParam) {
+void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
     printf("Error in opengl occured!\n");
-    printf("Message: %s\n",message);
+    printf("Message: %s\n", message);
     printf("type or error: ");
-    switch (type) {
+    switch(type) {
     case GL_DEBUG_TYPE_ERROR:
         printf("ERROR");
         break;
@@ -1233,9 +1232,9 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
         printf("OTHER");
         break;
     }
-    printf("\nId:%d \n",id);
+    printf("\nId:%d \n", id);
     printf("Severity:");
-    switch (severity) {
+    switch(severity) {
     case GL_DEBUG_SEVERITY_LOW:
         printf("LOW");
         break;
@@ -1250,15 +1249,15 @@ void APIENTRY openglCallbackFunction(GLenum source,GLenum type,GLuint id,GLenum 
 }
 
 void drop_file_callback(GLFWwindow* window, int count, const char** paths) {
-    for(int i=0; i<count; i++) {
-        printf("Dropped File Path: %s\n",paths[i]);
+    for(int i = 0; i < count; i++) {
+        printf("Dropped File Path: %s\n", paths[i]);
     }
 }
 
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
-    float temp_mouse_scroll= -0.04f*(float)yOffset;
-    if((FOV+temp_mouse_scroll<1.0f)&&(FOV+temp_mouse_scroll>0.1f)) {
-        FOV+=temp_mouse_scroll;
+    float temp_mouse_scroll = -0.04f * (float)yOffset;
+    if((FOV + temp_mouse_scroll < 1.0f) && (FOV + temp_mouse_scroll > 0.1f)) {
+        FOV += temp_mouse_scroll;
     } else {
     }
 }
@@ -1266,11 +1265,11 @@ void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
 unsigned int read_uint_from_endian_file(FILE* file) {
     unsigned char data[4];
     unsigned int data_return_int;
-    if(fread(data,1,4,file)<4) { //total number of read elements is less than 4
+    if(fread(data, 1, 4, file) < 4) {     //total number of read elements is less than 4
         return 0;
     }
     //little endian
-    data_return_int=(data[3]<<24)|(data[2]<<16)|(data[1]<<8)|data[0];
+    data_return_int = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
     //big endian (comment out and comment little endian if needed)
     //data_return_int=(data[0]<<24)|(data[1]<<16)|(data[2]<<8)|data[3];
     return data_return_int;
@@ -1280,11 +1279,11 @@ unsigned short read_short_from_endian_file(FILE* file) {
     //http://cpansearch.perl.org/src/DHUNT/PDL-Planet-0.05/libimage/bmp.c
     unsigned char data[2];
     unsigned short data_return_short;
-    if(fread(data,1,2,file)<2) { //total number of read elements is less than 4
+    if(fread(data, 1, 2, file) < 2) {     //total number of read elements is less than 4
         return 0;
     }
     //little endian
-    data_return_short=(data[1]<<8)|data[0];
+    data_return_short = (data[1] << 8) | data[0];
     //big endian (comment out and comment little endian if needed)
     //data_return_short=(data[0]<<8)|data[1];
     return data_return_short;
@@ -1293,46 +1292,46 @@ unsigned short read_short_from_endian_file(FILE* file) {
 unsigned char* read_bmp(char* filepath) {
     //source https://github.com/ndd314/sjsu_cmpe295_cuda_fft_opengl/blob/master/opengl/plane/readBMPV2.c#L50
     //https://stackoverflow.com/questions/7990273/converting-256-color-bitmap-to-rgba-bitmap
-    FILE *filepointer=fopen(filepath,"rb");
+    FILE *filepointer = fopen(filepath, "rb");
 
-    if(filepointer==NULL) {
-        printf("Error: File :%s could not be found\n",filepath);
+    if(filepointer == NULL) {
+        printf("Error: File :%s could not be found\n", filepath);
         fclose(filepointer);
         return 0;
     }
 
-    fseek(filepointer,0,SEEK_SET);  //Jump to beginning of file
-    if(read_short_from_endian_file(filepointer)!=0x4D42) { // (equals BM in ASCII)
+    fseek(filepointer, 0, SEEK_SET);   //Jump to beginning of file
+    if(read_short_from_endian_file(filepointer) != 0x4D42) {     // (equals BM in ASCII)
         fclose(filepointer);
-        printf("Error: File :%s is not an BMP\n",filepath);
+        printf("Error: File :%s is not an BMP\n", filepath);
         return 0;
     }
 
-    fseek(filepointer,10,SEEK_SET);
+    fseek(filepointer, 10, SEEK_SET);
     unsigned int BitmapOffset = read_uint_from_endian_file(filepointer);
-    printf("Info: BMP data offset:%d\n",BitmapOffset);
+    printf("Info: BMP data offset:%d\n", BitmapOffset);
 
-    if(read_uint_from_endian_file(filepointer)!=124) {
+    if(read_uint_from_endian_file(filepointer) != 124) {
         printf("Error: BitmapHeader is not BITMAPV5HEADER / 124 \n");
         fclose(filepointer);
         return 0;
     }
-    unsigned int BitmapWidth=read_uint_from_endian_file(filepointer);
-    printf("Info: BitmapWidth is %d.\n",BitmapWidth);
+    unsigned int BitmapWidth = read_uint_from_endian_file(filepointer);
+    printf("Info: BitmapWidth is %d.\n", BitmapWidth);
 
-    unsigned int BitmapHeight=read_uint_from_endian_file(filepointer);
-    printf("Info: BitmapHeight is %d.\n",BitmapHeight);
+    unsigned int BitmapHeight = read_uint_from_endian_file(filepointer);
+    printf("Info: BitmapHeight is %d.\n", BitmapHeight);
 
-    if(read_short_from_endian_file(filepointer)!=1) {
+    if(read_short_from_endian_file(filepointer) != 1) {
         printf("Error: Unsupported plane count\n");
         return 0;
     }
 
-    unsigned int BitmapColorDepth=read_short_from_endian_file(filepointer);
-    printf("Info: BMP color depth:%d",BitmapColorDepth);
-    unsigned int BitmapSizeCalculated=(BitmapColorDepth/8)*(BitmapWidth+(BitmapWidth%4))*BitmapWidth;
+    unsigned int BitmapColorDepth = read_short_from_endian_file(filepointer);
+    printf("Info: BMP color depth:%d", BitmapColorDepth);
+    unsigned int BitmapSizeCalculated = (BitmapColorDepth / 8) * (BitmapWidth + (BitmapWidth % 4)) * BitmapWidth;
 
-    unsigned int BitmapCompression=read_uint_from_endian_file(filepointer);
+    unsigned int BitmapCompression = read_uint_from_endian_file(filepointer);
     switch(BitmapCompression) {
     case 0:
         printf("Warn: Compression type: none/BI_RGB\n");
@@ -1341,54 +1340,54 @@ unsigned char* read_bmp(char* filepath) {
         printf("Info: Compression type: Bitfields/BI_BITFIELDS\n");
         break;
     default:
-        printf("Error: Unsupported compression %d\n",BitmapCompression);
+        printf("Error: Unsupported compression %d\n", BitmapCompression);
         fclose(filepointer);
         return 0;
         break;
     }
-    unsigned int BitmapImageSize=read_uint_from_endian_file(filepointer);
-    if(BitmapImageSize!=BitmapSizeCalculated) {
-        printf("Error: Reading image size: Calculated Image Size: %d.\nRead Image size: %d\n",BitmapSizeCalculated,BitmapImageSize);
+    unsigned int BitmapImageSize = read_uint_from_endian_file(filepointer);
+    if(BitmapImageSize != BitmapSizeCalculated) {
+        printf("Error: Reading image size: Calculated Image Size: %d.\nRead Image size: %d\n", BitmapSizeCalculated, BitmapImageSize);
         fclose(filepointer);
         return 0;
     }
-    printf("Info: Image Size:%d\n",BitmapSizeCalculated);
+    printf("Info: Image Size:%d\n", BitmapSizeCalculated);
     /*unsigned int BitmapXPpM=*/read_uint_from_endian_file(filepointer);
     /*unsigned int BitmapYPpM=*/read_uint_from_endian_file(filepointer);
-    unsigned int BitmapColorsInPalette=read_uint_from_endian_file(filepointer);
-    printf("Info: Colors in palette: %d.\n",BitmapColorsInPalette);
-    fseek(filepointer,4,SEEK_CUR);//skip over important color count
-    if(BitmapCompression==3) {
+    unsigned int BitmapColorsInPalette = read_uint_from_endian_file(filepointer);
+    printf("Info: Colors in palette: %d.\n", BitmapColorsInPalette);
+    fseek(filepointer, 4, SEEK_CUR);   //skip over important color count
+    if(BitmapCompression == 3) {
         unsigned char RGBA_mask[4];
-        for(unsigned int color_channel=0; color_channel<4; color_channel++) {
-            unsigned int color_channel_mask=read_uint_from_endian_file(filepointer);
-            switch(color_channel_mask) { //read shift value for color_channel
+        for(unsigned int color_channel = 0; color_channel < 4; color_channel++) {
+            unsigned int color_channel_mask = read_uint_from_endian_file(filepointer);
+            switch(color_channel_mask) {   //read shift value for color_channel
             case 0xFF000000:
-                RGBA_mask[color_channel]=3;
+                RGBA_mask[color_channel] = 3;
                 break;
             case 0x00FF0000:
-                RGBA_mask[color_channel]=2;
+                RGBA_mask[color_channel] = 2;
                 break;
             case 0x0000FF00:
-                RGBA_mask[color_channel]=1;
+                RGBA_mask[color_channel] = 1;
                 break;
             case 0x000000FF:
-                RGBA_mask[color_channel]=0;
+                RGBA_mask[color_channel] = 0;
                 break;
             default:
-                printf("Error: Invalid BITMASK. Value: %x!\n",color_channel_mask);
+                printf("Error: Invalid BITMASK. Value: %x!\n", color_channel_mask);
                 fclose(filepointer);
                 return 0;
                 break;
             }
         }
         //TODO implement swapping routine if brga!=[3,2,1,0]
-        printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n",RGBA_mask[0],RGBA_mask[1],RGBA_mask[2],RGBA_mask[3]);
-        unsigned char* imageData=malloc(BitmapSizeCalculated);
-        printf("Info: BMOFFST: %d\n",BitmapOffset);
-        fseek(filepointer,BitmapOffset,SEEK_SET);//jump to pixel data
-        printf("Info: Calsize: %d\n",BitmapSizeCalculated);
-        if(fread(imageData,BitmapSizeCalculated,1,filepointer)==0) {
+        printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n", RGBA_mask[0], RGBA_mask[1], RGBA_mask[2], RGBA_mask[3]);
+        unsigned char* imageData = malloc(BitmapSizeCalculated);
+        printf("Info: BMOFFST: %d\n", BitmapOffset);
+        fseek(filepointer, BitmapOffset, SEEK_SET);   //jump to pixel data
+        printf("Info: Calsize: %d\n", BitmapSizeCalculated);
+        if(fread(imageData, BitmapSizeCalculated, 1, filepointer) == 0) {
             printf("Error: Reading failed!");
         }
         fclose(filepointer);
@@ -1399,56 +1398,56 @@ unsigned char* read_bmp(char* filepath) {
     return 0;
 }
 
-void windows_size_callback(GLFWwindow* window, int width, int height){
-    glViewport(0,0,width,height);
+void windows_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
     //Refresh lower GUI Border
-    guiElementsStorage[GUI_BUTTON].top_left_y=(height/(float)width)-guiElementsStorage[GUI_BUTTON].percentOfWidth*0.25f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_y=(height/(float)width)-guiElementsStorage[GUI_BUTTON].percentOfWidth;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_y=(height/(float)width)-guiElementsStorage[GUI_BUTTON].percentOfWidth;
-    drawGui(G_OBJECT_UPDATE,width/(float)height);
+    guiElementsStorage[GUI_BUTTON].top_left_y = (height / (float)width) - guiElementsStorage[GUI_BUTTON].percentOfWidth * 0.25f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth;
+    drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
-void cursor_pos_callback(GLFWwindow* window,double xpos, double ypos){
-    int width=0;
-    int height=0;
+void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
+    int width = 0;
+    int height = 0;
     glfwGetWindowSize(MainWindow, &width, &height);
-    xpos=xpos/width;
-    if(selectedGuiElement==-1){
+    xpos = xpos / width;
+    if(selectedGuiElement == -1) {
         return;
     }
-    guiElementsStorage[selectedGuiElement].position_x=((((xpos-guiElementsStorage[selectedGuiElement].top_left_x)/guiElementsStorage[selectedGuiElement].percentOfWidth)*512.0f)-36.0f)/440.0f;
-    if(guiElementsStorage[selectedGuiElement].position_x<0.0f){
-        guiElementsStorage[selectedGuiElement].position_x=0.0f;
-    }else if(guiElementsStorage[selectedGuiElement].position_x>1.0f){
-        guiElementsStorage[selectedGuiElement].position_x=1.0f;
+    guiElementsStorage[selectedGuiElement].position_x = ((((xpos - guiElementsStorage[selectedGuiElement].top_left_x) / guiElementsStorage[selectedGuiElement].percentOfWidth) * 512.0f) - 36.0f) / 440.0f;
+    if(guiElementsStorage[selectedGuiElement].position_x < 0.0f) {
+        guiElementsStorage[selectedGuiElement].position_x = 0.0f;
+    } else if(guiElementsStorage[selectedGuiElement].position_x > 1.0f) {
+        guiElementsStorage[selectedGuiElement].position_x = 1.0f;
     }
-    switch(selectedGuiElement){
-        case GUI_SLIDER_SIZE:
-            if(measurement==2){
-                diameter=guiElementsStorage[selectedGuiElement].position_x*SIZE_MULTI+1.0f;
-                draw=1;
-            }
+    switch(selectedGuiElement) {
+    case GUI_SLIDER_SIZE:
+        if(measurement == 2) {
+            diameter = guiElementsStorage[selectedGuiElement].position_x * SIZE_MULTI + 1.0f;
+            draw = 1;
+        }
 
-            break;
-        case GUI_SLIDER_SPEED:
-            if(measurement==0){
-                dt=guiElementsStorage[selectedGuiElement].position_x*SPEED_MULTI;
-                momentum_prop=1;
-            }
-            break;
-        default:
-            printf("Error: Gui Element undefined but registered as clickable.\n");
-            break;
+        break;
+    case GUI_SLIDER_SPEED:
+        if(measurement == 0) {
+            dt = guiElementsStorage[selectedGuiElement].position_x * SPEED_MULTI;
+            momentum_prop = 1;
+        }
+        break;
+    default:
+        printf("Error: Gui Element undefined but registered as clickable.\n");
+        break;
     }
-    drawGui(G_OBJECT_UPDATE,width/(float)height);
+    drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
 
 
 void write_bmp(char* filepath, unsigned int width, unsigned int height) {
-    FILE* filepointer = fopen(filepath,"wb");
+    FILE* filepointer = fopen(filepath, "wb");
     //bytes_per_line=(3*(width+1)/4)*4;
-    const char* String_to_write="BMP";
-    fwrite(&String_to_write,sizeof(char),3,filepointer);
+    const char* String_to_write = "BMP";
+    fwrite(&String_to_write, sizeof(char), 3, filepointer);
     return;
 }
