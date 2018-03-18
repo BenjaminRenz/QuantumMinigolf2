@@ -1049,10 +1049,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if(key == GLFW_KEY_M && action == GLFW_PRESS) {
         if(measurement == 0)
             measurement = 1;
+            guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_RESET;
     }
     if(measurement == 2) {
         if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
             measurement = 0;
+            guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_MESS;
         }
         if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
             offset_x = offset_x + Offset_change;
@@ -1097,9 +1099,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     if(measurement == 5 || measurement == 1) {
         if(key == GLFW_KEY_N && action == GLFW_PRESS) {
+            draw = 1;
             measurement = 2;
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
-            draw = 1;
+            guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_START;
         }
     }
     if(key == GLFW_KEY_X && action == GLFW_PRESS) {
@@ -1145,6 +1148,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     if(measurement == 5 || measurement == 1) {
                         draw = 1;
                         measurement = 2;
+                        diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
                         drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
