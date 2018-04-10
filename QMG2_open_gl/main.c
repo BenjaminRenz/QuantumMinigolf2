@@ -543,7 +543,38 @@ int main(int argc, char* argv[]) {
     fftw_free(psi);
     return 0;
 }
+void drawTargetBox(int G_OBJECT_STATE){
+    static GLuint* vboTargetBox=0;
+    if(G_OBJECT_STATE==G_OBJECT_INIT){
+        //Compile Shaders
+        targetShaderID = glCreateProgram();              //create program to run on GPU
+        glAttachShader(targetShaderID, CompileShaderFromFile(filepath_shader_vertex_target, GL_VERTEX_SHADER));       //attach vertex shader to new program
+        glAttachShader(targetShaderID, CompileShaderFromFile(filepath_shader_fragment_target, GL_FRAGMENT_SHADER));      //attach fragment shader to new program
+        glLinkProgram(targetShaderID);
+        //Get Shader Variables
+        glUseProgram(targetShaderID);
+        mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
 
+        glGenBuffers(1,vboTargetBox);
+        float VertexData[]={
+
+        }
+        glBufferData(GL_ARRAY_BUFFER,sizeof(VertexData),VertexData,GL_STATIC_DRAW);//sizeof?
+        glBindBuffer(GL_ARRAY_BUFFER,vboTargetBox);
+        glVertexPointer(3,GL_FLOAT,0,0);
+    }else(G_OBJECT_STATE==G_OBJECT_DRAW){
+        glBindBuffer(GL_ARRAY_BUFFER, vboTargetBox);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);   //x,y
+        //Enabler Shader
+        glUseProgram(targetShaderID);
+        //Set Shader Uniforms to render Grid
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
+
+        glDraw(GL_TRIANGLES,0,12);
+
+    }
+}
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4) {
     //3d object info
     //uses Texture0 which is constantly updated
