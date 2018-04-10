@@ -56,7 +56,7 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 void JoystickControll();
-void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4);
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -332,7 +332,8 @@ int main(int argc, char* argv[]) {
     //Init plane and grid
     drawPlaneAndGrid(G_OBJECT_INIT, PlaneRes, GridRes, NULL);   //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
-
+    //Init target box
+    drawTargetBox(G_OBJECT_INIT,0,0.0f);
     //Init gui
     drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
     {
@@ -342,8 +343,6 @@ int main(int argc, char* argv[]) {
         windows_size_callback(MainWindow, width, height);   //Init y coordinates for Gui elements which depend on border
     }
     printf("Info: Generation of gui successfull!\n");
-    //Init target box
-    drawTargetBox(G_OBJECT_INIT,0);
     //Graphics@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         if(measurement == 0) {
@@ -538,6 +537,7 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
+        drawTargetBox(G_OBJECT_DRAW,mvp4x4,sin(glfwGetTime()*3.0));
         drawGui(G_OBJECT_DRAW, 0);
         //Swap Buffers
         glFinish();
@@ -550,9 +550,10 @@ int main(int argc, char* argv[]) {
     fftw_free(psi);
     return 0;
 }
-void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4){
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
     static GLuint vboTargetBoxID=0;
     static GLuint targetShaderID=0;
+    static GLuint IntensityFloatUniform = 0;
     static GLuint mvpMatrixUniform = 0; //How is the Uniform variable called in the compiled shader
     if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shaders
@@ -563,49 +564,32 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4){
         //Get Shader Variables
         glUseProgram(targetShaderID);
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
-
+        IntensityFloatUniform = glGetUniformLocation(targetShaderID, "Intensity");
         glGenBuffers(1,&vboTargetBoxID);
+        #define VertMinX -0.10f //width
+        #define VertMaxX 0.10f
+        #define VertMinY 0.05f //length (direction of wave
+        #define VertMaxY 0.25f
+        #define VertMinZ 0.00f
+        #define VertMaxZ 0.002f
         float VertexData[]={
-            -1.0f,-1.0f,-1.0f, // triangle 1 : begin
-            -1.0f,-1.0f, 1.0f,
-            -1.0f, 1.0f, 1.0f, // triangle 1 : end
-            1.0f, 1.0f,-1.0f, // triangle 2 : begin
-            -1.0f,-1.0f,-1.0f,
-            -1.0f, 1.0f,-1.0f, // triangle 2 : end
-            1.0f,-1.0f, 1.0f,
-            -1.0f,-1.0f,-1.0f,
-            1.0f,-1.0f,-1.0f,
-            1.0f, 1.0f,-1.0f,
-            1.0f,-1.0f,-1.0f,
-            -1.0f,-1.0f,-1.0f,
-            -1.0f,-1.0f,-1.0f,
-            -1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f,-1.0f,
-            1.0f,-1.0f, 1.0f,
-            -1.0f,-1.0f, 1.0f,
-            -1.0f,-1.0f,-1.0f,
-            -1.0f, 1.0f, 1.0f,
-            -1.0f,-1.0f, 1.0f,
-            1.0f,-1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f,-1.0f,-1.0f,
-            1.0f, 1.0f,-1.0f,
-            1.0f,-1.0f,-1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f,-1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f,-1.0f,
-            -1.0f, 1.0f,-1.0f,
-            1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f,-1.0f,
-            -1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f, 1.0f,
-            1.0f,-1.0f, 1.0f
+            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
+            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
+            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
+            VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,
+            VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,//face 3
+            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,
+            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,//face 4
+            VertMinX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,
+            VertMinX,VertMinY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,//topface
+            VertMaxX,VertMinY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ
+            //no bottomface
         };
-        glBufferData(GL_ARRAY_BUFFER,sizeof(VertexData),VertexData,GL_STATIC_DRAW);//sizeof
+        printf("DEBUG: sizeof: %d\n",sizeof(VertexData));
         glBindBuffer(GL_ARRAY_BUFFER,vboTargetBoxID);
-        glVertexPointer(3,GL_FLOAT,0,0);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(VertexData),VertexData,GL_STATIC_DRAW);//sizeof
+        //
+        //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         glBindBuffer(GL_ARRAY_BUFFER, vboTargetBoxID);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -614,9 +598,11 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4){
         glUseProgram(targetShaderID);
         //Set Shader Uniforms to render Grid
         glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
-
-        glDrawArrays(GL_TRIANGLES,0,12);
-
+        glUniform1f(IntensityFloatUniform,Intensity);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        glDrawArrays(GL_TRIANGLES,0,10*3); //12-2 because bottom face is missing
+        glDisable(GL_BLEND);
     }
 }
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4) {
