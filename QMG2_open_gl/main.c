@@ -22,6 +22,8 @@
  #define filepath_shader_fragment_gui ".\\res\\shaders\\fragment_gui.glsl"
  #define filepath_shader_vertex_graph ".\\res\\shaders\\vertex_graph.glsl"
  #define filepath_shader_fragment_graph ".\\res\\shaders\\fragment_graph.glsl"
+ #define filepath_shader_vertex_target ".\\res\\shaders\\vertex_target.glsl"
+ #define filepath_shader_fragment_target ".\\res\\shaders\\fragment_target.glsl"
 #elif __linux__
  #define filepath_gui_bmp "./res/textures/GUI2.bmp"
  #define filepath_potential_bmp "./res/potentials/double_slit512.bmp"
@@ -29,6 +31,8 @@
  #define filepath_shader_fragment_gui "./res/shaders/fragment_gui.glsl"
  #define filepath_shader_vertex_graph "./res/shaders/vertex_graph.glsl"
  #define filepath_shader_fragment_graph "./res/shaders/fragment_graph.glsl"
+  #define filepath_shader_vertex_target "./res/shaders/vertex_target.glsl"
+ #define filepath_shader_fragment_target "./res/shaders/fragment_target.glsl"
 #endif
 
 
@@ -52,6 +56,7 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 void JoystickControll();
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4);
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -337,6 +342,8 @@ int main(int argc, char* argv[]) {
         windows_size_callback(MainWindow, width, height);   //Init y coordinates for Gui elements which depend on border
     }
     printf("Info: Generation of gui successfull!\n");
+    //Init target box
+    drawTargetBox(G_OBJECT_INIT,0);
     //Graphics@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         if(measurement == 0) {
@@ -543,8 +550,10 @@ int main(int argc, char* argv[]) {
     fftw_free(psi);
     return 0;
 }
-void drawTargetBox(int G_OBJECT_STATE){
-    static GLuint* vboTargetBox=0;
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4){
+    static GLuint vboTargetBoxID=0;
+    static GLuint targetShaderID=0;
+    static GLuint mvpMatrixUniform = 0; //How is the Uniform variable called in the compiled shader
     if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shaders
         targetShaderID = glCreateProgram();              //create program to run on GPU
@@ -555,15 +564,50 @@ void drawTargetBox(int G_OBJECT_STATE){
         glUseProgram(targetShaderID);
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
 
-        glGenBuffers(1,vboTargetBox);
+        glGenBuffers(1,&vboTargetBoxID);
         float VertexData[]={
-
-        }
-        glBufferData(GL_ARRAY_BUFFER,sizeof(VertexData),VertexData,GL_STATIC_DRAW);//sizeof?
-        glBindBuffer(GL_ARRAY_BUFFER,vboTargetBox);
+            -1.0f,-1.0f,-1.0f, // triangle 1 : begin
+            -1.0f,-1.0f, 1.0f,
+            -1.0f, 1.0f, 1.0f, // triangle 1 : end
+            1.0f, 1.0f,-1.0f, // triangle 2 : begin
+            -1.0f,-1.0f,-1.0f,
+            -1.0f, 1.0f,-1.0f, // triangle 2 : end
+            1.0f,-1.0f, 1.0f,
+            -1.0f,-1.0f,-1.0f,
+            1.0f,-1.0f,-1.0f,
+            1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f,-1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f, 1.0f, 1.0f,
+            -1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f, 1.0f,
+            -1.0f,-1.0f, 1.0f,
+            -1.0f,-1.0f,-1.0f,
+            -1.0f, 1.0f, 1.0f,
+            -1.0f,-1.0f, 1.0f,
+            1.0f,-1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f,-1.0f,-1.0f,
+            1.0f, 1.0f,-1.0f,
+            1.0f,-1.0f,-1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f,-1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f,-1.0f,
+            -1.0f, 1.0f,-1.0f,
+            1.0f, 1.0f, 1.0f,
+            -1.0f, 1.0f,-1.0f,
+            -1.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 1.0f,
+            -1.0f, 1.0f, 1.0f,
+            1.0f,-1.0f, 1.0f
+        };
+        glBufferData(GL_ARRAY_BUFFER,sizeof(VertexData),VertexData,GL_STATIC_DRAW);//sizeof
+        glBindBuffer(GL_ARRAY_BUFFER,vboTargetBoxID);
         glVertexPointer(3,GL_FLOAT,0,0);
-    }else(G_OBJECT_STATE==G_OBJECT_DRAW){
-        glBindBuffer(GL_ARRAY_BUFFER, vboTargetBox);
+    }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
+        glBindBuffer(GL_ARRAY_BUFFER, vboTargetBoxID);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);   //x,y
         //Enabler Shader
@@ -571,7 +615,7 @@ void drawTargetBox(int G_OBJECT_STATE){
         //Set Shader Uniforms to render Grid
         glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
 
-        glDraw(GL_TRIANGLES,0,12);
+        glDrawArrays(GL_TRIANGLES,0,12);
 
     }
 }
@@ -1086,9 +1130,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(MainWindow, 1);
     }
     if(key == GLFW_KEY_M && action == GLFW_PRESS) {
-        if(measurement == 0)
+        if(measurement == 0){
             measurement = 1;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_RESET;
+        }
     }
     if(measurement == 2) {
         if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
