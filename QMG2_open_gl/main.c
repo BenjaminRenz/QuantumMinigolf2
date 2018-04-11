@@ -51,6 +51,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
+float timerForBlink();
 void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
 void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
@@ -1095,6 +1096,17 @@ float update_delta_time() {             //Get the current time with glfwGetTime 
     current_glfw_time = glfwGetTime();
     float delta = (float)(current_glfw_time - last_glfw_time);
     last_glfw_time = current_glfw_time;
+    return delta;
+}
+
+float timeForBlink(int restart) {             //Get the current time with glfwGetTime and subtract last time to return deltatime
+    static double last_glfw_time = 0.0f;
+    static double current_glfw_time;
+    current_glfw_time = glfwGetTime();
+    float delta = (float)(current_glfw_time - last_glfw_time);
+    if(restart){
+        last_glfw_time = current_glfw_time;
+    }
     return delta;
 }
 
