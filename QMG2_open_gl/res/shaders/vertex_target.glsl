@@ -8,7 +8,7 @@ void main(){
         ColorIntensity = vec4(0.0f,0.0f,0.0f,0.0f);
     }else{
         if(Intensity>2.0f){
-            ColorIntensity = vec4(0.0f,0.0f,1.0f,Intensity-2.0f);
+            ColorIntensity = vec4(1.0f,1.0f,0.0f,Intensity-2.0f);
         }else if(Intensity>1.0f){
             ColorIntensity = vec4(0.0f,1.0f,0.0f,Intensity-1.0f);
         }else{

@@ -537,7 +537,7 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-        drawTargetBox(G_OBJECT_DRAW,mvp4x4,0.02f);//,sin(glfwGetTime()*3.0));
+        drawTargetBox(G_OBJECT_DRAW,mvp4x4,2.5f);//,sin(glfwGetTime()*3.0));
         drawGui(G_OBJECT_DRAW, 0);
         //Swap Buffers
         glFinish();
@@ -610,12 +610,14 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
         glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        glDrawArrays(GL_TRIANGLES,0,6); //12-2 because bottom face is missing
+        glDrawArrays(GL_TRIANGLES,0,6);
         glDrawArrays(GL_TRIANGLES,6,6);
         glDrawArrays(GL_TRIANGLES,12,6);
-        glDrawArrays(GL_TRIANGLES,18,6);
+        glDrawArrays(GL_TRIANGLES,18,6); //12-2 because bottom face is missing
         glDrawArrays(GL_TRIANGLES,24,6);
+        glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
     }
 }
