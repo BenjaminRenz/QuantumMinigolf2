@@ -264,7 +264,7 @@ int main(int argc, char* argv[]) {
         printf("Info: maxIndicesPerBuffer:%d\nInfo: maxVertexPerBuffer:%d\nInfo: maxTextureSize:%d\nInfo: maxBufferSize:%d\n", maxIndices, maxVertices, maxTexSize, maxTexBufferSize);
     }
     //Set background color
-    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
+    glClearColor(0.6f, 0.6f, 0.6f, 0.0f);
     //Enable z checking
     glEnable(GL_DEPTH_TEST);
     //Enable Antialiasing
@@ -514,7 +514,7 @@ int main(int argc, char* argv[]) {
         cent_vec[2]=0.0f;
         vec3_add(eye_vec,eye_vec,cent_vec); //apply offset to eye to have folloging effect
         mat4x4_look_at(mvp4x4, eye_vec, cent_vec, up_vec);
-        mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.5f, 10.0f);
+        mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.15f, 10.0f);
         mat4x4_mul(mvp4x4, persp4x4, mvp4x4);
 
 
@@ -612,7 +612,7 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
-        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_ONE);
         glDrawArrays(GL_TRIANGLES,0,6);
         glDrawArrays(GL_TRIANGLES,6,6);
         glDrawArrays(GL_TRIANGLES,12,6);
@@ -795,9 +795,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
         unsigned int buffernumber;
         //Smooth lines?
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glEnable(GL_LINE_SMOOTH);
         glLineWidth(1.3);
-        glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
         //Draw all vertices but those in the last index buffer
         for(buffernumber = 0; buffernumber < (indexBufferCountGrid - 1); buffernumber++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboGridPointer[buffernumber]);

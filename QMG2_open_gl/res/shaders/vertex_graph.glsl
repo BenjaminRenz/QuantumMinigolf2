@@ -5,6 +5,7 @@ uniform mat4 MVPmatrix;
 out vec2 UV;
 out float potential_true_frag;
 uniform sampler2D texture0;
+varying float zheight;
 void main(){
     UV=position.xy+vec2(0.5f,0.5f);
     potential_true_frag=potential_true;
@@ -12,5 +13,6 @@ void main(){
     float im=(texture(texture0,UV).g)*2-1.0f;
     float abs_sqr_psi=(re*re+im*im)/10.0f;
     float pot=(texture(texture0,UV).r)/10.0f;
-    gl_Position = MVPmatrix*vec4(position,(1-potential_true)*abs_sqr_psi+(potential_true)*pot ,1.0f);//(re*re+im*im)/10.0f,1.0f);
+    zheight=(1-potential_true)*abs_sqr_psi+(potential_true)*pot;
+    gl_Position = MVPmatrix*vec4(position,zheight,1.0f);//(re*re+im*im)/10.0f,1.0f);
 }
