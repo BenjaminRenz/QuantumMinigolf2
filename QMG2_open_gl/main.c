@@ -537,7 +537,7 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-        drawTargetBox(G_OBJECT_DRAW,mvp4x4,sin(glfwGetTime()*3.0));
+        drawTargetBox(G_OBJECT_DRAW,mvp4x4,0.02f);//,sin(glfwGetTime()*3.0));
         drawGui(G_OBJECT_DRAW, 0);
         //Swap Buffers
         glFinish();
@@ -570,9 +570,9 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         #define VertMaxX 0.10f
         #define VertMinY 0.05f //length (direction of wave
         #define VertMaxY 0.25f
-        #define VertMinZ 0.00f
-        #define VertMaxZ 0.002f
-        float VertexData[]={
+        #define VertMinZ 0.001f
+        #define VertMaxZ 0.1f
+        float VertexData[]={/*
             VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
             VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
             VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
@@ -582,7 +582,17 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
             VertMinX,VertMaxY,VertMinZ,VertMinX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,//face 4
             VertMinX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,
             VertMinX,VertMinY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,//topface
-            VertMaxX,VertMinY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ
+            VertMaxX,VertMinY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ*/
+            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
+            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
+            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
+            VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,
+            VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,//face 3
+            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,
+            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,//face 4
+            VertMinX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,
+            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMinZ,//bottomface inverted (normal inward)
+            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ
             //no bottomface
         };
         printf("DEBUG: sizeof: %d\n",sizeof(VertexData));
@@ -601,7 +611,11 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        glDrawArrays(GL_TRIANGLES,0,10*3); //12-2 because bottom face is missing
+        glDrawArrays(GL_TRIANGLES,0,6); //12-2 because bottom face is missing
+        glDrawArrays(GL_TRIANGLES,6,6);
+        glDrawArrays(GL_TRIANGLES,12,6);
+        glDrawArrays(GL_TRIANGLES,18,6);
+        glDrawArrays(GL_TRIANGLES,24,6);
         glDisable(GL_BLEND);
     }
 }
