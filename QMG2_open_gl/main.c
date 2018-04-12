@@ -184,6 +184,7 @@ float dt = SLIDER_SPEED_START * SPEED_MULTI;
 int offset_x = offset_x_start; //offset for particle
 
 float ColorIntensity=2.9f;
+int BlinkStep=0;
 
 int main(int argc, char* argv[]) {
     //GUI INIT
@@ -363,7 +364,6 @@ int main(int argc, char* argv[]) {
     //Graphics@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         if(timerForBlink(0)>5.0f){
-            static int BlinkStep=0;
             //Same as Reset Button
             if(measurement==5||measurement==1){
                 draw = 1;
@@ -380,7 +380,7 @@ int main(int argc, char* argv[]) {
             //Animation Only
             ColorIntensity=0.4f*sin(((BlinkStep++)*PI/50.0f))+2.5f;
             if(BlinkStep>100){
-                BlinkStep=0;
+                BlinkStep=1;
             }
             //TODO RESET
         }
@@ -1133,8 +1133,11 @@ float timerForBlink(int restart) {             //Get the current time with glfwG
     current_glfw_time = glfwGetTime();
     float delta = (float)(current_glfw_time - last_glfw_time);
     if(restart){
+        if(BlinkStep){
+            ColorIntensity=2.9f;
+            BlinkStep=0;
+        }
         last_glfw_time = current_glfw_time;
-        ColorIntensity=2.9f;
     }
     return delta;
 }
