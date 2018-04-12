@@ -51,7 +51,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
 unsigned char* read_bmp(char* filepath);
 void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
-float timerForBlink();
+float timerForBlink(int restart);
 void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
 void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
@@ -127,7 +127,13 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 #define GUI_JOYSTICK_ROTATION 4
 #define GUI_JOYSTICK_PROPERTY_SCALE 0.3f //how big the joystick is in relation to movement Area
 
-
+//Mess window
+        #define VertMinX -0.2f //width
+        #define VertMaxX 0.2f
+        #define VertMinY 0.05f //length (direction of wave
+        #define VertMaxY 0.25f
+        #define VertMinZ 0.001f
+        #define VertMaxZ 0.01f
 
 
 struct GUI_render {
@@ -166,7 +172,7 @@ float Movement_angle = PI / 2.0f; //angle for particle
 #define offset_y_start 40
 int offset_y = offset_y_start; //offset for particle
 int measurement = 2; //mode of operation
-int particle = 0;  //number of simulated wavepackets
+int AnimationStep = 0;
 int pos = 0;
 int draw = 1; //render next frame?
 int momentum_prop = 1;
@@ -176,6 +182,8 @@ float dt = SLIDER_SPEED_START * SPEED_MULTI;
 #define Offset_change 10
 #define offset_x_start Resolution/2
 int offset_x = offset_x_start; //offset for particle
+
+float ColorIntensity=2.9f;
 
 int main(int argc, char* argv[]) {
     //GUI INIT
@@ -301,11 +309,19 @@ int main(int argc, char* argv[]) {
     fftw_complex *psi;
     fftw_complex *psi_transform;
     fftw_complex *prop;
+    fftw_complex *animation_start;
+    fftw_complex *animation_end;
     psi = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
     psi_transform = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
     prop = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+
+    animation_start = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+    animation_end = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+
     fftw_plan fft = fftw_plan_dft_2d(Resolution, Resolution, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
     fftw_plan ifft = fftw_plan_dft_2d(Resolution, Resolution, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
+
+    //
 
     //GUI
     unsigned char* speicher = calloc(Resolution * Resolution * 4, 1);
@@ -346,7 +362,30 @@ int main(int argc, char* argv[]) {
     printf("Info: Generation of gui successfull!\n");
     //Graphics@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
+        if(timerForBlink(0)>5.0f){
+            static int BlinkStep=0;
+            //Same as Reset Button
+            if(measurement==5||measurement==1){
+                draw = 1;
+                diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
+                guiElementsStorage[GUI_BUTTON].position_x = GUI_STATE_BUTTON1_START;
+                {
+                    int width = 0;
+                    int height = 0;
+                    glfwGetWindowSize(MainWindow, &width, &height);
+                    drawGui(G_OBJECT_UPDATE, width / (float)height);
+                }
+                measurement = 2;
+            }
+            //Animation Only
+            ColorIntensity=0.4f*sin(((BlinkStep++)*PI/50.0f))+2.5f;
+            if(BlinkStep>100){
+                BlinkStep=0;
+            }
+            //TODO RESET
+        }
         if(measurement == 0) {
+            timerForBlink(1);
             for(int i = 0; i < 1; i++) {
                 fftw_execute(fft);
                 //momentum space
@@ -383,8 +422,9 @@ int main(int argc, char* argv[]) {
         }
 
         if(measurement == 1) {
-            if(particle == 0) {
-                srand((long)10000.0f * glfwGetTime());
+            timerForBlink(1);
+            if(AnimationStep==0) {
+                srand((long)(10000.0f * glfwGetTime()));
                 double random = (rand() % 1001) / 1000.0f;
                 double sum = 0;
                 double norm_sum = 0;
@@ -394,57 +434,53 @@ int main(int argc, char* argv[]) {
                 for(pos = 0; pos < Resolution * Resolution; pos++) {
                     sum = sum + ((psi[pos][0] * psi[pos][0] + psi[pos][1] * psi[pos][1]) / norm_sum);
                     if(sum > random) {
-                        //printf("sum%f\n",sum);
-                        //printf("rand: %f\n",random);
+                        printf("Sum:  %f\n",sum);
+                        printf("Rand: %f\n",random);
+                        printf("Norm %f\n",norm_sum);
                         break;
                     }
                 }
-                for(int i = 0; i < Resolution * Resolution; i++) {
+                /*for(int i = 0; i < Resolution * Resolution; i++) {
                     psi[i][0] = sqrt(psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
                     psi[i][1] = 0;
-                }
-                printf("Rot=0\n");
-            }
-
-            for(int j = 0; j < Resolution; j++) {
-                double radius_squared;
-                for(int k = 0; k < Resolution; k++) {
-                    //psi[k+j*Resolution][0]=psi[k+j*Resolution][0]*exp(-(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))/1000.0f);
-                    radius_squared = ((pos % Resolution) - k) * ((pos % Resolution) - k) + ((pos / Resolution) - j) * ((pos / Resolution) - j);
-                    if(particle > 20) {
-                        if(radius_squared < 3) {
-                            psi[k + j * Resolution][0] += exp(-(((pos % Resolution) - k) * ((pos % Resolution) - k) + ((pos / Resolution) - j) * ((pos / Resolution) - j)) / 100.0f)/*(1.0-psi[k+j*Resolution][0])*(1.0-psi[k+j*Resolution][0])*/ * 0.01;
-                        } else {
-                            psi[k + j * Resolution][0] = 0.99 * psi[k + j * Resolution][0];
-                        }
-                    } else {
-                        psi[k + j * Resolution][0] = 0.99 * psi[k + j * Resolution][0];
-                    }
-                }
-            }
-            particle++;
-            if(particle == 300) {
-                /*for(int j=0; j<Resolution; j++) {
-                    for(int k=0; k<Resolution;k++){
-                        if(sqrt(((pos%Resolution)-k)*((pos%Resolution)-k)+((pos/Resolution)-j)*((pos/Resolution)-j))<3){
-                            psi[k+j*Resolution][0]=1;
-                            if(sqrt((((measure_win_x+measure_win_y*Resolution)%Resolution)-k)*(((measure_win_x+measure_win_y*Resolution)%Resolution)-k)+(((measure_win_x+measure_win_y*Resolution)/Resolution)-j)*(((measure_win_x+measure_win_y*Resolution)/Resolution)-j))<100){
-                                psi[k+j*Resolution][1]=1;
-                            }
-                            else{
-                                psi[k+j*Resolution][1]=0;
-                            }
-                        }
-                        else{
-                            psi[k+j*Resolution][0]=0;
-                            psi[k+j*Resolution][1]=0;
-                        }
-                    }
                 }*/
-                particle = 0;
+                printf("Rot=0\n");
+                if((pos%Resolution)>((VertMinX+0.5f)*Resolution)&&(pos%Resolution)<((VertMaxX+0.5f)*Resolution)&&(pos/Resolution)>((VertMinY+0.5f)*Resolution)&&(pos/Resolution)<((VertMaxY+0.5f)*Resolution)){
+                    ColorIntensity=1.99f;
+                    printf("HIT\n\n\n");
+                }
+                else{
+                    ColorIntensity=0.99f;
+                    printf("NO HIT\n\n\n");
+                }
+                //Animation for mess
+                for(int x = 0; x<(Resolution*Resolution-1);x++){
+                    animation_start[x][0]=psi_transform[x][0];
+                    animation_start[x][1]=psi_transform[x][1];
+                    if((((pos % Resolution) - x%Resolution) * ((pos % Resolution) - x%Resolution) + ((pos / Resolution) - x/Resolution) * ((pos / Resolution) - x/Resolution))<10.0f){
+                        psi[x][0]=1.0f;
+                    }else{
+                        psi[x][0]=0.0f;
+                    }
+                    psi[x][1]=0.0f;
+                }
+                fftw_execute(fft);
+                for(int x = 0; x<(Resolution*Resolution-1);x++){
+                    animation_end[x][0]=psi_transform[x][0];
+                    animation_end[x][1]=psi_transform[x][1];
+                }
+                AnimationStep=0;
+            }
+            for(int x = 0; x<(Resolution*Resolution-1);x++){
+                psi_transform[x][0]=animation_start[x][0]*(1.0f-AnimationStep/30.0f)+animation_end[x][0]*(AnimationStep/30.0f);
+                psi_transform[x][1]=animation_start[x][1]*(1.0f-AnimationStep/30.0f)+animation_end[x][1]*(AnimationStep/30.0f);
+            }
+            fftw_execute(ifft);
+            AnimationStep++;
+            if(AnimationStep == 30) {
+                AnimationStep = 0;
                 measurement = 5;
             }
-            //measurement=5;
         }
 
         int biggest = 0;
@@ -538,7 +574,7 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-        drawTargetBox(G_OBJECT_DRAW,mvp4x4,2.5f);//,sin(glfwGetTime()*3.0));
+        drawTargetBox(G_OBJECT_DRAW,mvp4x4,ColorIntensity);//,sin(glfwGetTime()*3.0));
         drawGui(G_OBJECT_DRAW, 0);
         //Swap Buffers
         glFinish();
@@ -567,12 +603,6 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
         IntensityFloatUniform = glGetUniformLocation(targetShaderID, "Intensity");
         glGenBuffers(1,&vboTargetBoxID);
-        #define VertMinX -0.10f //width
-        #define VertMaxX 0.10f
-        #define VertMinY 0.05f //length (direction of wave
-        #define VertMaxY 0.25f
-        #define VertMinZ 0.001f
-        #define VertMaxZ 0.1f
         float VertexData[]={/*
             VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
             VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
@@ -611,14 +641,14 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
         glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
-        glDisable(GL_DEPTH_TEST);
-        glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_ONE);
+        //glDisable(GL_DEPTH_TEST);
+        glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
         glDrawArrays(GL_TRIANGLES,0,6);
         glDrawArrays(GL_TRIANGLES,6,6);
         glDrawArrays(GL_TRIANGLES,12,6);
         glDrawArrays(GL_TRIANGLES,18,6); //12-2 because bottom face is missing
-        glDrawArrays(GL_TRIANGLES,24,6);
-        glEnable(GL_DEPTH_TEST);
+        //glDrawArrays(GL_TRIANGLES,24,6);
+        //glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
     }
 }
@@ -708,7 +738,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
             }
         }
         glGenBuffers(1, &VboVerticesId);                                                          //create buffer
-        glBindBuffer(GL_ARRAY_BUFFER, VboVerticesId);                                            //Link buffer
+        glBindBuffer(GL_ARRAY_BUFFER, VboVerticesId);                          //Link buffer
         glBufferData(GL_ARRAY_BUFFER, 2 * finalVertexResolution * finalVertexResolution * sizeof(float), plane_vertex_data, GL_STATIC_DRAW);     //Upload data to Buffer, Vertex data is set only once and drawn regularly, hence we use GL_STATIC_DRAW
         free(plane_vertex_data);    //we no longer need plane_vertex_data because it has been uploaded to gpu memory
         printf("Info: vertices for plane/grid successfully generated\n");
@@ -1097,13 +1127,14 @@ float update_delta_time() {             //Get the current time with glfwGetTime 
     return delta;
 }
 
-float timeForBlink(int restart) {             //Get the current time with glfwGetTime and subtract last time to return deltatime
+float timerForBlink(int restart) {             //Get the current time with glfwGetTime and subtract last time to return deltatime
     static double last_glfw_time = 0.0f;
     static double current_glfw_time;
     current_glfw_time = glfwGetTime();
     float delta = (float)(current_glfw_time - last_glfw_time);
     if(restart){
         last_glfw_time = current_glfw_time;
+        ColorIntensity=2.9f;
     }
     return delta;
 }
@@ -1193,8 +1224,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
         }
     }
-    if(measurement == 5 || measurement == 1) {
+    if((measurement == 5 || measurement == 1)&&(!AnimationStep)) {
         if(key == GLFW_KEY_N && action == GLFW_PRESS) {
+            ColorIntensity=2.99f;
             draw = 1;
             measurement = 2;
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
@@ -1241,9 +1273,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 }
             } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
                 if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
-                    if(measurement == 5 || measurement == 1) {
+                    if((measurement == 5 || measurement == 1)&&(!AnimationStep)) {
+                        ColorIntensity=2.99f;
                         draw = 1;
                         measurement = 2;
+                        AnimationStep = 0;
                         diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
                         drawGui(G_OBJECT_UPDATE, width / (float)height);
@@ -1528,6 +1562,7 @@ void windows_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
+    timerForBlink(1);
     if(selectedGuiElement == -1) { //directly leave this if there is no gui object to monitor (no dragged slider / joystick)
         return;
     }
