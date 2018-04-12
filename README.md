@@ -7,3 +7,4 @@ If you just want to run the game use the executable in the latest v0.X folder. T
 
 ![Screenshot 1](/screenshots/qmg_0_5_1.png?raw=true "Screenshot 1")
 ![Screenshot 2](/screenshots/qmg_0_5_2.png?raw=true "Screenshot 2")
+![Screenshot 2](/screenshots/qmg_0_5_3.png?raw=true "Screenshot 3")
