@@ -11,11 +11,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <dirent.h>
 
 #include <math.h>
 #define PI 3.14159265358979323846
 #include <limits.h>
 #ifdef _WIN32
+ #define filepath_potentials ".\\res\\potentials"
  #define filepath_gui_bmp ".\\res\\textures\\GUI2.bmp"  //CHANGED!!!
  #define filepath_potential_bmp ".\\res\\potentials\\double_slit512.bmp"
  #define filepath_shader_vertex_gui ".\\res\\shaders\\vertex_gui.glsl"
@@ -25,8 +28,9 @@
  #define filepath_shader_vertex_target ".\\res\\shaders\\vertex_target.glsl"
  #define filepath_shader_fragment_target ".\\res\\shaders\\fragment_target.glsl"
 #elif __linux__
+ #define filepath_potentials "./res/potentials"
  #define filepath_gui_bmp "./res/textures/GUI2.bmp"
- #define filepath_potential_bmp "./res/potentials/double_slit512.bmp"
+ //#define filepath_potential_bmp "./res/potentials/double_slit512.bmp"
  #define filepath_shader_vertex_gui "./res/shaders/vertex_gui.glsl"
  #define filepath_shader_fragment_gui "./res/shaders/fragment_gui.glsl"
  #define filepath_shader_vertex_graph "./res/shaders/vertex_graph.glsl"
@@ -58,6 +62,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 void JoystickControll();
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
+void update_potential();
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -212,7 +217,33 @@ int offset_x = offset_x_start; //offset for particle
 float ColorIntensity=2.9f;
 int BlinkStep=0;
 
+char PotentialFilesList[20][256];
+uint8_t CountOfPotentialFiles=0;
+
+//Potential Pointer
+double* potential;
+unsigned char* pot;
+
 int main(int argc, char* argv[]) {
+    //Index and initialize Potential Files
+    {
+        DIR* directory;
+        directory=opendir(filepath_potentials);
+        struct dirent* subdirectory;
+        if(directory){
+            while((subdirectory=readdir(directory))!=0){
+                char* fileEnding=strrchr(subdirectory->d_name,'.');
+                if(fileEnding && !strcmp(fileEnding, ".bmp")){
+                    strcpy(PotentialFilesList[CountOfPotentialFiles++],(subdirectory->d_name));
+                    printf("Info: Found Potential File '%s'\n",subdirectory->d_name);
+                }
+            }
+        }else{
+            printf("Error: Missing Potential directory (./res/potentials)\n");
+            return 1;
+        }
+        printf("\nInfo: Will use '%s' as Potential\n",&(PotentialFilesList[0][0]));
+    }
     //GUI INIT
     guiElementsStorage = malloc(numberOfGuiElements * sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
@@ -369,12 +400,8 @@ int main(int argc, char* argv[]) {
 
     //GUI
     unsigned char* speicher = calloc(Resolution * Resolution * 4, 1);
-    unsigned char* pot = read_bmp(filepath_potential_bmp);
-    double* potential = malloc(Resolution * Resolution * sizeof(double));
-
-    for(int i = 0; i < Resolution * Resolution; i++) {
-        potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
-    }
+    potential = (double*) malloc(Resolution * Resolution * sizeof(double));
+    update_potential();
     //Create wave
     delta_time = update_delta_time();
 
@@ -1452,7 +1479,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     return;
                 }
             }else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_POTENTIAL && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))){
-                printf("TODO: Should change potential\n");
+                printf("Debug: Should change potential\n");
+                update_potential();
             } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_WAVE_MOVE) {
                 float x_offset = guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_x) + 0.5f) - xpos; //Calculates the centere of the joystic and then calculates delta to pressed position
                 float y_offset = guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_y) + 0.5f) - ypos;
@@ -1875,4 +1903,28 @@ void write_bmp(char* filepath, unsigned int width, unsigned int height) {
     const char* String_to_write = "BMP";
     fwrite(&String_to_write, sizeof(char), 3, filepointer);
     return;
+}
+void update_potential(){
+    static uint8_t SelectedPotential=0;
+    char PotentialSourceFile[256];
+    strcat(PotentialSourceFile,filepath_potentials);
+    #ifdef _WIN32
+    strcat(PotentialSourceFile,"\\");
+    #elif __linux__
+    strcat(PotentialSourceFile,"/");
+    #endif
+
+    strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
+    printf("Loading: %s",PotentialSourceFile);
+    pot = read_bmp(PotentialSourceFile);
+    for(int i = 0; i < Resolution * Resolution; i++) {
+        potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
+    }
+    if((++SelectedPotential)==CountOfPotentialFiles){
+        SelectedPotential=0;
+    }
+    //TODO update buttons
+    guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
+    drawGui(G_OBJECT_UPDATE,16.0f/9.0f);
+    measurement = 2; //reinitialize TODO? is this right
 }
