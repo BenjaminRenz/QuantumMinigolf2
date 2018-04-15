@@ -421,7 +421,7 @@ int main(int argc, char* argv[]) {
                 measurement = 2;
             }
             //Animation Only
-            ColorIntensity=0.4f*sin(((BlinkStep++)*PI/50.0f))+2.5f;
+            ColorIntensity=0.4f*cos(((BlinkStep++)*PI/50.0f))+2.5f;
             if(BlinkStep>100){
                 BlinkStep=1;
             }
@@ -552,8 +552,8 @@ int main(int argc, char* argv[]) {
         if(draw == 1) {
             for(int j = 0; j < Resolution; j++) {
                 for(int i = 0; i < Resolution; i++) {
-                    psi[i + j * Resolution][0] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / diameter) * cos(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
-                    psi[i + j * Resolution][1] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / diameter) * sin(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
+                    psi[i + j * Resolution][0] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / (diameter)) * cos(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
+                    psi[i + j * Resolution][1] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / (diameter)) * sin(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
                 }
             }
             draw = 0;
@@ -1295,7 +1295,7 @@ float timerForBlink(int restart) {             //Get the current time with glfwG
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    /*if(key == GLFW_KEY_W) {
+    if(key == GLFW_KEY_W) {
         if(rotation_up_down < (3.0)) {
             rotation_up_down = rotation_up_down + delta_time;
         }
@@ -1323,7 +1323,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             rotation_left_right = -PI;
         }
     }
-    */
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(MainWindow, 1);
     }
@@ -1433,7 +1432,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         draw = 1;
                         measurement = 2;
                         AnimationStep = 0;
-                        diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
                         drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
@@ -1744,8 +1742,9 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         if(measurement == 2) {
             diameter = guiElementsStorage[selectedGuiElement].position_x * SIZE_MULTI + 1.0f;
             draw = 1;
+        }else if(measurement != 2){
+            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 1.0f;
         }
-
         break;
     case GUI_SLIDER_SPEED:
         if(measurement == 0) {
