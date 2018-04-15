@@ -276,8 +276,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    MainWindow = glfwCreateWindow(800, 800, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed
-    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    //MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
