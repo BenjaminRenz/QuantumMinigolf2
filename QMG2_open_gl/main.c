@@ -1937,6 +1937,11 @@ void update_potential(){
     }
     //TODO update buttons
     guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
-    drawGui(G_OBJECT_UPDATE,16.0f/9.0f);
+    {
+        int width=0;
+        int height=0;
+        glfwGetWindowSize(MainWindow,&width,&height);
+        drawGui(G_OBJECT_UPDATE,width/(float)height);
+    }
     simulation_state = simulation_state_create_and_wait_for_start; //reinitialize TODO? is this right
 }
