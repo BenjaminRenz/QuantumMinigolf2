@@ -203,7 +203,7 @@ float Movement_angle = PI / 2.0f; //angle for particle
 
 int AnimationStep = 0;
 int pos = 0;
-int draw = 1; //render next frame?
+int draw_new_wave = 1; //render next frame?
 int momentum_prop = 1;
 #define MovementBorderWave 0.4f
 #define Speed_change 0.05f
@@ -211,9 +211,9 @@ int momentum_prop = 1;
 float dt = SLIDER_SPEED_START * SPEED_MULTI;
 #define Offset_change 10
 #define offset_x_start Resolution/2
-int wave_offset_x = offset_x_start; //offset for particle
-#define offset_y_start 40
-int wave_offset_y = offset_y_start; //offset for particle
+float wave_offset_x = offset_x_start; //offset for particle
+#define offset_y_start Resolution*0.10f
+float wave_offset_y = offset_y_start; //offset for particle
 
 float ColorIntensity=2.9f;
 int BlinkStep=0;
@@ -444,8 +444,8 @@ int main(int argc, char* argv[]) {
 
         if(timerForBlink(0)>5.0f){
             //Same as Reset Button
-            if(simulation_state==5||simulation_state==1){
-                draw = 1;
+            if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation){
+                draw_new_wave = 1;
                 diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                 guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
                 {
@@ -463,46 +463,44 @@ int main(int argc, char* argv[]) {
             }
             //TODO RESET
         }
-        if(simulation_state == 0) {
-            timerForBlink(1);
-            for(int i = 0; i < 1; i++) {
-                fftw_execute(fft);
-                //momentum space
-                for(int i = 0; i < Resolution * Resolution; i++) {
-                    double psi_re_temp = psi_transform[i][0];
-                    psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
-                    psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
-                }
-                fftw_execute(ifft);
-                for(int i = 0; i < Resolution * Resolution; i++) {
-                    psi[i][0] = psi[i][0] / (double)(norm);
-                    psi[i][1] = psi[i][1] / (double)(norm);
-                }
-                for(int i = 0; i < Resolution * Resolution; i++) {
-                    double psi_re_temp = psi[i][0];
-                    psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
-                    psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
-                }
-                //Delete the border of the wavefunction horizontal
-                for(int i = 0; i < Resolution; i++) {
-                    psi[i][0] = 0;
-                    psi[i][1] = 0;
-                    psi[i + (Resolution - 1)*Resolution][0] = 0;
-                    psi[i + (Resolution - 1)*Resolution][1] = 0;
-                }
-                //Delete the border of the wavefunction vertical
-                for(int i = 0; i < Resolution; i++) {
-                    psi[1 + i * Resolution][0] = 0;//TODO problem for i=0?
-                    psi[1 + i * Resolution][1] = 0;
-                    psi[Resolution - 1 + i * Resolution][0] = 0;
-                    psi[Resolution - 1 + i * Resolution][1] = 0;
-                }
+        if(simulation_state == simulation_state_simulate) {
+            timerForBlink(1); //reset standby counter so simulation isn't interrupted
+            fftw_execute(fft);
+            //momentum space
+            for(int i = 0; i < Resolution * Resolution; i++) {
+                double psi_re_temp = psi_transform[i][0];
+                psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
+                psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
+            }
+            fftw_execute(ifft);
+            for(int i = 0; i < Resolution * Resolution; i++) {
+                psi[i][0] = psi[i][0] / (double)(norm);
+                psi[i][1] = psi[i][1] / (double)(norm);
+            }
+            for(int i = 0; i < Resolution * Resolution; i++) {
+                double psi_re_temp = psi[i][0];
+                psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
+                psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
+            }
+            //Delete the border of the wavefunction horizontal
+            for(int i = 0; i < Resolution; i++) {
+                psi[i][0] = 0;
+                psi[i][1] = 0;
+                psi[i + (Resolution - 1)*Resolution][0] = 0;
+                psi[i + (Resolution - 1)*Resolution][1] = 0;
+            }
+            //Delete the border of the wavefunction vertical
+            for(int i = 0; i < Resolution; i++) {
+                psi[1 + i * Resolution][0] = 0;//TODO problem for i=0?
+                psi[1 + i * Resolution][1] = 0;
+                psi[Resolution - 1 + i * Resolution][0] = 0;
+                psi[Resolution - 1 + i * Resolution][1] = 0;
             }
         }
 
         if(simulation_state == simulation_state_measurement_animation) {
             timerForBlink(1);
-            if(AnimationStep==0) {
+            if(!AnimationStep) {
                 srand((long)(10000.0f * glfwGetTime()));
                 double random = (rand() % 1001) / 1000.0f;
                 double sum = 0;
@@ -519,11 +517,6 @@ int main(int argc, char* argv[]) {
                         break;
                     }
                 }
-                /*for(int i = 0; i < Resolution * Resolution; i++) {
-                    psi[i][0] = sqrt(psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
-                    psi[i][1] = 0;
-                }*/
-                printf("Rot=0\n");
                 if((pos%Resolution)>((VertMinX+0.5f)*Resolution)&&(pos%Resolution)<((VertMaxX+0.5f)*Resolution)&&(pos/Resolution)>((VertMinY+0.5f)*Resolution)&&(pos/Resolution)<((VertMaxY+0.5f)*Resolution)){
                     ColorIntensity=1.99f;
                     printf("HIT\n\n\n");
@@ -582,16 +575,18 @@ int main(int argc, char* argv[]) {
         glBindTexture(GL_TEXTURE_2D, psiTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolution, Resolution, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
-        if(draw == 1) {
+        if(draw_new_wave == 1) {
+            memset(&(psi[0][0]),0,Resolution*Resolution*2*sizeof(float));
             for(int j = 0; j < Resolution; j++) {
                 for(int i = 0; i < Resolution; i++) {
                         //TODO radial cutoff for faster initialisation
-                        if((i-wave_offset_x))
-                    psi[i + j * Resolution][0] = exp(-((i - wave_offset_x) * (i - wave_offset_x) + (j - wave_offset_y) * (j - wave_offset_y)) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
-                    psi[i + j * Resolution][1] = exp(-((i - wave_offset_x) * (i - wave_offset_x) + (j - wave_offset_y) * (j - wave_offset_y)) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
+                    if((abs(i-((int)wave_offset_x)))<(Resolution/20.0f)&&(abs(j-((int)wave_offset_y))<(Resolution/20.0f))){
+                        psi[i + j * Resolution][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
+                        psi[i + j * Resolution][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
+                    }
                 }
             }
-            draw = 0;
+            draw_new_wave = 0;
         }
 
         if(momentum_prop == 1) { //Because fft is shifted we need to calculate the propagator for each section
@@ -1374,19 +1369,19 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
         if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
             wave_offset_x = wave_offset_x + Offset_change;
-            draw = 1;
+            draw_new_wave = 1;
         }
         if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
             wave_offset_x = wave_offset_x - Offset_change;
-            draw = 1;
+            draw_new_wave = 1;
         }
         if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
             wave_offset_y = wave_offset_y + Offset_change;
-            draw = 1;
+            draw_new_wave = 1;
         }
         if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
             wave_offset_y = wave_offset_y - Offset_change;
-            draw = 1;
+            draw_new_wave = 1;
         }
         if(key == GLFW_KEY_R && action == GLFW_PRESS) {
             wave_offset_x = offset_x_start;
@@ -1396,27 +1391,27 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
             dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
             momentum_prop = 1;
-            draw = 1;
+            draw_new_wave = 1;
         }
         if(key == GLFW_KEY_O && action == GLFW_PRESS) {
             if(guiElementsStorage[GUI_SLIDER_SIZE].position_x > Diameter_change) {
                 guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x - Diameter_change;
                 diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI;
-                draw = 1;
+                draw_new_wave = 1;
             }
         }
         if(key == GLFW_KEY_P && action == GLFW_PRESS) {
             if(guiElementsStorage[GUI_SLIDER_SIZE].position_x < 1.0f - Diameter_change) {
                 guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x + Diameter_change;
                 diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
-                draw = 1;
+                draw_new_wave = 1;
             }
         }
     }
     if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
         if(key == GLFW_KEY_N && action == GLFW_PRESS) {
             ColorIntensity=2.99f;
-            draw = 1;
+            draw_new_wave = 1;
             simulation_state = simulation_state_create_and_wait_for_start;
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_START;
@@ -1464,7 +1459,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
                     if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
                         ColorIntensity=2.99f;
-                        draw = 1;
+                        draw_new_wave = 1;
                         simulation_state = simulation_state_create_and_wait_for_start;
                         AnimationStep = 0;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
@@ -1777,7 +1772,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     case GUI_SLIDER_SIZE:
         if(simulation_state == simulation_state_create_and_wait_for_start) {
             diameter = guiElementsStorage[selectedGuiElement].position_x * SIZE_MULTI + 1.0f;
-            draw = 1;
+            draw_new_wave = 1;
         }else{
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 1.0f;
         }
@@ -1808,7 +1803,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         if(simulation_state == simulation_state_create_and_wait_for_start){
             printf("Debug: Angle %f\n",2*PI*guiElementsStorage[selectedGuiElement].position_x);
             Movement_angle=PI*guiElementsStorage[selectedGuiElement].position_x;
-            draw =1;
+            draw_new_wave =1;
         }
         break;
     default:
@@ -1892,21 +1887,21 @@ void JoystickControll(){
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
 
-        wave_offset_x += (int) (Resolution*0.1f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
-        wave_offset_y += (int) (Resolution*0.1f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
-        printf("wave_offset_x: %d, wave_offset_y: %d\n",(int) (Resolution*0.1f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right))),wave_offset_y);
+        wave_offset_x += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
+        wave_offset_y += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
+        printf("wave_offset_x: %d, wave_offset_y: %d\n",(int) (Resolution*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right))),wave_offset_y);
         printf("MOVE WAVE\n\n\n");
         if(wave_offset_x>(Resolution*0.9f)){
             wave_offset_x=Resolution*0.9f;
         }else if(wave_offset_x<(Resolution*0.1f)){
             wave_offset_x=(Resolution*0.1f);
         }
-        if(wave_offset_y>Resolution*0.2f){
-            wave_offset_y=Resolution*0.2f;
-        }else if(wave_offset_y<(Resolution*0.1f)){
-            wave_offset_y=Resolution*0.1f;
+        if(wave_offset_y>Resolution*0.15f){
+            wave_offset_y=Resolution*0.15f;
+        }else if(wave_offset_y<(Resolution*0.05f)){
+            wave_offset_y=Resolution*0.05f;
         }
-        draw = 1;
+        draw_new_wave = 1;
     }
 }
 
