@@ -189,7 +189,7 @@ double rotation_up_down = PI/2;
 double rotation_left_right = 0;
 double position_x_axis = 0.0;
 double position_y_axis = 0.0;
-#define MovementBorder 0.5f
+#define MovementBorderCamera 0.5f
 #define PlaneRes 1024  //should be power of 2 ,vertex resolution of the rendered plane
 #define GridRes 256        //must be power of 2 ,vertex resolution of the rendered grid
 
@@ -200,19 +200,20 @@ double position_y_axis = 0.0;
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolution*Resolution
 float Movement_angle = PI / 2.0f; //angle for particle
-#define offset_y_start 40
-int offset_y = offset_y_start; //offset for particle
-int measurement = 2; //mode of operation
+
 int AnimationStep = 0;
 int pos = 0;
 int draw = 1; //render next frame?
 int momentum_prop = 1;
+#define MovementBorderWave 0.4f
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
 float dt = SLIDER_SPEED_START * SPEED_MULTI;
 #define Offset_change 10
 #define offset_x_start Resolution/2
-int offset_x = offset_x_start; //offset for particle
+int wave_offset_x = offset_x_start; //offset for particle
+#define offset_y_start 40
+int wave_offset_y = offset_y_start; //offset for particle
 
 float ColorIntensity=2.9f;
 int BlinkStep=0;
@@ -224,6 +225,11 @@ uint8_t CountOfPotentialFiles=0;
 double* potential;
 uint8_t* pot;
 
+#define simulation_state_simulate 0
+#define simulation_state_measurement_animation 1
+#define simulation_state_create_and_wait_for_start 2
+#define simulation_state_wait_for_restart 5
+int simulation_state = 2; //mode of operation
 int main(int argc, char* argv[]) {
     //Index and initialize Potential Files
     {
@@ -307,8 +313,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -434,9 +440,11 @@ int main(int argc, char* argv[]) {
 
     //Graphics@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
+        delta_time = update_delta_time();
+
         if(timerForBlink(0)>5.0f){
             //Same as Reset Button
-            if(measurement==5||measurement==1){
+            if(simulation_state==5||simulation_state==1){
                 draw = 1;
                 diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                 guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
@@ -446,7 +454,7 @@ int main(int argc, char* argv[]) {
                     glfwGetWindowSize(MainWindow, &width, &height);
                     drawGui(G_OBJECT_UPDATE, width / (float)height);
                 }
-                measurement = 2;
+                simulation_state = 2;
             }
             //Animation Only
             ColorIntensity=0.4f*cos(((BlinkStep++)*PI/50.0f))+2.5f;
@@ -455,7 +463,7 @@ int main(int argc, char* argv[]) {
             }
             //TODO RESET
         }
-        if(measurement == 0) {
+        if(simulation_state == 0) {
             timerForBlink(1);
             for(int i = 0; i < 1; i++) {
                 fftw_execute(fft);
@@ -475,16 +483,16 @@ int main(int argc, char* argv[]) {
                     psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
                     psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
                 }
-
+                //Delete the border of the wavefunction horizontal
                 for(int i = 0; i < Resolution; i++) {
                     psi[i][0] = 0;
                     psi[i][1] = 0;
                     psi[i + (Resolution - 1)*Resolution][0] = 0;
                     psi[i + (Resolution - 1)*Resolution][1] = 0;
                 }
-
+                //Delete the border of the wavefunction vertical
                 for(int i = 0; i < Resolution; i++) {
-                    psi[1 + i * Resolution][0] = 0;
+                    psi[1 + i * Resolution][0] = 0;//TODO problem for i=0?
                     psi[1 + i * Resolution][1] = 0;
                     psi[Resolution - 1 + i * Resolution][0] = 0;
                     psi[Resolution - 1 + i * Resolution][1] = 0;
@@ -492,7 +500,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if(measurement == 1) {
+        if(simulation_state == simulation_state_measurement_animation) {
             timerForBlink(1);
             if(AnimationStep==0) {
                 srand((long)(10000.0f * glfwGetTime()));
@@ -550,7 +558,7 @@ int main(int argc, char* argv[]) {
             AnimationStep++;
             if(AnimationStep == 30) {
                 AnimationStep = 0;
-                measurement = 5;
+                simulation_state = simulation_state_wait_for_restart;
             }
         }
 
@@ -574,20 +582,19 @@ int main(int argc, char* argv[]) {
         glBindTexture(GL_TEXTURE_2D, psiTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolution, Resolution, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
-
-        delta_time = update_delta_time();
-
         if(draw == 1) {
             for(int j = 0; j < Resolution; j++) {
                 for(int i = 0; i < Resolution; i++) {
-                    psi[i + j * Resolution][0] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / (diameter)) * cos(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
-                    psi[i + j * Resolution][1] = exp(-((i - offset_x) * (i - offset_x) + (j - offset_y) * (j - offset_y)) / (diameter)) * sin(((i - Resolution / (float)2) * cos(Movement_angle) + (j - Resolution / (float)2) * sin(Movement_angle)) * 8.0f);
+                        //TODO radial cutoff for faster initialisation
+                        if((i-wave_offset_x))
+                    psi[i + j * Resolution][0] = exp(-((i - wave_offset_x) * (i - wave_offset_x) + (j - wave_offset_y) * (j - wave_offset_y)) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
+                    psi[i + j * Resolution][1] = exp(-((i - wave_offset_x) * (i - wave_offset_x) + (j - wave_offset_y) * (j - wave_offset_y)) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
                 }
             }
             draw = 0;
         }
 
-        if(momentum_prop == 1) {
+        if(momentum_prop == 1) { //Because fft is shifted we need to calculate the propagator for each section
             for(int x = 0; x < Resolution / 2; x++) {
                 for(int y = 0; y < Resolution / 2; y++) {
                     prop[x * Resolution + y][0] = cos(dt * (-x * x - y * y));
@@ -1355,35 +1362,35 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(MainWindow, 1);
     }
     if(key == GLFW_KEY_M && action == GLFW_PRESS) {
-        if(measurement == 0){
-            measurement = 1;
+        if(simulation_state == simulation_state_simulate){
+            simulation_state = simulation_state_measurement_animation;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_RESET;
         }
     }
-    if(measurement == 2) {
+    if(simulation_state == simulation_state_create_and_wait_for_start) {
         if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-            measurement = 0;
+            simulation_state = simulation_state_simulate;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_MESS;
         }
         if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-            offset_x = offset_x + Offset_change;
+            wave_offset_x = wave_offset_x + Offset_change;
             draw = 1;
         }
         if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-            offset_x = offset_x - Offset_change;
+            wave_offset_x = wave_offset_x - Offset_change;
             draw = 1;
         }
         if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
-            offset_y = offset_y + Offset_change;
+            wave_offset_y = wave_offset_y + Offset_change;
             draw = 1;
         }
         if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-            offset_y = offset_y - Offset_change;
+            wave_offset_y = wave_offset_y - Offset_change;
             draw = 1;
         }
         if(key == GLFW_KEY_R && action == GLFW_PRESS) {
-            offset_x = offset_x_start;
-            offset_y = offset_y_start;
+            wave_offset_x = offset_x_start;
+            wave_offset_y = offset_y_start;
             guiElementsStorage[GUI_SLIDER_SIZE].position_x = SLIDER_SIZE_START;
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI;
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
@@ -1406,11 +1413,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
         }
     }
-    if((measurement == 5 || measurement == 1)&&(!AnimationStep)) {
+    if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
         if(key == GLFW_KEY_N && action == GLFW_PRESS) {
             ColorIntensity=2.99f;
             draw = 1;
-            measurement = 2;
+            simulation_state = simulation_state_create_and_wait_for_start;
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_START;
         }
@@ -1455,25 +1462,25 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 }
             } else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_CONTROL && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
                 if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
-                    if((measurement == 5 || measurement == 1)&&(!AnimationStep)) {
+                    if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
                         ColorIntensity=2.99f;
                         draw = 1;
-                        measurement = 2;
+                        simulation_state = simulation_state_create_and_wait_for_start;
                         AnimationStep = 0;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
                         drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
                     return;
                 } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
-                    if(measurement == 2) {
-                        measurement = 0;
+                    if(simulation_state == simulation_state_create_and_wait_for_start) {
+                        simulation_state = simulation_state_simulate;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
                         drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
                     return;
                 } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
-                    if(measurement == 0) {
-                        measurement = 1;
+                    if(simulation_state == simulation_state_simulate) {
+                        simulation_state = simulation_state_measurement_animation;
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_RESET;
                         drawGui(G_OBJECT_UPDATE, width / (float)height);
                     }
@@ -1768,34 +1775,21 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     }
     switch(selectedGuiElement) {
     case GUI_SLIDER_SIZE:
-        if(measurement == 2) {
+        if(simulation_state == simulation_state_create_and_wait_for_start) {
             diameter = guiElementsStorage[selectedGuiElement].position_x * SIZE_MULTI + 1.0f;
             draw = 1;
-        }else if(measurement != 2){
+        }else{
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 1.0f;
         }
         break;
     case GUI_SLIDER_SPEED:
-        if(measurement == 0) {
+        if(simulation_state == simulation_state_simulate) {
             dt = guiElementsStorage[selectedGuiElement].position_x * SPEED_MULTI;
             momentum_prop = 1;
         }
         break;
     case GUI_JOYSTICK_MOVEMENT:
     case GUI_JOYSTICK_ROTATION:
-        guiElementsStorage[selectedGuiElement].position_x = ((xpos - (guiElementsStorage[selectedGuiElement].top_left_x + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        guiElementsStorage[selectedGuiElement].position_y = ((ypos - (guiElementsStorage[selectedGuiElement].top_left_y + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        if(guiElementsStorage[selectedGuiElement].position_x < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_x = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_x > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_x = 1.0f;
-        }
-        if(guiElementsStorage[selectedGuiElement].position_y < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_y = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_y = 1.0f;
-        }
-        break;
     case GUI_JOYSTICK_WAVE_MOVE:
         guiElementsStorage[selectedGuiElement].position_x = ((xpos - (guiElementsStorage[selectedGuiElement].top_left_x + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
         guiElementsStorage[selectedGuiElement].position_y = ((ypos - (guiElementsStorage[selectedGuiElement].top_left_y + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
@@ -1809,10 +1803,10 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
-        printf("TODO: implement functionality 2\n");
         break;
     case GUI_SLIDER_WAVE_ROTATION:
-        if(measurement == 2){
+        if(simulation_state == simulation_state_create_and_wait_for_start){
+            printf("Debug: Angle %f\n",2*PI*guiElementsStorage[selectedGuiElement].position_x);
             Movement_angle=PI*guiElementsStorage[selectedGuiElement].position_x;
             draw =1;
         }
@@ -1872,17 +1866,17 @@ void JoystickControll(){
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
-        position_x_axis += MovementBorder*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
-        position_y_axis += MovementBorder*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
-        if(position_x_axis>MovementBorder){
-            position_x_axis=MovementBorder;
-        }else if(position_x_axis<(-MovementBorder)){
-            position_x_axis=(-MovementBorder);
+        position_x_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
+        position_y_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
+        if(position_x_axis>MovementBorderCamera){
+            position_x_axis=MovementBorderCamera;
+        }else if(position_x_axis<(-MovementBorderCamera)){
+            position_x_axis=(-MovementBorderCamera);
         }
-        if(position_y_axis>MovementBorder){
-            position_y_axis=MovementBorder;
-        }else if(position_y_axis<-MovementBorder){
-            position_y_axis=-MovementBorder;
+        if(position_y_axis>MovementBorderCamera){
+            position_y_axis=MovementBorderCamera;
+        }else if(position_y_axis<-MovementBorderCamera){
+            position_y_axis=-MovementBorderCamera;
         }
     }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE == GUI_TYPE_JOYSTICK_WAVE_MOVE){
         guiElementsStorage[selectedGuiElement].position_x = ((xpos - (guiElementsStorage[selectedGuiElement].top_left_x + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
@@ -1897,7 +1891,22 @@ void JoystickControll(){
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
-        printf("TODO: Implement functionality for moving wave\n");
+
+        wave_offset_x += (int) (Resolution*0.1f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
+        wave_offset_y += (int) (Resolution*0.1f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
+        printf("wave_offset_x: %d, wave_offset_y: %d\n",(int) (Resolution*0.1f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right))),wave_offset_y);
+        printf("MOVE WAVE\n\n\n");
+        if(wave_offset_x>(Resolution*0.9f)){
+            wave_offset_x=Resolution*0.9f;
+        }else if(wave_offset_x<(Resolution*0.1f)){
+            wave_offset_x=(Resolution*0.1f);
+        }
+        if(wave_offset_y>Resolution*0.2f){
+            wave_offset_y=Resolution*0.2f;
+        }else if(wave_offset_y<(Resolution*0.1f)){
+            wave_offset_y=Resolution*0.1f;
+        }
+        draw = 1;
     }
 }
 
@@ -1934,5 +1943,5 @@ void update_potential(){
     //TODO update buttons
     guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
     drawGui(G_OBJECT_UPDATE,16.0f/9.0f);
-    measurement = 2; //reinitialize TODO? is this right
+    simulation_state = simulation_state_create_and_wait_for_start; //reinitialize TODO? is this right
 }
