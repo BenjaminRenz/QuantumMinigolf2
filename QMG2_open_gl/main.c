@@ -1944,4 +1944,5 @@ void update_potential(){
         drawGui(G_OBJECT_UPDATE,width/(float)height);
     }
     simulation_state = simulation_state_create_and_wait_for_start; //reinitialize TODO? is this right
+    draw_new_wave=1;
 }
