@@ -1811,10 +1811,13 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         printf("TODO: implement functionality 2\n");
         break;
     case GUI_SLIDER_WAVE_ROTATION:
-        printf("TODO: implement functionality 1\n");
+        if(measurement == 2){
+            Movement_angle=PI*guiElementsStorage[selectedGuiElement].position_x;
+            draw =1;
+        }
         break;
     default:
-        printf("Error: cursor pos callback seems to have logged unregistered GUI Element!\n");
+        printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_xseems to have logged unregistered GUI Element!\n");
         break;
     }
     drawGui(G_OBJECT_UPDATE, width / (float)height);
