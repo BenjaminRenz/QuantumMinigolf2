@@ -222,7 +222,7 @@ uint8_t CountOfPotentialFiles=0;
 
 //Potential Pointer
 double* potential;
-unsigned char* pot;
+uint8_t* pot;
 
 int main(int argc, char* argv[]) {
     //Index and initialize Potential Files
@@ -399,12 +399,21 @@ int main(int argc, char* argv[]) {
     //
 
     //GUI
+    //Init gui
+    drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
+    {
+        int width = 0;
+        int height = 0;
+        glfwGetWindowSize(MainWindow, &width, &height);
+        windows_size_callback(MainWindow, width, height);   //Init y coordinates for Gui elements which depend on border
+    }
+    printf("Info: Generation of gui successfull!\n");
+    //Potential loading
     unsigned char* speicher = calloc(Resolution * Resolution * 4, 1);
     potential = (double*) malloc(Resolution * Resolution * sizeof(double));
     update_potential();
     //Create wave
     delta_time = update_delta_time();
-
     unsigned int measure_win_x = Resolution / 2;
     unsigned int measure_win_y = Resolution - 100;
     //@@Graphics
@@ -422,15 +431,7 @@ int main(int argc, char* argv[]) {
     printf("Info: Generation of plane and grid successfull!\n");
     //Init target box
     drawTargetBox(G_OBJECT_INIT,0,0.0f);
-    //Init gui
-    drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
-    {
-        int width = 0;
-        int height = 0;
-        glfwGetWindowSize(MainWindow, &width, &height);
-        windows_size_callback(MainWindow, width, height);   //Init y coordinates for Gui elements which depend on border
-    }
-    printf("Info: Generation of gui successfull!\n");
+
     //Graphics@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         if(timerForBlink(0)>5.0f){
@@ -703,7 +704,7 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         glBindBuffer(GL_ARRAY_BUFFER, vboTargetBoxID);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
         glEnableVertexAttribArray(0);   //x,y
         //Enabler Shader
         glUseProgram(targetShaderID);
@@ -1721,7 +1722,7 @@ unsigned char* read_bmp(char* filepath) {
         }
         //TODO implement swapping routine if brga!=[3,2,1,0]
         printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n", RGBA_mask[0], RGBA_mask[1], RGBA_mask[2], RGBA_mask[3]);
-        unsigned char* imageData = malloc(BitmapSizeCalculated);
+        uint8_t* imageData = malloc(BitmapSizeCalculated);
         printf("Info: BMOFFST: %d\n", BitmapOffset);
         fseek(filepointer, BitmapOffset, SEEK_SET);   //jump to pixel data
         printf("Info: Calsize: %d\n", BitmapSizeCalculated);
@@ -1924,7 +1925,6 @@ void update_potential(){
     }else{
         pot = read_bmp(PotentialSourceFile);
     }
-
     for(int i = 0; i < Resolution * Resolution; i++) {
         potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
     }
