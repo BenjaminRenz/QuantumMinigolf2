@@ -313,8 +313,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
-    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    //MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -335,6 +335,8 @@ int main(int argc, char* argv[]) {
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(openglCallbackFunction, 0);
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);   //Dont filter messages
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);   //Dont filter messages
+
 
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow, key_callback);
@@ -1291,7 +1293,9 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndicesID);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * numberOfQuads * sizeof(GLuint), GUI_indices, GL_DYNAMIC_DRAW);
         //update vao
-        glBindVertexArray(vaoID);
+        glBindVertexArray(vaoID);//in order to bind vertexAttribPointers to this object
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 8 * numberOfQuads));
         glEnableVertexAttribArray(1);
         glBindVertexArray(0);
