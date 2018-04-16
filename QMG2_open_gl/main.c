@@ -576,7 +576,7 @@ int main(int argc, char* argv[]) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolution, Resolution, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
         if(draw_new_wave == 1) {
-            memset(&(psi[0][0]),0,Resolution*Resolution*2*sizeof(float));
+            memset(&(psi[0][0]),0,Resolution*Resolution*4*sizeof(float));
             for(int j = 0; j < Resolution; j++) {
                 for(int i = 0; i < Resolution; i++) {
                         //TODO radial cutoff for faster initialisation
