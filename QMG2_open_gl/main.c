@@ -1916,10 +1916,15 @@ void update_potential(){
     #elif __linux__
     strcat(PotentialSourceFile,"/");
     #endif
-
     strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
     printf("Loading: %s",PotentialSourceFile);
-    pot = read_bmp(PotentialSourceFile);
+
+    if(PotentialSourceFile[0]==1){
+        pot = read_bmp(PotentialSourceFile+1);
+    }else{
+        pot = read_bmp(PotentialSourceFile);
+    }
+
     for(int i = 0; i < Resolution * Resolution; i++) {
         potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
     }
