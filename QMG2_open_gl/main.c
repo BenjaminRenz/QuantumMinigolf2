@@ -583,8 +583,8 @@ int main(int argc, char* argv[]) {
                 for(int i = 0; i < Resolution; i++) {
                         //TODO radial cutoff for faster initialisation
                     if((abs(i-((int)wave_offset_x)))<(Resolution/20.0f)&&(abs(j-((int)wave_offset_y))<(Resolution/20.0f))){
-                        psi[i + j * Resolution][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
-                        psi[i + j * Resolution][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 8.0f);
+                        psi[i + j * Resolution][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 2.0f);
+                        psi[i + j * Resolution][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 2.0f);
                     }
                 }
             }
@@ -1806,7 +1806,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     case GUI_SLIDER_WAVE_ROTATION:
         if(simulation_state == simulation_state_create_and_wait_for_start){
             printf("Debug: Angle %f\n",2*PI*guiElementsStorage[selectedGuiElement].position_x);
-            Movement_angle=PI*guiElementsStorage[selectedGuiElement].position_x;
+            Movement_angle=2*PI*(guiElementsStorage[selectedGuiElement].position_x+0.5f);
             draw_new_wave =1;
         }
         break;
