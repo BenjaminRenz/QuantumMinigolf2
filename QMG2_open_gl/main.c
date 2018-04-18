@@ -63,6 +63,7 @@ GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 void JoystickControll();
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 void update_potential();
+void refereshGUI();
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -123,6 +124,11 @@ void update_potential();
 #define UV_GUI_BUTTON_POTENTIAL_TOP_LEFT_Y    ( 724.0f/1024.0f)
 #define UV_GUI_BUTTON_POTENTIAL_DOWN_RIGHT_X  (1024.0f/1024.0f)
 #define UV_GUI_BUTTON_POTENTIAL_DOWN_RIGHT_Y  ( 596.0f/1024.0f)
+
+#define UV_GUI_JOYSTICK_BORDER_TOP_LEFT_X     ( 780.0f/1024.0f)
+#define UV_GUI_JOYSTICK_BORDER_TOP_LEFT_Y     ( 984.0f/1024.0f)
+#define UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_X   (1024.0f/1024.0f)
+#define UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_Y   ( 740.0f/1024.0f)
 
 #define GUI_TYPE_JOYSTICK_MOVEMENT 6
 #define UV_GUI_JOYSTICK_MOVEMENT_TOP_LEFT_X   (   0.0f/1024.0f)
@@ -196,7 +202,7 @@ double position_y_axis = 0.0;
 //Manipulation of simulation
 #define Resolution 512      //must be power of 2, size of the bmp file (512*512) and for the fft/simulation
 #define Diameter_change 0.02f
-#define SIZE_MULTI 200.0f
+#define SIZE_MULTI 600.0f
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolution*Resolution
 float Movement_angle = PI / 2.0f; //angle for particle
@@ -274,13 +280,13 @@ int main(int argc, char* argv[]) {
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_x = 0.0f;
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_x = 0.0f;
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].position_y = 0.0f;
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth = 0.2f;
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth = 0.1f;
     guiElementsStorage[GUI_JOYSTICK_MOVEMENT].GUI_TYPE = GUI_TYPE_JOYSTICK_MOVEMENT;
     //
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_x = 0.25f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_x = 0.15f;
     guiElementsStorage[GUI_JOYSTICK_ROTATION].position_x = 0.0f;
     guiElementsStorage[GUI_JOYSTICK_ROTATION].position_y = 0.0f;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth = 0.2f;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth = 0.1f;
     guiElementsStorage[GUI_JOYSTICK_ROTATION].GUI_TYPE = GUI_TYPE_JOYSTICK_ROTATION;
     //
     guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].top_left_x = 0.0f;
@@ -289,10 +295,10 @@ int main(int argc, char* argv[]) {
     guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].percentOfWidth = 0.3f;
     guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].GUI_TYPE = GUI_TYPE_SLIDER_ANGLE;
     //
-    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].top_left_x = 0.5f;
+    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].top_left_x = 0.3f;
     guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].position_x = 0.0f;
     guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].position_y = 0.0f;
-    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].percentOfWidth = 0.2f;
+    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].percentOfWidth = 0.1f;
     guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].GUI_TYPE = GUI_TYPE_JOYSTICK_WAVE_MOVE;
     //
     guiElementsStorage[GUI_BUTTON_POTENTIAL].top_left_x = 0.8f;
@@ -409,12 +415,7 @@ int main(int argc, char* argv[]) {
     //GUI
     //Init gui
     drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
-    {
-        int width = 0;
-        int height = 0;
-        glfwGetWindowSize(MainWindow, &width, &height);
-        windows_size_callback(MainWindow, width, height);   //Init y coordinates for Gui elements which depend on border
-    }
+    refereshGUI();
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
     unsigned char* speicher = calloc(Resolution * Resolution * 4, 1);
@@ -448,16 +449,15 @@ int main(int argc, char* argv[]) {
             //Same as Reset Button
             if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation){
                 draw_new_wave = 1;
-                diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                 guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
-                {
-                    int width = 0;
-                    int height = 0;
-                    glfwGetWindowSize(MainWindow, &width, &height);
-                    drawGui(G_OBJECT_UPDATE, width / (float)height);
-                }
+                refereshGUI();
                 simulation_state = 2;
             }
+            guiElementsStorage[GUI_SLIDER_SIZE].position_x = 0.5f;
+            guiElementsStorage[GUI_SLIDER_SPEED].position_x = 0.5f;
+            guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x = 0.5f;
+            refereshGUI();
+
             //Animation Only
             ColorIntensity=0.4f*cos(((BlinkStep++)*PI/50.0f))+2.5f;
             if(BlinkStep>100){
@@ -578,11 +578,13 @@ int main(int argc, char* argv[]) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolution, Resolution, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
         if(draw_new_wave == 1) {
+            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
+            Movement_angle = PI * 2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x-0.25f);
             memset(&(psi[0][0]),0,Resolution*Resolution*4*sizeof(float));
             for(int j = 0; j < Resolution; j++) {
                 for(int i = 0; i < Resolution; i++) {
                         //TODO radial cutoff for faster initialisation
-                    if((abs(i-((int)wave_offset_x)))<(Resolution/20.0f)&&(abs(j-((int)wave_offset_y))<(Resolution/20.0f))){
+                    if((abs(i-((int)wave_offset_x)))<(Resolution/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolution/10.0f))){
                         psi[i + j * Resolution][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 2.0f);
                         psi[i + j * Resolution][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 2.0f);
                     }
@@ -992,7 +994,7 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
             case GUI_TYPE_JOYSTICK_ROTATION:
             case GUI_TYPE_JOYSTICK_MOVEMENT:
             case GUI_TYPE_JOYSTICK_WAVE_MOVE:
-                numberOfQuads += 1;
+                numberOfQuads += 2; //one for button and one for surounding box
                 break;
             }
         }
@@ -1065,6 +1067,16 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
                 float glCoordsX = 2.0f * ((guiElementsStorage[gElmt].top_left_x) - 0.5f);     //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsY = -2.0f * (guiElementsStorage[gElmt].top_left_y * aspectRatio - 0.5f);   //Transform coordinates from [0,1] to [-1,1]
                 float glCoordsSize = 2.0f * guiElementsStorage[gElmt].percentOfWidth;   //Transform coordinates from [0,1] to [-1,1]
+                //for box
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX; //LOWERLEFT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize; //LOWERRIGHT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX; //UPPERLEFT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize; //UPPERRIGHT
+                GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY;
+                //for button
                 GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (positionX * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE); //LOWERLEFT
                 GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * (1 - (1 - GUI_JOYSTICK_PROPERTY_SCALE) * (positionY * (-0.5f) + 0.5f));
                 GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (1 - (1 - GUI_JOYSTICK_PROPERTY_SCALE) * (positionX * (-0.5f) + 0.5f)); //LOWERRIGHT
@@ -1073,10 +1085,19 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
                 GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * ((positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE));
                 GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsX + glCoordsSize * (1 - (1 - GUI_JOYSTICK_PROPERTY_SCALE) * (positionX * (-0.5f) + 0.5f)); //UPPERRIGHT
                 GUI_positions_and_uv[offsetInGuiPaUV++] = glCoordsY - aspectRatio * glCoordsSize * ((positionY * 0.5f + 0.5f) * (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-
             }
         }
         for(int gElmt = 0; gElmt < numberOfGuiElements; gElmt++) {
+            if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_WAVE_MOVE || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION || guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT){
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_TOP_LEFT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_TOP_LEFT_Y;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_X;
+                GUI_positions_and_uv[offsetInGuiPaUV++] = UV_GUI_JOYSTICK_BORDER_TOP_LEFT_Y;
+            }
             if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_SLIDER_SIZE) {
                 //UV
                 //Part 1 slider
@@ -1391,7 +1412,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             wave_offset_x = offset_x_start;
             wave_offset_y = offset_y_start;
             guiElementsStorage[GUI_SLIDER_SIZE].position_x = SLIDER_SIZE_START;
-            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI;
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
             dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
             momentum_prop = 1;
@@ -1400,14 +1420,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if(key == GLFW_KEY_O && action == GLFW_PRESS) {
             if(guiElementsStorage[GUI_SLIDER_SIZE].position_x > Diameter_change) {
                 guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x - Diameter_change;
-                diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI;
                 draw_new_wave = 1;
             }
         }
         if(key == GLFW_KEY_P && action == GLFW_PRESS) {
             if(guiElementsStorage[GUI_SLIDER_SIZE].position_x < 1.0f - Diameter_change) {
                 guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x + Diameter_change;
-                diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
                 draw_new_wave = 1;
             }
         }
@@ -1417,7 +1435,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             ColorIntensity=2.99f;
             draw_new_wave = 1;
             simulation_state = simulation_state_create_and_wait_for_start;
-            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * 50.0f;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_START;
         }
     }
@@ -1435,10 +1452,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             momentum_prop = 1;
         }
     }
-    int width = 0;
-    int height = 0;
-    glfwGetWindowSize(MainWindow, &width, &height);
-    drawGui(G_OBJECT_UPDATE, width / (float)height);
+    refereshGUI();
 }
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     double xpos = 0;
@@ -1493,7 +1507,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 float y_offset = guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_y) + 0.5f) - ypos;
                 if((x_offset * x_offset + y_offset * y_offset) < (0.25f * guiElementsStorage[gElmt].percentOfWidth * GUI_JOYSTICK_PROPERTY_SCALE * guiElementsStorage[gElmt].percentOfWidth * GUI_JOYSTICK_PROPERTY_SCALE)) { //if inside the tappable circle 0.25f because it is GUI_JOYSTICK_PROPERT_SCALE is the diameter->*0.5f = radius
                     selectedGuiElement = gElmt;
-                    printf("Debug: Grabbed on Joystick %d\n", selectedGuiElement);
                     return;
                 }
             }
@@ -1775,15 +1788,12 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     switch(selectedGuiElement) {
     case GUI_SLIDER_SIZE:
         if(simulation_state == simulation_state_create_and_wait_for_start) {
-            diameter = guiElementsStorage[selectedGuiElement].position_x * SIZE_MULTI + 1.0f;
             draw_new_wave = 1;
-        }else{
-            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 1.0f;
         }
         break;
     case GUI_SLIDER_SPEED:
+        dt = guiElementsStorage[selectedGuiElement].position_x * SPEED_MULTI;
         if(simulation_state == simulation_state_simulate) {
-            dt = guiElementsStorage[selectedGuiElement].position_x * SPEED_MULTI;
             momentum_prop = 1;
         }
         break;
@@ -1806,7 +1816,6 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     case GUI_SLIDER_WAVE_ROTATION:
         if(simulation_state == simulation_state_create_and_wait_for_start){
             printf("Debug: Angle %f\n",2*PI*guiElementsStorage[selectedGuiElement].position_x);
-            Movement_angle=2*PI*(guiElementsStorage[selectedGuiElement].position_x+0.5f);
             draw_new_wave =1;
         }
         break;
@@ -1890,22 +1899,21 @@ void JoystickControll(){
         } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
-
-        wave_offset_x += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
-        wave_offset_y += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
-        printf("wave_offset_x: %d, wave_offset_y: %d\n",(int) (Resolution*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right))),wave_offset_y);
-        printf("MOVE WAVE\n\n\n");
-        if(wave_offset_x>(Resolution*0.9f)){
-            wave_offset_x=Resolution*0.9f;
-        }else if(wave_offset_x<(Resolution*0.1f)){
-            wave_offset_x=(Resolution*0.1f);
+        if(simulation_state==simulation_state_create_and_wait_for_start){
+            wave_offset_x += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
+            wave_offset_y += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
+            if(wave_offset_x>(Resolution*0.9f)){
+                wave_offset_x=Resolution*0.9f;
+            }else if(wave_offset_x<(Resolution*0.1f)){
+                wave_offset_x=(Resolution*0.1f);
+            }
+            if(wave_offset_y>Resolution*0.15f){
+                wave_offset_y=Resolution*0.15f;
+            }else if(wave_offset_y<(Resolution*0.05f)){
+                wave_offset_y=Resolution*0.05f;
+            }
+            draw_new_wave = 1;
         }
-        if(wave_offset_y>Resolution*0.15f){
-            wave_offset_y=Resolution*0.15f;
-        }else if(wave_offset_y<(Resolution*0.05f)){
-            wave_offset_y=Resolution*0.05f;
-        }
-        draw_new_wave = 1;
     }
 }
 
@@ -1941,12 +1949,14 @@ void update_potential(){
     }
     //TODO update buttons
     guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
-    {
-        int width=0;
-        int height=0;
-        glfwGetWindowSize(MainWindow,&width,&height);
-        drawGui(G_OBJECT_UPDATE,width/(float)height);
-    }
+    refereshGUI();
     simulation_state = simulation_state_create_and_wait_for_start; //reinitialize TODO? is this right
     draw_new_wave=1;
+}
+
+void refereshGUI(){
+    int width=0;
+    int height=0;
+    glfwGetWindowSize(MainWindow,&width,&height);
+    windows_size_callback(MainWindow,width,height);
 }
