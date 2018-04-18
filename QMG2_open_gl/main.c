@@ -1952,6 +1952,7 @@ void update_potential(){
     refereshGUI();
     simulation_state = simulation_state_create_and_wait_for_start; //reinitialize TODO? is this right
     draw_new_wave=1;
+    ColorIntensity=2.9f;
 }
 
 void refereshGUI(){
