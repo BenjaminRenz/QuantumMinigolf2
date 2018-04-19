@@ -224,7 +224,7 @@ float wave_offset_y = offset_y_start; //offset for particle
 float ColorIntensity=2.9f;
 int BlinkStep=0;
 
-char PotentialFilesList[20][256];
+char PotentialFilesList[20][256]; //Currently limited to 20 .bmp files
 uint8_t CountOfPotentialFiles=0;
 
 //Potential Pointer
@@ -423,8 +423,6 @@ int main(int argc, char* argv[]) {
     update_potential();
     //Create wave
     delta_time = update_delta_time();
-    unsigned int measure_win_x = Resolution / 2;
-    unsigned int measure_win_y = Resolution - 100;
     //@@Graphics
     //init texture for Psi because its dynamic
     glActiveTexture(GL_TEXTURE0);
@@ -579,7 +577,7 @@ int main(int argc, char* argv[]) {
         //Graphics@@
         if(draw_new_wave == 1) {
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
-            Movement_angle = PI * 2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x-0.25f);
+            Movement_angle = PI * -2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x+0.25f);
             memset(&(psi[0][0]),0,Resolution*Resolution*4*sizeof(float));
             for(int j = 0; j < Resolution; j++) {
                 for(int i = 0; i < Resolution; i++) {
@@ -1692,7 +1690,9 @@ unsigned char* read_bmp(char* filepath) {
     unsigned int BitmapCompression = read_uint_from_endian_file(filepointer);
     switch(BitmapCompression) {
     case 0:
-        printf("Warn: Compression type: none/BI_RGB\n");
+        printf("Error: Compression type: none/BI_RGB\n");
+        fclose(filepointer);
+        return 0; //TODO add support
         break;
     case 3:
         printf("Info: Compression type: Bitfields/BI_BITFIELDS\n");
