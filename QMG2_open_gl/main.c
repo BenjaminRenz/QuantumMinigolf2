@@ -165,10 +165,10 @@ void refereshGUI();
 #define GUI_BUTTON_POTENTIAL 7
 
 //Mess window
-        #define VertMinX -0.2f //width
-        #define VertMaxX 0.2f
-        #define VertMinY 0.05f //length (direction of wave
-        #define VertMaxY 0.25f
+        #define VertMinX -0.1f //width
+        #define VertMaxX 0.1f
+        #define VertMinY 0.25f //length (direction of wave
+        #define VertMaxY 0.45f
         #define VertMinZ 0.001f
         #define VertMaxZ 0.01f
 
@@ -486,15 +486,39 @@ int main(int argc, char* argv[]) {
             for(int i = 0; i < Resolution; i++) {
                 psi[i][0] = 0;
                 psi[i][1] = 0;
+                psi[i+1][0] = 0;
+                psi[i+1][1] = 0;
+                psi[i+2][0] = 0;
+                psi[i+2][1] = 0;
+                psi[i+3][0] = 0;
+                psi[i+3][1] = 0;
                 psi[i + (Resolution - 1)*Resolution][0] = 0;
                 psi[i + (Resolution - 1)*Resolution][1] = 0;
+                psi[i + (Resolution - 2)*Resolution][0] = 0;
+                psi[i + (Resolution - 2)*Resolution][1] = 0;
+                psi[i + (Resolution - 3)*Resolution][0] = 0;
+                psi[i + (Resolution - 3)*Resolution][1] = 0;
+                psi[i + (Resolution - 4)*Resolution][0] = 0;
+                psi[i + (Resolution - 4)*Resolution][1] = 0;
             }
             //Delete the border of the wavefunction vertical
             for(int i = 0; i < Resolution; i++) {
                 psi[1 + i * Resolution][0] = 0;//TODO problem for i=0?
                 psi[1 + i * Resolution][1] = 0;
+                psi[2 + i * Resolution][0] = 0;//TODO problem for i=0?
+                psi[2 + i * Resolution][1] = 0;
+                psi[3 + i * Resolution][0] = 0;//TODO problem for i=0?
+                psi[3 + i * Resolution][1] = 0;
+                psi[4 + i * Resolution][0] = 0;//TODO problem for i=0?
+                psi[4 + i * Resolution][1] = 0;
                 psi[Resolution - 1 + i * Resolution][0] = 0;
                 psi[Resolution - 1 + i * Resolution][1] = 0;
+                psi[Resolution - 2 + i * Resolution][0] = 0;
+                psi[Resolution - 2 + i * Resolution][1] = 0;
+                psi[Resolution - 3 + i * Resolution][0] = 0;
+                psi[Resolution - 3 + i * Resolution][1] = 0;
+                psi[Resolution - 4 + i * Resolution][0] = 0;
+                psi[Resolution - 4 + i * Resolution][1] = 0;
             }
         }
 
