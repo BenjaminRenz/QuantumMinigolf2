@@ -191,8 +191,8 @@ float delta_time;
 int numberOfGuiElements = 8;
 int selectedGuiElement = (-1);   //-1 == no element selected
 struct GUI_render* guiElementsStorage;
-double rotation_up_down = PI/2;
-double rotation_left_right = 0;
+double rotation_up_down = PI/3;
+double rotation_left_right = PI;
 double position_x_axis = 0.0;
 double position_y_axis = 0.0;
 #define MovementBorderCamera 0.5f
@@ -445,11 +445,15 @@ int main(int argc, char* argv[]) {
 
         if(timerForBlink(0)>5.0f){
             //Same as Reset Button
-            if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation){
+            if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation||simulation_state==simulation_state_create_and_wait_for_start){
                 draw_new_wave = 1;
                 guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
                 refereshGUI();
                 simulation_state = 2;
+                rotation_left_right = PI;
+                rotation_up_down = PI/3;
+                position_x_axis = 0;
+                position_y_axis = 0;
             }
             guiElementsStorage[GUI_SLIDER_SIZE].position_x = 0.5f;
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = 0.5f;
