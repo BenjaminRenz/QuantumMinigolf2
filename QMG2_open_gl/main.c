@@ -1961,6 +1961,7 @@ void write_bmp(char* filepath, unsigned int width, unsigned int height) {
 void update_potential(){
     static uint8_t SelectedPotential=0;
     char PotentialSourceFile[256];
+    PotentialSourceFile[0]=0;
     strcat(PotentialSourceFile,filepath_potentials);
     #ifdef _WIN32
     strcat(PotentialSourceFile,"\\");
@@ -1970,11 +1971,12 @@ void update_potential(){
     strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
     printf("Loading: %s",PotentialSourceFile);
 
-    if(PotentialSourceFile[0]==1){
+    /*if(PotentialSourceFile[0]==1){
         pot = read_bmp(PotentialSourceFile+1);
     }else{
         pot = read_bmp(PotentialSourceFile);
-    }
+    }*/
+    pot=read_bmp(PotentialSourceFile);
     for(int i = 0; i < Resolutionx * Resolutiony; i++) {
         potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
     }
