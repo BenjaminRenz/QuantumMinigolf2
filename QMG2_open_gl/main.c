@@ -196,15 +196,21 @@ double rotation_left_right = PI;
 double position_x_axis = 0.0;
 double position_y_axis = 0.0;
 #define MovementBorderCamera 0.5f
-#define PlaneRes 1024  //should be power of 2 ,vertex resolution of the rendered plane
+#define PlaneResx 2048
+#define PlaneResy 2048
+#define PlaneRes 2048  //should be power of 2 ,vertex resolution of the rendered plane
+#define GridResx 256
+#define GridResy 256
 #define GridRes 256        //must be power of 2 ,vertex resolution of the rendered grid
 
 //Manipulation of simulation
-#define Resolution 512      //must be power of 2, size of the bmp file (512*512) and for the fft/simulation
+#define Resolutionx 512      //must be power of 2, size of the bmp file (512*512) and for the fft/simulation
+#define Resolutiony 512
+//#define Resolution 512
 #define Diameter_change 0.02f
 #define SIZE_MULTI 600.0f
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
-#define norm Resolution*Resolution
+#define norm Resolutionx*Resolutiony
 float Movement_angle = PI / 2.0f; //angle for particle
 
 int AnimationStep = 0;
@@ -216,9 +222,9 @@ int momentum_prop = 1;
 #define SPEED_MULTI 0.0002f
 float dt = SLIDER_SPEED_START * SPEED_MULTI;
 #define Offset_change 10
-#define offset_x_start Resolution/2
+#define offset_x_start Resolutionx/2
 float wave_offset_x = offset_x_start; //offset for particle
-#define offset_y_start Resolution*0.10f
+#define offset_y_start Resolutiony*0.10f
 float wave_offset_y = offset_y_start; //offset for particle
 
 float ColorIntensity=2.9f;
@@ -371,7 +377,7 @@ int main(int argc, char* argv[]) {
     */
     /*//https://www.seas.upenn.edu/%7Epcozzi/OpenGLInsights/OpenGLInsights-AsynchronousBufferTransfers.pdf
     //Generate data memory for psi
-    unsigned char* psi=malloc(Resolution*Resolution*4);
+    unsigned char* psi=malloc(Resolutionx*Resolutiony*4);
     //generate Texture
     glActiveTexture(GL_TEXTURE0);
     GLuint psi_texture=0;
@@ -383,11 +389,11 @@ int main(int argc, char* argv[]) {
     glGenBuffers(1,&PBO1);
     glGenBuffers(1,&PBO2);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8,speicher);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolution*Resolution,psi,GL_STREAM_DRAW);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolutionx*Resolutiony,psi,GL_STREAM_DRAW);
 
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,Resolution,Resolution,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,Resolutionx,Resolutiony,GL_RGBA,GL_UNSIGNED_INT_8_8_8_8_REV,NULL); //NULL pointer let opengl fetch data from bound GL_PIXEL_UNPACK_BUFFER
     */
-    //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolution,Resolution,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
+    //glTexSubImage2D(GL_TEXTURE_2D,,0,0,0,Resolutionx,Resolutiony,GL_UNSIGNED_INT_8_8_8_8_REV);//4 upadte every frame
 
     mat4x4 mvp4x4;
     mat4x4 persp4x4; //remove?? TODO
@@ -400,15 +406,15 @@ int main(int argc, char* argv[]) {
     fftw_complex *prop;
     fftw_complex *animation_start;
     fftw_complex *animation_end;
-    psi = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
-    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
-    prop = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+    psi = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
+    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
+    prop = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
 
-    animation_start = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
-    animation_end = (fftw_complex*) fftw_alloc_complex(Resolution * Resolution);
+    animation_start = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
+    animation_end = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
 
-    fftw_plan fft = fftw_plan_dft_2d(Resolution, Resolution, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
-    fftw_plan ifft = fftw_plan_dft_2d(Resolution, Resolution, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
+    fftw_plan fft = fftw_plan_dft_2d(Resolutionx, Resolutiony, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
+    fftw_plan ifft = fftw_plan_dft_2d(Resolutionx, Resolutiony, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
     //
 
@@ -418,8 +424,8 @@ int main(int argc, char* argv[]) {
     refereshGUI();
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
-    unsigned char* speicher = calloc(Resolution * Resolution * 4, 1);
-    potential = (double*) malloc(Resolution * Resolution * sizeof(double));
+    unsigned char* speicher = calloc(Resolutionx * Resolutiony * 4, 1);
+    potential = (double*) malloc(Resolutionx * Resolutiony * sizeof(double));
     update_potential();
     //Create wave
     delta_time = update_delta_time();
@@ -471,58 +477,58 @@ int main(int argc, char* argv[]) {
             timerForBlink(1); //reset standby counter so simulation isn't interrupted
             fftw_execute(fft);
             //momentum space
-            for(int i = 0; i < Resolution * Resolution; i++) {
+            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
                 double psi_re_temp = psi_transform[i][0];
                 psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
                 psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
             }
             fftw_execute(ifft);
-            for(int i = 0; i < Resolution * Resolution; i++) {
+            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
                 psi[i][0] = psi[i][0] / (double)(norm);
                 psi[i][1] = psi[i][1] / (double)(norm);
             }
-            for(int i = 0; i < Resolution * Resolution; i++) {
+            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
                 double psi_re_temp = psi[i][0];
                 psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
                 psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
             }
             //Delete the border of the wavefunction horizontal
-            for(int i = 0; i < Resolution; i++) {
+            for(int i = 0; i < Resolutionx; i++) {
                 psi[i][0] = 0;
                 psi[i][1] = 0;
-                psi[i+1][0] = 0;
-                psi[i+1][1] = 0;
-                psi[i+2][0] = 0;
-                psi[i+2][1] = 0;
-                psi[i+3][0] = 0;
-                psi[i+3][1] = 0;
-                psi[i + (Resolution - 1)*Resolution][0] = 0;
-                psi[i + (Resolution - 1)*Resolution][1] = 0;
-                psi[i + (Resolution - 2)*Resolution][0] = 0;
-                psi[i + (Resolution - 2)*Resolution][1] = 0;
-                psi[i + (Resolution - 3)*Resolution][0] = 0;
-                psi[i + (Resolution - 3)*Resolution][1] = 0;
-                psi[i + (Resolution - 4)*Resolution][0] = 0;
-                psi[i + (Resolution - 4)*Resolution][1] = 0;
+                psi[i+1*Resolutionx][0] = 0;
+                psi[i+1*Resolutionx][1] = 0;
+                psi[i+2*Resolutionx][0] = 0;
+                psi[i+2*Resolutionx][1] = 0;
+                psi[i+3*Resolutionx][0] = 0;
+                psi[i+3*Resolutionx][1] = 0;
+                psi[i + (Resolutiony - 1)*Resolutionx][0] = 0;
+                psi[i + (Resolutiony - 1)*Resolutionx][1] = 0;
+                psi[i + (Resolutiony - 2)*Resolutionx][0] = 0;
+                psi[i + (Resolutiony - 2)*Resolutionx][1] = 0;
+                psi[i + (Resolutiony - 3)*Resolutionx][0] = 0;
+                psi[i + (Resolutiony - 3)*Resolutionx][1] = 0;
+                psi[i + (Resolutiony - 4)*Resolutionx][0] = 0;
+                psi[i + (Resolutiony - 4)*Resolutionx][1] = 0;
             }
             //Delete the border of the wavefunction vertical
-            for(int i = 0; i < Resolution; i++) {
-                psi[1 + i * Resolution][0] = 0;//TODO problem for i=0?
-                psi[1 + i * Resolution][1] = 0;
-                psi[2 + i * Resolution][0] = 0;//TODO problem for i=0?
-                psi[2 + i * Resolution][1] = 0;
-                psi[3 + i * Resolution][0] = 0;//TODO problem for i=0?
-                psi[3 + i * Resolution][1] = 0;
-                psi[4 + i * Resolution][0] = 0;//TODO problem for i=0?
-                psi[4 + i * Resolution][1] = 0;
-                psi[Resolution - 1 + i * Resolution][0] = 0;
-                psi[Resolution - 1 + i * Resolution][1] = 0;
-                psi[Resolution - 2 + i * Resolution][0] = 0;
-                psi[Resolution - 2 + i * Resolution][1] = 0;
-                psi[Resolution - 3 + i * Resolution][0] = 0;
-                psi[Resolution - 3 + i * Resolution][1] = 0;
-                psi[Resolution - 4 + i * Resolution][0] = 0;
-                psi[Resolution - 4 + i * Resolution][1] = 0;
+            for(int i = 0; i < Resolutiony; i++) {
+                psi[1 + i * Resolutionx][0] = 0;//TODO problem for i=0?
+                psi[1 + i * Resolutionx][1] = 0;
+                psi[2 + i * Resolutionx][0] = 0;//TODO problem for i=0?
+                psi[2 + i * Resolutionx][1] = 0;
+                psi[3 + i * Resolutionx][0] = 0;//TODO problem for i=0?
+                psi[3 + i * Resolutionx][1] = 0;
+                psi[4 + i * Resolutionx][0] = 0;//TODO problem for i=0?
+                psi[4 + i * Resolutionx][1] = 0;
+                psi[Resolutionx - 1 + i * Resolutionx][0] = 0;
+                psi[Resolutionx - 1 + i * Resolutionx][1] = 0;
+                psi[Resolutionx - 2 + i * Resolutionx][0] = 0;
+                psi[Resolutionx - 2 + i * Resolutionx][1] = 0;
+                psi[Resolutionx - 3 + i * Resolutionx][0] = 0;
+                psi[Resolutionx - 3 + i * Resolutionx][1] = 0;
+                psi[Resolutionx - 4 + i * Resolutionx][0] = 0;
+                psi[Resolutionx - 4 + i * Resolutionx][1] = 0;
             }
         }
 
@@ -533,10 +539,10 @@ int main(int argc, char* argv[]) {
                 double random = (rand() % 1001) / 1000.0f;
                 double sum = 0;
                 double norm_sum = 0;
-                for(int i = 0; i < Resolution * Resolution; i++) {
+                for(int i = 0; i < Resolutionx * Resolutiony; i++) {
                     norm_sum = norm_sum + (psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
                 }
-                for(pos = 0; pos < Resolution * Resolution; pos++) {
+                for(pos = 0; pos < Resolutionx * Resolutiony; pos++) {
                     sum = sum + ((psi[pos][0] * psi[pos][0] + psi[pos][1] * psi[pos][1]) / norm_sum);
                     if(sum > random) {
                         printf("Sum:  %f\n",sum);
@@ -545,7 +551,7 @@ int main(int argc, char* argv[]) {
                         break;
                     }
                 }
-                if((pos%Resolution)>((VertMinX+0.5f)*Resolution)&&(pos%Resolution)<((VertMaxX+0.5f)*Resolution)&&(pos/Resolution)>((VertMinY+0.5f)*Resolution)&&(pos/Resolution)<((VertMaxY+0.5f)*Resolution)){
+                if((pos%Resolutionx)>((VertMinX+0.5f)*Resolutionx)&&(pos%Resolutionx)<((VertMaxX+0.5f)*Resolutionx)&&(pos/Resolutiony)>((VertMinY+0.5f)*Resolutiony)&&(pos/Resolutiony)<((VertMaxY+0.5f)*Resolutiony)){
                     ColorIntensity=1.99f;
                     printf("HIT\n\n\n");
                 }
@@ -554,10 +560,10 @@ int main(int argc, char* argv[]) {
                     printf("NO HIT\n\n\n");
                 }
                 //Animation for mess
-                for(int x = 0; x<(Resolution*Resolution-1);x++){
+                for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
                     animation_start[x][0]=psi_transform[x][0];
                     animation_start[x][1]=psi_transform[x][1];
-                    if((((pos % Resolution) - x%Resolution) * ((pos % Resolution) - x%Resolution) + ((pos / Resolution) - x/Resolution) * ((pos / Resolution) - x/Resolution))<10.0f){
+                    if((((pos % Resolutionx) - x%Resolutionx) * ((pos % Resolutionx) - x%Resolutionx) + ((pos / Resolutiony) - x/Resolutiony) * ((pos / Resolutiony) - x/Resolutiony))<10.0f){
                         psi[x][0]=1.0f;
                     }else{
                         psi[x][0]=0.0f;
@@ -565,13 +571,13 @@ int main(int argc, char* argv[]) {
                     psi[x][1]=0.0f;
                 }
                 fftw_execute(fft);
-                for(int x = 0; x<(Resolution*Resolution-1);x++){
+                for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
                     animation_end[x][0]=psi_transform[x][0];
                     animation_end[x][1]=psi_transform[x][1];
                 }
                 AnimationStep=0;
             }
-            for(int x = 0; x<(Resolution*Resolution-1);x++){
+            for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
                 psi_transform[x][0]=animation_start[x][0]*(1.0f-AnimationStep/30.0f)+animation_end[x][0]*(AnimationStep/30.0f);
                 psi_transform[x][1]=animation_start[x][1]*(1.0f-AnimationStep/30.0f)+animation_end[x][1]*(AnimationStep/30.0f);
             }
@@ -586,14 +592,14 @@ int main(int argc, char* argv[]) {
         int biggest = 0;
         biggest = 0;
 
-        for(int i = 0; i < Resolution * Resolution; i++) {
+        for(int i = 0; i < Resolutionx * Resolutiony; i++) {
             if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])
                 biggest = i;
         }
 
         double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
 
-        for(int i = 0; i < Resolution * Resolution; i++) {
+        for(int i = 0; i < Resolutionx * Resolutiony; i++) {
             speicher[i * 4 + 2] = (unsigned char)(0.5f * 255 * (psi[i][0] * norming + 1.0f));
             speicher[i * 4 + 1] = (unsigned char)(0.5f * 255 * (psi[i][1] * norming + 1.0f));
             speicher[i * 4 + 3] = pot[i * 4 + 1];
@@ -601,18 +607,18 @@ int main(int argc, char* argv[]) {
         //@@Graphics
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, psiTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolution, Resolution, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolutionx, Resolutiony, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
         if(draw_new_wave == 1) {
             diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
             Movement_angle = PI * -2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x+0.25f);
-            memset(&(psi[0][0]),0,Resolution*Resolution*4*sizeof(float));
-            for(int j = 0; j < Resolution; j++) {
-                for(int i = 0; i < Resolution; i++) {
+            memset(&(psi[0][0]),0,Resolutionx*Resolutiony*4*sizeof(float));
+            for(int j = 0; j < Resolutiony; j++) {
+                for(int i = 0; i < Resolutionx; i++) {
                         //TODO radial cutoff for faster initialisation
-                    if((abs(i-((int)wave_offset_x)))<(Resolution/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolution/10.0f))){
-                        psi[i + j * Resolution][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 2.0f);
-                        psi[i + j * Resolution][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolution / 2.0f) * cos(Movement_angle) + ((j - Resolution / 2.0f) * sin(Movement_angle)) * 2.0f);
+                    if((abs(i-((int)wave_offset_x)))<(Resolutionx/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolutiony/10.0f))){
+                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * 2.0f);
+                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * 2.0f);
                     }
                 }
             }
@@ -620,24 +626,24 @@ int main(int argc, char* argv[]) {
         }
 
         if(momentum_prop == 1) { //Because fft is shifted we need to calculate the propagator for each section
-            for(int x = 0; x < Resolution / 2; x++) {
-                for(int y = 0; y < Resolution / 2; y++) {
-                    prop[x * Resolution + y][0] = cos(dt * (-x * x - y * y));
-                    prop[x * Resolution + y][1] = sin(dt * (-x * x - y * y));
+            for(int y = 0; y < Resolutiony / 2; y++) {
+                for(int x = 0; x < Resolutionx / 2; x++) {
+                    prop[y * Resolutionx + x][0] = cos(dt * (-x * x - y * y));
+                    prop[y * Resolutionx + x][1] = sin(dt * (-x * x - y * y));
                 }
-                for(int y = Resolution / 2; y < Resolution; y++) {
-                    prop[x * Resolution + y][0] = cos(dt * (-x * x - (y - Resolution) * (y - Resolution)));
-                    prop[x * Resolution + y][1] = sin(dt * (-x * x - (y - Resolution) * (y - Resolution)));
+                for(int x = Resolutionx / 2; x < Resolutionx; x++) {
+                    prop[y * Resolutionx + x][0] = cos(dt * (-(x - Resolutionx) * (x - Resolutionx) - y * y));
+                    prop[y * Resolutionx + x][1] = sin(dt * (-(x - Resolutionx) * (x - Resolutionx) - y * y));
                 }
             }
-            for(int x = Resolution / 2; x < Resolution; x++) {
-                for(int y = 0; y < Resolution / 2; y++) {
-                    prop[x * Resolution + y][0] = cos(dt * (-(x - Resolution) * (x - Resolution) - y * y));
-                    prop[x * Resolution + y][1] = sin(dt * (-(x - Resolution) * (x - Resolution) - y * y));
+            for(int y = Resolutiony / 2; y < Resolutiony; y++) {
+                for(int x = 0; x < Resolutionx / 2; x++) {
+                    prop[y * Resolutionx + x][0] = cos(dt * (-x * x - (y - Resolutiony) * (y - Resolutiony)));
+                    prop[y * Resolutionx + x][1] = sin(dt * (-x * x - (y - Resolutiony) * (y - Resolutiony)));
                 }
-                for(int y = Resolution / 2; y < Resolution; y++) {
-                    prop[x * Resolution + y][0] = cos(dt * (-(x - Resolution) * (x - Resolution) - (y - Resolution) * (y - Resolution)));
-                    prop[x * Resolution + y][1] = sin(dt * (-(x - Resolution) * (x - Resolution) - (y - Resolution) * (y - Resolution)));
+                for(int x = Resolutionx / 2; x < Resolutionx; x++) {
+                    prop[y * Resolutionx + x][0] = cos(dt * (-(x - Resolutionx) * (x - Resolutionx) - (y - Resolutiony) * (y - Resolutiony)));
+                    prop[y * Resolutionx + x][1] = sin(dt * (-(x - Resolutionx) * (x - Resolutionx) - (y - Resolutiony) * (y - Resolutiony)));
                 }
             }
             momentum_prop = 0;
@@ -660,11 +666,11 @@ int main(int argc, char* argv[]) {
         /*concept for async texture upload
         glBindTexture(GL_TEXTURE_2D, psi_texture);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO1);
-        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,Resolution,Resolution,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,NULL);
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,Resolutionx,Resolutiony,GL_BGRA,GL_UNSIGNED_INT_8_8_8_8,NULL);
         //Make PBO2 ready to recieve new data
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,PBO2);
-        glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolution*Resolution,0,GL_STREAM_DRAW);
-        GLuint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,4*Resolution*Resolution,GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
+        glBufferData(GL_PIXEL_UNPACK_BUFFER,4*Resolutionx*Resolutiony,0,GL_STREAM_DRAW);
+        GLuint* data = glMapBuffer(GL_PIXEL_UNPACK_BUFFER,0,4*Resolutionx*Resolutiony,GL_MAP_WRITE_BIT);//Map buffer on gpu to client address space : offset 0,data,allow to write to buffer
         //write to data
 
         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); //start upload
@@ -1928,17 +1934,17 @@ void JoystickControll(){
             guiElementsStorage[selectedGuiElement].position_y = 1.0f;
         }
         if(simulation_state==simulation_state_create_and_wait_for_start){
-            wave_offset_x += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
-            wave_offset_y += (Resolution*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
-            if(wave_offset_x>(Resolution*0.9f)){
-                wave_offset_x=Resolution*0.9f;
-            }else if(wave_offset_x<(Resolution*0.1f)){
-                wave_offset_x=(Resolution*0.1f);
+            wave_offset_x += (Resolutionx*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
+            wave_offset_y += (Resolutiony*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
+            if(wave_offset_x>(Resolutionx*0.9f)){
+                wave_offset_x=Resolutionx*0.9f;
+            }else if(wave_offset_x<(Resolutionx*0.1f)){
+                wave_offset_x=(Resolutionx*0.1f);
             }
-            if(wave_offset_y>Resolution*0.15f){
-                wave_offset_y=Resolution*0.15f;
-            }else if(wave_offset_y<(Resolution*0.05f)){
-                wave_offset_y=Resolution*0.05f;
+            if(wave_offset_y>Resolutiony*0.15f){
+                wave_offset_y=Resolutiony*0.15f;
+            }else if(wave_offset_y<(Resolutiony*0.05f)){
+                wave_offset_y=Resolutiony*0.05f;
             }
             draw_new_wave = 1;
         }
@@ -1969,7 +1975,7 @@ void update_potential(){
     }else{
         pot = read_bmp(PotentialSourceFile);
     }
-    for(int i = 0; i < Resolution * Resolution; i++) {
+    for(int i = 0; i < Resolutionx * Resolutiony; i++) {
         potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
     }
     if((++SelectedPotential)==CountOfPotentialFiles){
