@@ -1,0 +1,8 @@
+install msys2 with the provided installer. Launch msys2 32/64bit:
+pacman -Syu
+pacman -S mingw-w64-x86_64-gcc
+pacman -S make
+pacman -S diffutils
+pacman -S yasm
+cd to ffmpeg dir and
+./configure
