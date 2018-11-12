@@ -1,0 +1,24 @@
+install msys2 with the provided installer
+launch msys2 64bit
+pacman -Syu
+pacman -e,u mingw-w64-x86_64-toolchain
+
+setup in codeblocks:
+
+Settings->Compiler->
+Selected compiler dropdown      -> select GNU GCC Compiler
+Toolchain executables           -> Compiler's installation directory-> set path to DEPENDSONYOURINSTALLDIR\mingw64\mingw64
+C compiler                      -> x86_64-w64-mingw32-gcc.exe
+C++ compiler                    -> x86_64-w64-mingw32-g++.exe
+linker for dynamic libs         -> x86_64-w64-mingw32-g++.exe
+linker for static libs          -> ar.exe
+resource compiler               -> windres.exe
+make programm                   -> mingw32-make.exe
+
+Project->build options->
+Selected compiler dropdown      -> select GNU GCC Compiler
+Compiler Flags->General         -> -std=c99
+Linker settings->Link libraries -> add -> C:\Windows\System32\ole32.dll
+Linker settings->Link libraries -> add -> opengl32
+Linker settings->Link libraries -> add -> glu32
+Linker settings->Link libraries -> add -> gdi32
