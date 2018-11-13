@@ -1,3 +1,4 @@
+#define COBJMACROS //for using dshow and lpVtbl
 #include <libavcodec/avcodec.h>
 #include <dshow.h>
 #include <guiddef.h>
@@ -19,18 +20,34 @@ int createVideoDevice(){
         printf("Error\n");
         return 2;
     }
-    IEnumMoniker* myCameras=NULL;
-    if(S_OK==myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameras, 0)){
+    IEnumMoniker* myCameralist=NULL;
+    if(S_OK==myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0)){
         printf("Sucessfuly enumerated VideoInputDevices...\n");
     }else{
         printf("Error: No Video Devices found\n");
         return 3;
     }
-    IMoniker* myMoniker=NULL;
-    unsigned long *numberOfFetchedCameras=0;
-    if(S_OK==myCameras->lpVtbl->Next(myCameras,1,&myMoniker,numberOfFetchedCameras)){
-        printf("Found %lu Devices\n",*numberOfFetchedCameras);
+    IMoniker* myCamera=NULL;
+    unsigned long numberOfFetchedCameras=0;
+    while(S_OK==IEnumMoniker_Next(myCameralist,1,&myCamera,&numberOfFetchedCameras)){ //equivalent to myCameralist->lpVtbl->Next(");
+        IBindCtx* myBindContext=NULL;
+        CreateBindCtx(0,&myBindContext);
+        IPropertyBag* myPropertyBag=NULL;
+        if(S_OK!=myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag)){
+            return 6;
+        }
+
+        VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
+        VariantInit(&myFieldForFriendlyName);
+        VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
+        VariantInit(&myFieldForDevicePath);
+
+        myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
+        myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
+        printf("%S\n",myFieldForFriendlyName.bstrVal);
+        printf("%S\n",myFieldForDevicePath.bstrVal);
     }
+
 
 
     return 0;
