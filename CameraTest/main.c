@@ -4,8 +4,15 @@
 #include <guiddef.h>
 #include <stdio.h>
 #include <strmif.h>
+HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
+HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
+HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
+    printf("Function has been called\n");
+    return S_OK;
+}
 int createVideoDevice();
 int createVideoDevice(){
+    DWORD no;
     //Used code from https://www.codeproject.com/Articles/12869/Real-time-video-image-processing-frame-grabber-usi
     //from Ladislav Nevery under "The Code Project Open License"
     if(CoInitializeEx(NULL,COINIT_MULTITHREADED)==S_OK){
@@ -31,6 +38,8 @@ int createVideoDevice(){
     }
     IMoniker* myCamera=NULL;
     unsigned long numberOfFetchedCameras=0;
+    IMediaControl* myMediaControll=NULL;
+    INT_PTR* p=NULL;
     while(S_OK==IEnumMoniker_Next(myCameralist,1,&myCamera,&numberOfFetchedCameras)){ //equivalent to myCameralist->lpVtbl->Next(");
         IBindCtx* myBindContext=NULL;
         CreateBindCtx(0,&myBindContext);
@@ -52,22 +61,25 @@ int createVideoDevice(){
 
         //TODO only do this after we selected a camera
         //Create Graph
-        IGraphBuilder* graph=NULL;
-        CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&graph);
+        IGraphBuilder* myGraph=NULL;
+        CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
+
+        myGraph->lpVtbl->QueryInterface(myGraph,&IID_IMediaControl,(void**)&myMediaControll);
+
         //Create Filter
         IBaseFilter* myCameraGraphBaseObj=NULL;
         CreateBindCtx(0,&myBindContext);
         myCamera->lpVtbl->BindToObject(myCamera,myBindContext,NULL,&IID_IBaseFilter,(void **)&myCameraGraphBaseObj);
-        graph->lpVtbl->AddFilter(graph,myCameraGraphBaseObj, L"Capture Source");
+        myGraph->lpVtbl->AddFilter(myGraph,myCameraGraphBaseObj, L"Capture Source");
         IEnumPins* myOutputpins=0;
         myCameraGraphBaseObj->lpVtbl->EnumPins(myCameraGraphBaseObj,&myOutputpins);
         IPin* myOutputpin=0;
         unsigned long numberOfFetchedOutputPins=0;
         myOutputpins->lpVtbl->Next(myOutputpins,1,&myOutputpin,&numberOfFetchedOutputPins); //get one output pin
-        graph->lpVtbl->Render(graph,myOutputpin); //Render this output
+        myGraph->lpVtbl->Render(myGraph,myOutputpin); //Render this output
 
         IEnumFilters* myFilter=NULL;
-        graph->lpVtbl->EnumFilters(graph,&myFilter);
+        myGraph->lpVtbl->EnumFilters(myGraph,&myFilter);
         IBaseFilter* rnd=NULL;
         myFilter->lpVtbl->Next(myFilter,1,&rnd,0);
         IEnumPins* myRenderPins=0;
@@ -76,10 +88,13 @@ int createVideoDevice(){
         myRenderPins->lpVtbl->Next(myRenderPins,1,&myRenderPin, 0);
         IMemInputPin* myMemoryInputPin= 0;
         myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
-
+        p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
+        VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a seperate thread
     }
-
-
+    //p=(INT_PTR*)&callbackForGraphviewFPointer;
+    while(1){
+        myMediaControll->lpVtbl->Run(myMediaControll);
+    }
 
     return 0;
 }
@@ -88,5 +103,7 @@ int createVideoDevice(){
 }*/
 
 int main(void){
+    callbackForGraphviewFPointer=&callbackForGraphview; //Get the address of our function which we wish to inject into the object for callback
+
    createVideoDevice();
 }
