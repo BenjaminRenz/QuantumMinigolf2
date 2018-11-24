@@ -7,7 +7,9 @@
 HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
 HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
 HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
-    printf("Function has been called\n");
+    BYTE* pictureBuffer=NULL;
+    smp->lpVtbl->GetPointer(smp,&pictureBuffer);
+    printf("%d\n",pictureBuffer[0]);
     return S_OK;
 }
 int createVideoDevice();
@@ -91,7 +93,7 @@ int createVideoDevice(){
         p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
         VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a seperate thread
     }
-    //p=(INT_PTR*)&callbackForGraphviewFPointer;
+    *p=(INT_PTR*)callbackForGraphviewFPointer;
     while(1){
         myMediaControll->lpVtbl->Run(myMediaControll);
     }
