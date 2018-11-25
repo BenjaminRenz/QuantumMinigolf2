@@ -1851,6 +1851,8 @@ void drop_file_callback(GLFWwindow* window, int count, const char** paths) {
     }
 }
 
+//Read and write files
+
 unsigned int read_uint_from_endian_file(FILE* file) {
     unsigned char data[4];
     unsigned int data_return_int;
@@ -1989,6 +1991,16 @@ unsigned char* read_bmp(char* filepath) {
     return 0;
 }
 
+void write_bmp(char* filepath, unsigned int width, unsigned int height) {
+    FILE* filepointer = fopen(filepath, "wb");
+    //bytes_per_line=(3*(width+1)/4)*4;
+    const char* String_to_write = "BMP";
+    fwrite(&String_to_write, sizeof(char), 3, filepointer);
+    return;
+}
+
+//window size
+
 void windows_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
     //Refresh lower GUI Border
@@ -2000,13 +2012,8 @@ void windows_size_callback(GLFWwindow* window, int width, int height) {
     drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
-void write_bmp(char* filepath, unsigned int width, unsigned int height) {
-    FILE* filepointer = fopen(filepath, "wb");
-    //bytes_per_line=(3*(width+1)/4)*4;
-    const char* String_to_write = "BMP";
-    fwrite(&String_to_write, sizeof(char), 3, filepointer);
-    return;
-}
+//Potential
+
 void update_potential(){
     static uint8_t SelectedPotential=0;
     char PotentialSourceFile[256];
@@ -2039,6 +2046,8 @@ void update_potential(){
     draw_new_wave=1;
     ColorIntensity=2.9f;
 }
+
+//GUI
 
 void refereshGUI(){
     int width=0;
