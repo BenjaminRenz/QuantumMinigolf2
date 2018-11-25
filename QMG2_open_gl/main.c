@@ -1583,9 +1583,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) { //recenter joystick after released
-            guiElementsStorage[selectedGuiElement].position_x = 0.0f;
-            guiElementsStorage[selectedGuiElement].position_y = 0.0f;
-            printf("Debug: Reset Pos of Joystick %d\n", selectedGuiElement);
+            joystick_reset(selectedGuiElement);
             drawGui(G_OBJECT_UPDATE, width / (float)height);
         }
         selectedGuiElement = -1; //Deselect all gui elements (tracking for the dragged object like slider or joystick)
@@ -1628,11 +1626,40 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         change_speed();
         break;
     default:
-        printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_xseems to have logged unregistered GUI Element!\n");
+        printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
         break;
     }
     drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
+
+void JoystickControll(){
+    double xpos=0.0;
+    double ypos=0.0;
+    int width=0;
+    glfwGetCursorPos(MainWindow,&xpos,&ypos);
+    glfwGetWindowSize(MainWindow,&width,NULL);
+    xpos/=width;
+    ypos/=width;
+    if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
+        set_xy_position_joystick(selectedGuiElement, xpos, ypos);
+    }
+    switch(selectedGuiElement){
+    case GUI_JOYSTICK_ROTATION:
+        rotate_camera(selectedGuiElement);
+        break;
+    case GUI_JOYSTICK_MOVEMENT:
+        move_camera(selectedGuiElement);
+        break;
+    case GUI_JOYSTICK_WAVE_MOVE:
+        move_wave(selectedGuiElement);
+        break;
+    default:
+        printf("No Joystick there\n");
+        break;
+    }
+}
+
+//Needed functions for mouse and joystick control
 
 void set_x_position_slider(int selectedGuiElement, double xpos){
     guiElementsStorage[selectedGuiElement].position_x = ((((xpos - guiElementsStorage[selectedGuiElement].top_left_x) / guiElementsStorage[selectedGuiElement].percentOfWidth) * 512.0f) - 36.0f) / 440.0f;
@@ -1667,6 +1694,60 @@ void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos){
     }
 }
 
+void rotate_camera(int selectedGuiElement){
+    rotation_up_down -= delta_time * guiElementsStorage[selectedGuiElement].position_y;
+    rotation_left_right -= delta_time * guiElementsStorage[selectedGuiElement].position_x;
+    if(rotation_up_down > 3.0f) {
+        rotation_up_down = 3.0f;
+    } else if(rotation_up_down < 0.0f) {
+        rotation_up_down = 0.0f;
+    }
+    if(rotation_left_right < (-PI)) {
+        rotation_left_right = PI;
+    } else if(rotation_left_right > PI) {
+        rotation_left_right = (-PI);
+    }
+}
+
+void move_camera(int selectedGuiElement){
+    position_x_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
+    position_y_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
+    if(position_x_axis>MovementBorderCamera){
+        position_x_axis=MovementBorderCamera;
+    }else if(position_x_axis<(-MovementBorderCamera)){
+        position_x_axis=(-MovementBorderCamera);
+    }
+    if(position_y_axis>MovementBorderCamera){
+        position_y_axis=MovementBorderCamera;
+    }else if(position_y_axis<-MovementBorderCamera){
+        position_y_axis=-MovementBorderCamera;
+    }
+}
+
+void move_wave(int selectedGuiElement){
+    if(simulation_state==simulation_state_create_and_wait_for_start){
+        wave_offset_x += (Resolutionx*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
+        wave_offset_y += (Resolutiony*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
+        if(wave_offset_x>(Resolutionx*0.9f)){
+            wave_offset_x=Resolutionx*0.9f;
+        }else if(wave_offset_x<(Resolutionx*0.1f)){
+            wave_offset_x=(Resolutionx*0.1f);
+        }
+        if(wave_offset_y>Resolutiony*0.15f){
+            wave_offset_y=Resolutiony*0.15f;
+        }else if(wave_offset_y<(Resolutiony*0.05f)){
+            wave_offset_y=Resolutiony*0.05f;
+        }
+        draw_new_wave = 1;
+    }
+}
+
+void joystick_reset(int selectedGuiElement){
+    guiElementsStorage[selectedGuiElement].position_x = 0.0f;
+    guiElementsStorage[selectedGuiElement].position_y = 0.0f;
+    printf("Debug: Reset Pos of Joystick %d\n", selectedGuiElement);
+}
+
 void draw_wave(){
     if(simulation_state == simulation_state_create_and_wait_for_start) {
         draw_new_wave = 1;
@@ -1680,96 +1761,7 @@ void change_speed(){
     }
 }
 
-void JoystickControll(){
-    double xpos=0.0;
-    double ypos=0.0;
-    int width=0;
-    glfwGetCursorPos(MainWindow,&xpos,&ypos);
-    glfwGetWindowSize(MainWindow,&width,NULL);
-    xpos/=width;
-    ypos/=width;
-    if(guiElementsStorage[selectedGuiElement].GUI_TYPE == GUI_TYPE_JOYSTICK_ROTATION) { //if dragged component is one of the virtual joysticks
-        guiElementsStorage[selectedGuiElement].position_x = ((xpos - (guiElementsStorage[selectedGuiElement].top_left_x + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        guiElementsStorage[selectedGuiElement].position_y = ((ypos - (guiElementsStorage[selectedGuiElement].top_left_y + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        if(guiElementsStorage[selectedGuiElement].position_x < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_x = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_x > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_x = 1.0f;
-        }
-        if(guiElementsStorage[selectedGuiElement].position_y < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_y = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_y = 1.0f;
-        }
-        rotation_up_down -= delta_time * guiElementsStorage[selectedGuiElement].position_y;
-        rotation_left_right -= delta_time * guiElementsStorage[selectedGuiElement].position_x;
-        if(rotation_up_down > 3.0f) {
-            rotation_up_down = 3.0f;
-        } else if(rotation_up_down < 0.0f) {
-            rotation_up_down = 0.0f;
-        }
-        if(rotation_left_right < (-PI)) {
-            rotation_left_right = PI;
-        } else if(rotation_left_right > PI) {
-            rotation_left_right = (-PI);
-        }
-
-
-    } else if(guiElementsStorage[selectedGuiElement].GUI_TYPE == GUI_TYPE_JOYSTICK_MOVEMENT) {
-        guiElementsStorage[selectedGuiElement].position_x = ((xpos - (guiElementsStorage[selectedGuiElement].top_left_x + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        guiElementsStorage[selectedGuiElement].position_y = ((ypos - (guiElementsStorage[selectedGuiElement].top_left_y + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        if(guiElementsStorage[selectedGuiElement].position_x < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_x = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_x > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_x = 1.0f;
-        }
-        if(guiElementsStorage[selectedGuiElement].position_y < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_y = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_y = 1.0f;
-        }
-        position_x_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
-        position_y_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
-        if(position_x_axis>MovementBorderCamera){
-            position_x_axis=MovementBorderCamera;
-        }else if(position_x_axis<(-MovementBorderCamera)){
-            position_x_axis=(-MovementBorderCamera);
-        }
-        if(position_y_axis>MovementBorderCamera){
-            position_y_axis=MovementBorderCamera;
-        }else if(position_y_axis<-MovementBorderCamera){
-            position_y_axis=-MovementBorderCamera;
-        }
-    }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE == GUI_TYPE_JOYSTICK_WAVE_MOVE){
-        guiElementsStorage[selectedGuiElement].position_x = ((xpos - (guiElementsStorage[selectedGuiElement].top_left_x + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        guiElementsStorage[selectedGuiElement].position_y = ((ypos - (guiElementsStorage[selectedGuiElement].top_left_y + 0.5f * guiElementsStorage[selectedGuiElement].percentOfWidth)) / guiElementsStorage[selectedGuiElement].percentOfWidth) * (2.0f / (1 - GUI_JOYSTICK_PROPERTY_SCALE));
-        if(guiElementsStorage[selectedGuiElement].position_x < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_x = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_x > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_x = 1.0f;
-        }
-        if(guiElementsStorage[selectedGuiElement].position_y < (-1.0f)) {
-            guiElementsStorage[selectedGuiElement].position_y = (-1.0f);
-        } else if(guiElementsStorage[selectedGuiElement].position_y > 1.0f) {
-            guiElementsStorage[selectedGuiElement].position_y = 1.0f;
-        }
-        if(simulation_state==simulation_state_create_and_wait_for_start){
-            wave_offset_x += (Resolutionx*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
-            wave_offset_y += (Resolutiony*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
-            if(wave_offset_x>(Resolutionx*0.9f)){
-                wave_offset_x=Resolutionx*0.9f;
-            }else if(wave_offset_x<(Resolutionx*0.1f)){
-                wave_offset_x=(Resolutionx*0.1f);
-            }
-            if(wave_offset_y>Resolutiony*0.15f){
-                wave_offset_y=Resolutiony*0.15f;
-            }else if(wave_offset_y<(Resolutiony*0.05f)){
-                wave_offset_y=Resolutiony*0.05f;
-            }
-            draw_new_wave = 1;
-        }
-    }
-}
+//Shader
 
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType) {
     //read from file into heap memory
