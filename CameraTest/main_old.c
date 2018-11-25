@@ -1,60 +1,9 @@
+#define COBJMACROS //for using dshow and lpVtbl
 #include <libavcodec/avcodec.h>
 #include <dshow.h>
 #include <guiddef.h>
 #include <stdio.h>
 #include <strmif.h>
-#define getCameras_init_and_return_list -1
-void getCameras(int controll){ //TODO change to return char list with names
-    HRESULT hr=0;
-    hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
-    if(hr!=S_OK){
-        return;
-    }else{
-        printf("Info: Successfully initialized COM library\n");
-    }
-    ICreateDevEnum* myDeviceEnum=NULL;
-    hr=CoCreateInstance(&CLSID_SystemDeviceEnum,NULL,CLSCTX_INPROC,&IID_ICreateDevEnum,(void **)&myDeviceEnum);
-    if(hr!=S_OK){
-        return;
-    }else{
-        printf("Info: Successfully created DeviceEnumerator\n");
-    }
-    IEnumMoniker* myCameralist=NULL;
-    hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
-    if(hr!=S_OK){
-        return;
-    }else{
-        printf("Info: Successfully created VideoInputEnumerator\n");
-    }
-    IMoniker* myCamera=NULL;
-    unsigned long numberOfFetchedCameras=0;
-
-    IEnumMoniker_Next(myCameralist,1,&myCamera,&numberOfFetchedCameras);
-
-    IBindCtx* myBindContext=NULL;
-    hr=CreateBindCtx(0,&myBindContext);
-    IPropertyBag* myPropertyBag=NULL;
-        if(S_OK!=myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag)){
-            return 6;
-        }
-
-        VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
-        VariantInit(&myFieldForFriendlyName);
-        VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
-        VariantInit(&myFieldForDevicePath);
-
-        myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
-        myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
-        printf("%S\n",myFieldForFriendlyName.bstrVal);
-        printf("%S\n",myFieldForDevicePath.bstrVal);
-        myBindContext->lpVtbl->Release(myBindContext);
-
-
-    IMediaControl* myMediaControll=NULL;
-}
-
-
-
 HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
 HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
 HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
@@ -68,7 +17,20 @@ int createVideoDevice(){
     DWORD no;
     //Used code from https://www.codeproject.com/Articles/12869/Real-time-video-image-processing-frame-grabber-usi
     //from Ladislav Nevery under "The Code Project Open License"
-
+    if(CoInitializeEx(NULL,COINIT_MULTITHREADED)==S_OK){
+        printf("COM library initialized\n");
+    }else{
+        printf("Error while initializing COM library!\n");
+        return 1;
+    }
+    ICreateDevEnum* myDeviceEnum=NULL;
+    if(S_OK==CoCreateInstance(&CLSID_SystemDeviceEnum,NULL,CLSCTX_INPROC,&IID_ICreateDevEnum,(void **)&myDeviceEnum)){
+        printf("Sucessfully created enumerator\n");
+    } //Get an systemDeviceEnumerator object
+    if(NULL==myDeviceEnum){
+        printf("Error\n");
+        return 2;
+    }
     IEnumMoniker* myCameralist=NULL;
     if(S_OK==myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0)){
         printf("Sucessfuly enumerated VideoInputDevices...\n");
