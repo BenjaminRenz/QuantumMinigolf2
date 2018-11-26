@@ -4,7 +4,13 @@
 #include <stdio.h>
 #include <strmif.h>
 #define getCameras_init_and_return_list -1
-void getCameras(int controll){ //TODO change to return char list with names
+struct myCameraIdentifier{
+    char[30] friendlyName;
+    char[100] devicePath;
+
+};
+char** getCameras(int controll){ //TODO change to return char list with names
+    char** CameraList=NULL;
     HRESULT hr=0;
     hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
     if(hr!=S_OK){
@@ -34,14 +40,18 @@ void getCameras(int controll){ //TODO change to return char list with names
     IBindCtx* myBindContext=NULL;
     hr=CreateBindCtx(0,&myBindContext);
     IPropertyBag* myPropertyBag=NULL;
-        if(S_OK!=myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag)){
-            return 6;
-        }
+    CameraList=malloc(100*10); //100 Characters per camera and 10 cameras
+    VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
+    VariantInit(&myFieldForFriendlyName);
+    VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
+    VariantInit(&myFieldForDevicePath);
+    while(S_OK==myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag)){
 
-        VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
-        VariantInit(&myFieldForFriendlyName);
-        VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
-        VariantInit(&myFieldForDevicePath);
+    }
+
+
+
+
 
         myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
         myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
@@ -63,7 +73,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
     printf("%d\n",pictureBuffer[0]);
     return S_OK;
 }
-int createVideoDevice();
+
 int createVideoDevice(){
     DWORD no;
     //Used code from https://www.codeproject.com/Articles/12869/Real-time-video-image-processing-frame-grabber-usi
@@ -143,7 +153,7 @@ int createVideoDevice(){
 }*/
 
 int main(void){
-    callbackForGraphviewFPointer=&callbackForGraphview; //Get the address of our function which we wish to inject into the object for callback
+    getCameras(getCameras_init_and_return_list); //Get the address of our function which we wish to inject into the object for callback
 
    createVideoDevice();
 }
