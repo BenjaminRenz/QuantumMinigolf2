@@ -60,7 +60,7 @@ void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLen
 void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
-void JoystickControll();
+//void JoystickControll();
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 void update_potential();
 void refereshGUI();
@@ -672,7 +672,7 @@ int main(int argc, char* argv[]) {
         }
 
         //camera projection an transformation matrix calculation
-        JoystickControll();
+        //JoystickControll();
         eye_vec[0] = 1.5f * sin(rotation_left_right) * cos(atan(rotation_up_down));
         eye_vec[1] = 1.5f * cos(rotation_left_right) * cos(atan(rotation_up_down));
         eye_vec[2] = 1.5f * sin(atan(rotation_up_down));
@@ -1530,7 +1530,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     printf("Info: Grabbed on Slider x %d\n", selectedGuiElement);
                     return;
                 }
-            } else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > SLIDER_X_NUMBER) {
+            }else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > SLIDER_X_NUMBER) {
                 float x_offset = (guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * (32.0f / 512.0f)) - xpos;
                 float y_offset = (guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * ((36.0f) + guiElementsStorage[gElmt].position_x * 440.0f) / 512.0f) - ypos;
                 if((x_offset * x_offset + y_offset * y_offset) < ((guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f) * (guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f))) {
@@ -1538,14 +1538,14 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     printf("Info: Grabbed on Slider y %d\n", selectedGuiElement);
                     return;
                 }
-            } else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
+            }else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
                 float x_offset = guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_x) + 0.5f) - xpos; //Calculates the centere of the joystic and then calculates delta to pressed position
                 float y_offset = guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_y) + 0.5f) - ypos;
                 if((x_offset * x_offset + y_offset * y_offset) < (0.25f * guiElementsStorage[gElmt].percentOfWidth * GUI_JOYSTICK_PROPERTY_SCALE * guiElementsStorage[gElmt].percentOfWidth * GUI_JOYSTICK_PROPERTY_SCALE)) { //if inside the tappable circle 0.25f because it is GUI_JOYSTICK_PROPERT_SCALE is the diameter->*0.5f = radius
                     selectedGuiElement = gElmt;
                     return;
                 }
-            } else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER+BUTTON_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
+            }else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER+BUTTON_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
                 printf("BUTTON PUSHED\n\n\n");
                 if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_CONTROL){
                     if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
@@ -1558,14 +1558,14 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                             drawGui(G_OBJECT_UPDATE, width / (float)height);
                         }
                         return;
-                    } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
+                    }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
                         if(simulation_state == simulation_state_create_and_wait_for_start) {
                             simulation_state = simulation_state_simulate;
                             guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
                             drawGui(G_OBJECT_UPDATE, width / (float)height);
                         }
                         return;
-                    } else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
+                    }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
                         if(simulation_state == simulation_state_simulate) {
                             simulation_state = simulation_state_measurement_animation;
                             guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_RESET;
@@ -1594,7 +1594,7 @@ void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
     float temp_mouse_scroll = -0.02f * (float)yOffset;
     if((FOV + temp_mouse_scroll < 1.0f) && (FOV + temp_mouse_scroll > 0.1f)) {
         FOV += temp_mouse_scroll;
-    } else {
+    }else {
     }
 }
 
@@ -1610,11 +1610,9 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     ypos /= width; //ypos now aligned to local gui coordinates ranging from 0 - aspect ration 9/16 eg
     if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= SLIDER_X_NUMBER && guiElementsStorage[selectedGuiElement].GUI_TYPE > 0) {
         set_x_position_slider(selectedGuiElement, xpos);
-    }
-    if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > SLIDER_X_NUMBER) {
+    }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > SLIDER_X_NUMBER) {
         set_y_position_slider(selectedGuiElement, ypos);
-    }
-    if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
+    }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
         set_xy_position_joystick(selectedGuiElement, xpos, ypos);
     }
     switch(selectedGuiElement) {
@@ -1625,6 +1623,15 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     case GUI_SLIDER_SPEED:
         change_speed();
         break;
+    case GUI_JOYSTICK_ROTATION:
+        rotate_camera(selectedGuiElement);
+        break;
+    case GUI_JOYSTICK_MOVEMENT:
+        move_camera(selectedGuiElement);
+        break;
+    case GUI_JOYSTICK_WAVE_MOVE:
+        move_wave(selectedGuiElement);
+        break;
     default:
         printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
         break;
@@ -1632,7 +1639,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
-void JoystickControll(){
+/*void JoystickControll(){
     double xpos=0.0;
     double ypos=0.0;
     int width=0;
@@ -1657,7 +1664,7 @@ void JoystickControll(){
         printf("No Joystick there\n");
         break;
     }
-}
+}*/
 
 //Needed functions for mouse and joystick control
 
