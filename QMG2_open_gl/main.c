@@ -60,7 +60,16 @@ void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLen
 void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
-//void JoystickControll();
+void JoystickControll();
+void joystick_reset(int selectedGuiElement);
+void set_x_position_slider(int selectedGuiElement, double xpos);
+void set_y_position_slider(int selectedGuiElement, double ypos);
+void rotate_camera(int selectedGuiElement);
+void move_camera(int selectedGuiElement);
+void draw_wave();
+void move_wave(int selectedGuiElement);
+void change_speed();
+void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos);
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 void update_potential();
 void refereshGUI();
@@ -350,8 +359,8 @@ int main(int argc, char* argv[]) {
 
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    //MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -697,7 +706,7 @@ int main(int argc, char* argv[]) {
         }
 
         //camera projection an transformation matrix calculation
-        //JoystickControll();
+        JoystickControll();
         eye_vec[0] = 1.5f * sin(rotation_left_right) * cos(atan(rotation_up_down));
         eye_vec[1] = 1.5f * cos(rotation_left_right) * cos(atan(rotation_up_down));
         eye_vec[2] = 1.5f * sin(atan(rotation_up_down));
@@ -1649,7 +1658,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         change_speed();
         break;
     case GUI_JOYSTICK_ROTATION:
-        rotate_camera(selectedGuiElement);
+        //rotate_camera(selectedGuiElement); Commented because the rotation would be faster if the gui element is moved slightly
         break;
     case GUI_JOYSTICK_MOVEMENT:
         move_camera(selectedGuiElement);
@@ -1664,7 +1673,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
-/*void JoystickControll(){
+void JoystickControll(){   //Benötigt, da sonst keine Rotation bei hover on joystick
     double xpos=0.0;
     double ypos=0.0;
     int width=0;
@@ -1686,10 +1695,10 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         move_wave(selectedGuiElement);
         break;
     default:
-        printf("No Joystick there\n");
-        break;
+        //printf("No Joystick there\n");
+        return;
     }
-}*/
+}
 
 //Needed functions for mouse and joystick control
 
@@ -1729,6 +1738,7 @@ void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos){
 void rotate_camera(int selectedGuiElement){
     rotation_up_down -= delta_time * guiElementsStorage[selectedGuiElement].position_y;
     rotation_left_right -= delta_time * guiElementsStorage[selectedGuiElement].position_x;
+    printf("Rotup: %f and %f\n",delta_time * guiElementsStorage[selectedGuiElement].position_y,delta_time * guiElementsStorage[selectedGuiElement].position_x);
     if(rotation_up_down > 3.0f) {
         rotation_up_down = 3.0f;
     } else if(rotation_up_down < 0.0f) {

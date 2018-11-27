@@ -31,16 +31,15 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-O3" />
 			<Add option="-Wall" />
 			<Add option="-std=c99" />
-			<Add option="-g" />
 			<Add directory="libraries/GLEW_2.1.0/include" />
 			<Add directory="libraries/GLFW_3.2.1/include" />
 			<Add directory="libraries/FFTW_3.3.5/include" />
 			<Add directory="libraries/LINMATH/include" />
 		</Compiler>
 		<Linker>
-			<Add option="-static-libgcc" />
 			<Add library="glew32s" />
 			<Add library="libglfw3.a" />
 			<Add library="opengl32" />
