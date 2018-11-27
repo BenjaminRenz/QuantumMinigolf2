@@ -3,118 +3,69 @@
 #include <guiddef.h>
 #include <stdio.h>
 #include <strmif.h>
-#define getCameras_init_and_return_list -1
 struct myCameraIdentifier{
-    char[30] friendlyName;
-    char[100] devicePath;
-
+    char friendlyName[30];
+    char devicePath[100];
+    unsigned int* SupportedResolutions;
 };
-char** getCameras(int controll){ //TODO change to return char list with names
-    char** CameraList=NULL;
-    HRESULT hr=0;
-    hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
-    if(hr!=S_OK){
-        return;
-    }else{
-        printf("Info: Successfully initialized COM library\n");
-    }
-    ICreateDevEnum* myDeviceEnum=NULL;
-    hr=CoCreateInstance(&CLSID_SystemDeviceEnum,NULL,CLSCTX_INPROC,&IID_ICreateDevEnum,(void **)&myDeviceEnum);
-    if(hr!=S_OK){
-        return;
-    }else{
-        printf("Info: Successfully created DeviceEnumerator\n");
-    }
-    IEnumMoniker* myCameralist=NULL;
-    hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
-    if(hr!=S_OK){
-        return;
-    }else{
-        printf("Info: Successfully created VideoInputEnumerator\n");
-    }
-    IMoniker* myCamera=NULL;
-    unsigned long numberOfFetchedCameras=0;
-
-    IEnumMoniker_Next(myCameralist,1,&myCamera,&numberOfFetchedCameras);
-
-    IBindCtx* myBindContext=NULL;
-    hr=CreateBindCtx(0,&myBindContext);
-    IPropertyBag* myPropertyBag=NULL;
-    CameraList=malloc(100*10); //100 Characters per camera and 10 cameras
-    VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
-    VariantInit(&myFieldForFriendlyName);
-    VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
-    VariantInit(&myFieldForDevicePath);
-    while(S_OK==myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag)){
-
-    }
-
-
-
-
-
-        myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
-        myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
-        printf("%S\n",myFieldForFriendlyName.bstrVal);
-        printf("%S\n",myFieldForDevicePath.bstrVal);
-        myBindContext->lpVtbl->Release(myBindContext);
-
-
-    IMediaControl* myMediaControll=NULL;
-}
-
-
-
-HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
-HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
-HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
-    BYTE* pictureBuffer=NULL;
-    smp->lpVtbl->GetPointer(smp,&pictureBuffer);
-    printf("%d\n",pictureBuffer[0]);
-    return S_OK;
-}
-
-int createVideoDevice(){
-    DWORD no;
-    //Used code from https://www.codeproject.com/Articles/12869/Real-time-video-image-processing-frame-grabber-usi
-    //from Ladislav Nevery under "The Code Project Open License"
-
-    IEnumMoniker* myCameralist=NULL;
-    if(S_OK==myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0)){
-        printf("Sucessfuly enumerated VideoInputDevices...\n");
-    }else{
-        printf("Error: No Video Devices found\n");
-        return 3;
-    }
-    IMoniker* myCamera=NULL;
-    unsigned long numberOfFetchedCameras=0;
-    IMediaControl* myMediaControll=NULL;
-    INT_PTR* p=NULL;
-    while(S_OK==IEnumMoniker_Next(myCameralist,1,&myCamera,&numberOfFetchedCameras)){ //equivalent to myCameralist->lpVtbl->Next(");
-        IBindCtx* myBindContext=NULL;
-        CreateBindCtx(0,&myBindContext);
-        IPropertyBag* myPropertyBag=NULL;
-        if(S_OK!=myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag)){
-            return 6;
+/* This function shall be called with a NULL pointer to initialize and return all available cameras as structs. The user then should pick one camera and
+deallocate other cameras witch have not been selected*/
+struct myCameraIdentifier* getCameras(struct myCameraIdentifier* CameraIdent){ //TODO change to return char list with names
+    if((intptr_t) CameraIdent==0){
+        HRESULT hr=0;
+        hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
+        if(hr!=S_OK){
+            return 0;
+        }else{
+            printf("Info: Successfully initialized COM library\n");
+        }
+        ICreateDevEnum* myDeviceEnum=NULL;
+        hr=CoCreateInstance(&CLSID_SystemDeviceEnum,NULL,CLSCTX_INPROC,&IID_ICreateDevEnum,(void **)&myDeviceEnum);
+        if(hr!=S_OK){
+            return 0;
+        }else{
+            printf("Info: Successfully created DeviceEnumerator\n");
+        }
+        IEnumMoniker* myCameralist=NULL;
+        hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
+        if(hr!=S_OK){
+            return 0;
+        }else{
+            printf("Info: Successfully created VideoInputEnumerator\n");
+        }
+        IMoniker* myCamera=NULL;
+        unsigned long numberOfFetchedCamerasPerRun=0;
+        unsigned int numberOfStructsToAllocate=0;
+        while(S_OK!=myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+            numberOfStructsToAllocate++;
+        }
+        struct myCameraIdentifier* cameraIdentPointer=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
+        cameraIdentPointer=(struct myCameraIdentifier*) malloc(numberOfStructsToAllocate*sizeof(struct myCameraIdentifier));
+        myCameralist->lpVtbl->Reset(myCameralist);
+        while(S_OK!=myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+            IBindCtx* myBindContext=NULL;
+            hr=CreateBindCtx(0,&myBindContext);
+            IPropertyBag* myPropertyBag=NULL;
+            VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
+            VariantInit(&myFieldForFriendlyName);
+            VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
+            VariantInit(&myFieldForDevicePath);
+            //Get specific data such as name and device path for camera
+            myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag);
+            myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
+            myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
+            memcpy(cameraIdentPointer[--numberOfStructsToAllocate].friendlyName, myFieldForFriendlyName.bstrVal ,29);//Fill our structs with info
+            memcpy(cameraIdentPointer[numberOfStructsToAllocate].devicePath,myFieldForDevicePath.bstrVal,99);
+            //TODO get supported resolutions
+            myBindContext->lpVtbl->Release(myBindContext);
         }
 
-        VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
-        VariantInit(&myFieldForFriendlyName);
-        VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
-        VariantInit(&myFieldForDevicePath);
-
-        myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
-        myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
-        printf("%S\n",myFieldForFriendlyName.bstrVal);
-        printf("%S\n",myFieldForDevicePath.bstrVal);
-        myBindContext->lpVtbl->Release(myBindContext);
-
-        //TODO only do this after we selected a camera
-        //Create Graph
-        IGraphBuilder* myGraph=NULL;
-        CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
-
-        myGraph->lpVtbl->QueryInterface(myGraph,&IID_IMediaControl,(void**)&myMediaControll);
+    IGraphBuilder* myGraph=NULL;
+    CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
+    IMediaControl* myMediaControll=NULL;
+    INT_PTR* p=0;
+    CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
+    myGraph->lpVtbl->QueryInterface(myGraph,&IID_IMediaControl,(void**)&myMediaControll);
 
         //Create Filter
         IBaseFilter* myCameraGraphBaseObj=NULL;
@@ -148,12 +99,27 @@ int createVideoDevice(){
 
     return 0;
 }
-/*int deleteVideoDevice(){
-    CoUninitialize();
-}*/
 
-int main(void){
-    getCameras(getCameras_init_and_return_list); //Get the address of our function which we wish to inject into the object for callback
 
-   createVideoDevice();
+
+HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
+HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
+HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
+    BYTE* pictureBuffer=NULL;
+    smp->lpVtbl->GetPointer(smp,&pictureBuffer);
+    printf("%d\n",pictureBuffer[0]);
+    return S_OK;
 }
+
+
+
+
+///*int deleteVideoDevice(){
+//    CoUninitialize();
+//}*/
+//
+//int main(void){
+//    getCameras(getCameras_init_and_return_list); //Get the address of our function which we wish to inject into the object for callback
+//
+//   createVideoDevice();
+//}
