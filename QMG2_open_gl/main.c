@@ -259,6 +259,9 @@ uint8_t CountOfPotentialFiles=0;
 double* potential;
 uint8_t* pot;
 
+int block = 1;
+float jerk = 0.15f;
+
 #define simulation_state_simulate 0
 #define simulation_state_measurement_animation 1
 #define simulation_state_create_and_wait_for_start 2
@@ -618,6 +621,28 @@ int main(int argc, char* argv[]) {
             if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])
                 biggest = i;
         }
+
+        float sum = 0;
+        float weighted_sum_x = 0;
+        float weighted_sum_y = 0;
+
+        for(int i = 0; i < Resolutionx * Resolutiony; i++) {
+            if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > (psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])*0.9f){
+                sum = sum + (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
+                weighted_sum_x = weighted_sum_x + (float)(i % Resolutionx) * (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
+                weighted_sum_y = weighted_sum_y + (float)(i / Resolutiony) * (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
+            }
+        }
+
+        float weight_x = ((weighted_sum_x/sum)-(((float)Resolutionx)/2.0f))/((float)Resolutionx);
+        float weight_y = ((weighted_sum_y/sum)-(((float)Resolutiony)/2.0f))/((float)Resolutiony);
+
+        //printf("%f,%f,%f,%f\n\n\n",position_x_axis,position_x_axis + (weight_x-position_x_axis)*0.5f,position_y_axis,position_y_axis + (weight_y-position_y_axis)*0.5f);
+        if(block == 0){
+            position_x_axis = position_x_axis + (weight_x-position_x_axis)*jerk;
+            position_y_axis = position_y_axis + (weight_y-position_y_axis)*jerk;
+        }
+        block = 0;
 
         double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
 
