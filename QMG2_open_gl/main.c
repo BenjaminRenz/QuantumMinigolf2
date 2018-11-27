@@ -268,8 +268,8 @@ uint8_t CountOfPotentialFiles=0;
 double* potential;
 uint8_t* pot;
 
-int block = 1;
-float jerk = 0.15f;
+int disable_autocenter = 1;
+float jerk_for_autocenter = 0.15f;
 
 #define simulation_state_simulate 0
 #define simulation_state_measurement_animation 1
@@ -647,11 +647,11 @@ int main(int argc, char* argv[]) {
         float weight_y = ((weighted_sum_y/sum)-(((float)Resolutiony)/2.0f))/((float)Resolutiony);
 
         //printf("%f,%f,%f,%f\n\n\n",position_x_axis,position_x_axis + (weight_x-position_x_axis)*0.5f,position_y_axis,position_y_axis + (weight_y-position_y_axis)*0.5f);
-        if(block == 0){
-            position_x_axis = position_x_axis + (weight_x-position_x_axis)*jerk;
-            position_y_axis = position_y_axis + (weight_y-position_y_axis)*jerk;
+        if(!disable_autocenter){
+            position_x_axis = position_x_axis + (weight_x-position_x_axis)*jerk_for_autocenter;
+            position_y_axis = position_y_axis + (weight_y-position_y_axis)*jerk_for_autocenter;
         }
-        block = 0;
+        //disable_autocenter = 0;
 
         double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
 
