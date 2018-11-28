@@ -1,13 +1,25 @@
-#include <libavcodec/avcodec.h>
+//#include <libavcodec/avcodec.h>
 #include <dshow.h>
 #include <guiddef.h>
 #include <stdio.h>
 #include <strmif.h>
+#include <uchar.h>
+#define utf_strict
 struct myCameraIdentifier{
-    char friendlyName[30];
-    char devicePath[100];
+    char32_t friendlyName[30];
+    char32_t devicePath[200];
     unsigned int* SupportedResolutions;
 };
+
+int utf16_to_utf32(char16_t* inputString, size_t inputStringLengthInBytes, char32_t* outputString){ //Make sure the supplied output buffer is able to hold at least
+    size_t array_index=0;
+    while(array_index<inputStringLengthInBytes){
+        if(inputString[array_index]>=0xD800){//detect double characters
+            if(inputString[array_index]<)
+        }
+    }
+}
+
 /* This function shall be called with a NULL pointer to initialize and return all available cameras as structs. The user then should pick one camera and
 deallocate other cameras witch have not been selected*/
 struct myCameraIdentifier* getCameras(struct myCameraIdentifier* CameraIdent){ //TODO change to return char list with names
@@ -33,34 +45,40 @@ struct myCameraIdentifier* getCameras(struct myCameraIdentifier* CameraIdent){ /
         }else{
             printf("Info: Successfully created VideoInputEnumerator\n");
         }
+        printf("testtest\n");
         IMoniker* myCamera=NULL;
         unsigned long numberOfFetchedCamerasPerRun=0;
         unsigned int numberOfStructsToAllocate=0;
-        while(S_OK!=myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+        printf("Test3\n");
+        while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
             numberOfStructsToAllocate++;
+            printf("Test2\n");
         }
         struct myCameraIdentifier* cameraIdentPointer=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
         cameraIdentPointer=(struct myCameraIdentifier*) malloc(numberOfStructsToAllocate*sizeof(struct myCameraIdentifier));
         myCameralist->lpVtbl->Reset(myCameralist);
-        while(S_OK!=myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+        while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
             IBindCtx* myBindContext=NULL;
             hr=CreateBindCtx(0,&myBindContext);
             IPropertyBag* myPropertyBag=NULL;
-            VARIANT myFieldForFriendlyName; //Do not set to =0 or we will get access violation
-            VariantInit(&myFieldForFriendlyName);
-            VARIANT myFieldForDevicePath;   //Do not set to =0 or we will get access violation
-            VariantInit(&myFieldForDevicePath);
+            VARIANT VariantField; //Do not set to =0 or we will get access violation
+            VariantInit(&VariantField);
             //Get specific data such as name and device path for camera
             myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag);
-            myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&myFieldForFriendlyName,0);
-            myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&myFieldForDevicePath,0);
-            memcpy(cameraIdentPointer[--numberOfStructsToAllocate].friendlyName, myFieldForFriendlyName.bstrVal ,29);//Fill our structs with info
-            memcpy(cameraIdentPointer[numberOfStructsToAllocate].devicePath,myFieldForDevicePath.bstrVal,99);
+
+            myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&VariantField,0);
+            memcpy(cameraIdentPointer[--numberOfStructsToAllocate].friendlyName, VariantField.bstrVal ,29*sizeof(char32_t ));//Fill our structs with info and leve last character as null string terminator
+            cameraIdentPointer[numberOfStructsToAllocate].friendlyName[29]=0; //set string termination character
+            myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&VariantField,0);
+            memcpy(cameraIdentPointer[numberOfStructsToAllocate].devicePath,VariantField.bstrVal,199*sizeof(char32_t ));
+            cameraIdentPointer[numberOfStructsToAllocate].friendlyName[199]=0; //make sure we have terminated the string
+            printf("test %S\n",cameraIdentPointer[numberOfStructsToAllocate].devicePath);
+            printf("test %S\n",VariantField.bstrVal);
             //TODO get supported resolutions
             myBindContext->lpVtbl->Release(myBindContext);
         }
-
-    IGraphBuilder* myGraph=NULL;
+    }//TODO else if command not initialize
+    /*IGraphBuilder* myGraph=NULL;
     CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
     IMediaControl* myMediaControll=NULL;
     INT_PTR* p=0;
@@ -69,6 +87,7 @@ struct myCameraIdentifier* getCameras(struct myCameraIdentifier* CameraIdent){ /
 
         //Create Filter
         IBaseFilter* myCameraGraphBaseObj=NULL;
+
         CreateBindCtx(0,&myBindContext);
         myCamera->lpVtbl->BindToObject(myCamera,myBindContext,NULL,&IID_IBaseFilter,(void **)&myCameraGraphBaseObj);
         myGraph->lpVtbl->AddFilter(myGraph,myCameraGraphBaseObj, L"Capture Source");
@@ -97,7 +116,7 @@ struct myCameraIdentifier* getCameras(struct myCameraIdentifier* CameraIdent){ /
         myMediaControll->lpVtbl->Run(myMediaControll);
     }
 
-    return 0;
+    return 0;*/
 }
 
 
@@ -114,12 +133,9 @@ HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
 
 
 
-///*int deleteVideoDevice(){
+//int deleteVideoDevice(){
 //    CoUninitialize();
-//}*/
 //
-//int main(void){
-//    getCameras(getCameras_init_and_return_list); //Get the address of our function which we wish to inject into the object for callback
-//
-//   createVideoDevice();
-//}
+int main(void){
+    getCameras(0); //Get the address of our function which we wish to inject into the object for callback
+}
