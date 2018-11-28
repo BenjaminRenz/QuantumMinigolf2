@@ -1541,6 +1541,23 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             momentum_prop = 1;
         }
     }
+    if(key == GLFW_KEY_Q && action == GLFW_PRESS) {
+        if(disable_autocenter == 0){
+            disable_autocenter = 1;
+        }else if(disable_autocenter == 1){
+            disable_autocenter = 0;
+        }
+    }
+    if(key == GLFW_KEY_PERIOD && action == GLFW_PRESS) {
+        if(jerk_for_autocenter<1.0f){
+            jerk_for_autocenter=jerk_for_autocenter+0.1f;
+        }
+    }
+    if(key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
+        if(jerk_for_autocenter>0.2f){
+            jerk_for_autocenter=jerk_for_autocenter-0.1f;
+        }
+    }
     refereshGUI();
 }
 
