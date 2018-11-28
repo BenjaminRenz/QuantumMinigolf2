@@ -623,6 +623,30 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        if(selectedGuiElement!= (-1)){
+            switch(selectedGuiElement) {
+            case GUI_SLIDER_SIZE:
+            case GUI_SLIDER_WAVE_ROTATION:
+                draw_wave();
+                break;
+            case GUI_SLIDER_SPEED:
+                change_speed();
+                break;
+            case GUI_JOYSTICK_ROTATION:
+                //rotate_camera(selectedGuiElement); Commented because the rotation would be faster if the gui element is moved slightly
+                break;
+            case GUI_JOYSTICK_MOVEMENT:
+                move_camera(selectedGuiElement);
+                break;
+            case GUI_JOYSTICK_WAVE_MOVE:
+                move_wave(selectedGuiElement);
+                break;
+            default:
+                printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
+                break;
+            }
+        }
+
         int biggest = 0;
         biggest = 0;
 
@@ -1666,7 +1690,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
         set_xy_position_joystick(selectedGuiElement, xpos, ypos);
     }
-    switch(selectedGuiElement) {
+    /*switch(selectedGuiElement) {
     case GUI_SLIDER_SIZE:
     case GUI_SLIDER_WAVE_ROTATION:
         draw_wave();
@@ -1686,7 +1710,7 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     default:
         printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
         break;
-    }
+    }*/
     drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
