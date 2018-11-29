@@ -4,80 +4,124 @@
 #include <stdio.h>
 #include <strmif.h>
 #include <uchar.h>
-#define utf_strict
+
 struct myCameraIdentifier{
     char32_t friendlyName[30];
     char32_t devicePath[200];
     unsigned int* SupportedResolutions;
 };
 
-int utf16_to_utf32(char16_t* inputString, size_t inputStringLengthInBytes, char32_t* outputString){ //Make sure the supplied output buffer is able to hold at least
-    size_t array_index=0;
-    while(array_index<inputStringLengthInBytes){
-        if(inputString[array_index]>=0xD800){//detect double characters
-            if(inputString[array_index]<)
+size_t utf8_to_utf32(unsigned char* inputString, size_t numberOfChars, char32_t* outputString){
+    size_t input_array_index=0;
+    size_t output_array_index=0;
+    while(input_array_index<numberOfChars){
+        if(inputString[input_array_index]>=0xF0){//
+            outputString[output_array_index++]=
+                (((char32_t)(inputString[input_array_index]&&0x07))<<18)||
+                (((char32_t)(inputString[input_array_index+1]&&0x3F))<<12)||
+                (((char32_t)(inputString[input_array_index+2]&&0x3F))<<6)||
+                (inputString[input_array_index+3]&&0x3F);
+                input_array_index++;
+        }else if(inputString[input_array_index]>=0xE0){
+            outputString[output_array_index++]=
+                ((char32_t)((inputString[input_array_index]&&0x0F))<<12)||
+                ((char32_t)((inputString[input_array_index+1]&&0x3F))<<6)||
+                (inputString[input_array_index+2]&&0x3F);
+                input_array_index++;
+        }else if(inputString[input_array_index]>=0xC0){
+            outputString[output_array_index++]=
+                ((char32_t)((inputString[input_array_index]&&0x1F))<<6)||
+                (inputString[input_array_index+1]&&0x3F);
+            input_array_index++;
+        }else{
+            outputString[output_array_index++]=
+                (inputString[input_array_index++]&&0x7F);
         }
     }
+    printf("Info: Converted %d utf8 to %d utf32 chars\n",(unsigned int)input_array_index,(unsigned int)output_array_index);
+    return output_array_index;
+}
+
+size_t utf16_to_utf32(char16_t* inputString, size_t numberOfChar16s, char32_t* outputString){ //Make sure the supplied output buffer is able to hold at least
+    size_t input_array_index=0;
+    size_t output_array_index=0;
+    while(input_array_index<numberOfChar16s){
+        if(inputString[input_array_index]>=0xD800){//detect double characters
+            outputString[output_array_index++]=(((char32_t)(inputString[input_array_index]&&0x3FF))<<10)||(inputString[++input_array_index]);
+        }else{
+            outputString[output_array_index++]=(char32_t)inputString[input_array_index++];
+        }
+    }
+    printf("Info: Converted %d utf16 to %d utf32 chars\n",(unsigned int)input_array_index,(unsigned int)output_array_index);
+    return output_array_index;
+}
+
+size_t utf32_cut_ASCII(char32_t* inputString, size_t numberOfChar32s, unsigned char* outputString){
+    size_t output_array_index=0;
+    for(size_t input_array_index=0;input_array_index<numberOfChar32s;input_array_index++){
+        outputString[output_array_index++]=inputString[input_array_index++]&&0x7F;
+    }
+    return output_array_index;
 }
 
 /* This function shall be called with a NULL pointer to initialize and return all available cameras as structs. The user then should pick one camera and
 deallocate other cameras witch have not been selected*/
-struct myCameraIdentifier* getCameras(struct myCameraIdentifier* CameraIdent){ //TODO change to return char list with names
-    if((intptr_t) CameraIdent==0){
-        HRESULT hr=0;
-        hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
-        if(hr!=S_OK){
-            return 0;
-        }else{
-            printf("Info: Successfully initialized COM library\n");
-        }
-        ICreateDevEnum* myDeviceEnum=NULL;
-        hr=CoCreateInstance(&CLSID_SystemDeviceEnum,NULL,CLSCTX_INPROC,&IID_ICreateDevEnum,(void **)&myDeviceEnum);
-        if(hr!=S_OK){
-            return 0;
-        }else{
-            printf("Info: Successfully created DeviceEnumerator\n");
-        }
-        IEnumMoniker* myCameralist=NULL;
-        hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
-        if(hr!=S_OK){
-            return 0;
-        }else{
-            printf("Info: Successfully created VideoInputEnumerator\n");
-        }
-        printf("testtest\n");
-        IMoniker* myCamera=NULL;
-        unsigned long numberOfFetchedCamerasPerRun=0;
-        unsigned int numberOfStructsToAllocate=0;
-        printf("Test3\n");
-        while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
-            numberOfStructsToAllocate++;
-            printf("Test2\n");
-        }
-        struct myCameraIdentifier* cameraIdentPointer=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
-        cameraIdentPointer=(struct myCameraIdentifier*) malloc(numberOfStructsToAllocate*sizeof(struct myCameraIdentifier));
-        myCameralist->lpVtbl->Reset(myCameralist);
-        while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
-            IBindCtx* myBindContext=NULL;
-            hr=CreateBindCtx(0,&myBindContext);
-            IPropertyBag* myPropertyBag=NULL;
-            VARIANT VariantField; //Do not set to =0 or we will get access violation
-            VariantInit(&VariantField);
-            //Get specific data such as name and device path for camera
-            myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag);
+struct myCameraIdentifier* getCameras(unsigned int* numberOfCameras){ //TODO change to return char list with names
+    HRESULT hr=0;
+    hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
+    if(hr!=S_OK){
+        return 0;
+    }else{
+        printf("Info: Successfully initialized COM library\n");
+    }
+    ICreateDevEnum* myDeviceEnum=NULL;
+    hr=CoCreateInstance(&CLSID_SystemDeviceEnum,NULL,CLSCTX_INPROC,&IID_ICreateDevEnum,(void **)&myDeviceEnum);
+    if(hr!=S_OK){
+        return 0;
+    }else{
+        printf("Info: Successfully created DeviceEnumerator\n");
+    }
+    IEnumMoniker* myCameralist=NULL;
+    hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
+    if(hr!=S_OK){
+        return 0;
+    }else{
+        printf("Info: Successfully created VideoInputEnumerator\n");
+    }
+    printf("testtest\n");
+    IMoniker* myCamera=NULL;
+    unsigned long numberOfFetchedCamerasPerRun=0;
+    unsigned int numberOfStructsToAllocate=0;
+    printf("Test3\n");
+    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+        numberOfStructsToAllocate++;
+        printf("Test2\n");
+    }
+    struct myCameraIdentifier* cameraIdentPointer=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
+    cameraIdentPointer=(struct myCameraIdentifier*) malloc(numberOfStructsToAllocate*sizeof(struct myCameraIdentifier));
+    myCameralist->lpVtbl->Reset(myCameralist);
+    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+        IBindCtx* myBindContext=NULL;
+        hr=CreateBindCtx(0,&myBindContext);
+        IPropertyBag* myPropertyBag=NULL;
+        VARIANT VariantField; //Do not set to =0 or we will get access violation
+        VariantInit(&VariantField);
+        //Get specific data such as name and device path for camera
+        myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag);
 
-            myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&VariantField,0);
-            memcpy(cameraIdentPointer[--numberOfStructsToAllocate].friendlyName, VariantField.bstrVal ,29*sizeof(char32_t ));//Fill our structs with info and leve last character as null string terminator
-            cameraIdentPointer[numberOfStructsToAllocate].friendlyName[29]=0; //set string termination character
-            myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&VariantField,0);
-            memcpy(cameraIdentPointer[numberOfStructsToAllocate].devicePath,VariantField.bstrVal,199*sizeof(char32_t ));
-            cameraIdentPointer[numberOfStructsToAllocate].friendlyName[199]=0; //make sure we have terminated the string
-            printf("test %S\n",cameraIdentPointer[numberOfStructsToAllocate].devicePath);
-            printf("test %S\n",VariantField.bstrVal);
-            //TODO get supported resolutions
-            myBindContext->lpVtbl->Release(myBindContext);
-        }
-    }//TODO else if command not initialize
+        myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&VariantField,0);
+        memcpy(cameraIdentPointer[--numberOfStructsToAllocate].friendlyName, VariantField.bstrVal ,29*sizeof(char32_t ));//Fill our structs with info and leve last character as null string terminator
+        cameraIdentPointer[numberOfStructsToAllocate].friendlyName[29]=0; //set string termination character
+        myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&VariantField,0);
+        memcpy(cameraIdentPointer[numberOfStructsToAllocate].devicePath,VariantField.bstrVal,199*sizeof(char32_t ));
+        cameraIdentPointer[numberOfStructsToAllocate].friendlyName[199]=0; //make sure we have terminated the string
+        printf("test %S\n",cameraIdentPointer[numberOfStructsToAllocate].devicePath);
+        printf("test %S\n",VariantField.bstrVal);
+        //TODO get supported resolutions
+        myBindContext->lpVtbl->Release(myBindContext);
+    }
+
+
     /*IGraphBuilder* myGraph=NULL;
     CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
     IMediaControl* myMediaControll=NULL;
@@ -137,5 +181,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
 //    CoUninitialize();
 //
 int main(void){
-    getCameras(0); //Get the address of our function which we wish to inject into the object for callback
+    struct myCameraIdentifier* AllAvailableCameras=NULL;
+    unsigned int* numberOfAllocatedCams=0;
+    AllAvailableCameras=getCameras(numberOfAllocatedCams); //Get the address of our function which we wish to inject into the object for callback
 }
