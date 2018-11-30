@@ -6,6 +6,7 @@
 #include <uchar.h>
 
 struct myCameraIdentifier{
+    IMoniker* MonikerPointer;
     char32_t friendlyName[30];
     char32_t devicePath[200];
     unsigned int* SupportedResolutions;
@@ -66,6 +67,15 @@ size_t utf32_cut_ASCII(char32_t* inputString, size_t numberOfChar32s, unsigned c
 
 /* This function shall be called with a NULL pointer to initialize and return all available cameras as structs. The user then should pick one camera and
 deallocate other cameras witch have not been selected*/
+void closeCameras(){
+    CoUninitialize(); //Must be called once for every CoInitialize(Ex) to unload the dll
+
+}
+void getAvailableCameraResolutions(struct myCameraIdentifier* Camera){
+    HRESULT hr=0;
+    IPin* pin=NULL;
+}
+
 struct myCameraIdentifier* getCameras(unsigned int* numberOfCameras){ //TODO change to return char list with names
     HRESULT hr=0;
     hr=CoInitializeEx(NULL,COINIT_MULTITHREADED);
@@ -83,44 +93,41 @@ struct myCameraIdentifier* getCameras(unsigned int* numberOfCameras){ //TODO cha
     }
     IEnumMoniker* myCameralist=NULL;
     hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
+    myDeviceEnum->lpVtbl->Release(myDeviceEnum);//Release the DeviceEnumerator after we have retrieved all available Video Devices
     if(hr!=S_OK){
         return 0;
     }else{
         printf("Info: Successfully created VideoInputEnumerator\n");
     }
-    printf("testtest\n");
     IMoniker* myCamera=NULL;
     unsigned long numberOfFetchedCamerasPerRun=0;
-    unsigned int numberOfStructsToAllocate=0;
-    printf("Test3\n");
-    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
-        numberOfStructsToAllocate++;
-        printf("Test2\n");
-    }
-    struct myCameraIdentifier* cameraIdentPointer=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
-    cameraIdentPointer=(struct myCameraIdentifier*) malloc(numberOfStructsToAllocate*sizeof(struct myCameraIdentifier));
-    myCameralist->lpVtbl->Reset(myCameralist);
-    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){
+    struct myCameraIdentifier* camerasIdentPointer=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
+    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,&numberOfFetchedCamerasPerRun)){ //TODO replace numverOfFetched with nullptr
+        camerasIdentPointer=(struct myCameraIdentifier*) realloc(camerasIdentPointer,((*numberOfCameras)+1)*sizeof(struct myCameraIdentifier));
+        camerasIdentPointer[*numberOfCameras].MonikerPointer=myCamera;//Store the moniker object for later use
         IBindCtx* myBindContext=NULL;
         hr=CreateBindCtx(0,&myBindContext);
         IPropertyBag* myPropertyBag=NULL;
         VARIANT VariantField; //Do not set to =0 or we will get access violation
         VariantInit(&VariantField);
+
         //Get specific data such as name and device path for camera
         myCamera->lpVtbl->BindToStorage(myCamera,myBindContext,NULL,&IID_IPropertyBag,(void**)&myPropertyBag);
-
         myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&VariantField,0);
-        memcpy(cameraIdentPointer[--numberOfStructsToAllocate].friendlyName, VariantField.bstrVal ,29*sizeof(char32_t ));//Fill our structs with info and leve last character as null string terminator
-        cameraIdentPointer[numberOfStructsToAllocate].friendlyName[29]=0; //set string termination character
+        memcpy(camerasIdentPointer[*numberOfCameras].friendlyName, VariantField.bstrVal ,29*sizeof(char32_t ));//Fill our structs with info and leve last character as null string terminator
+        camerasIdentPointer[*numberOfCameras].friendlyName[29]=0; //set string termination character
         myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&VariantField,0);
-        memcpy(cameraIdentPointer[numberOfStructsToAllocate].devicePath,VariantField.bstrVal,199*sizeof(char32_t ));
-        cameraIdentPointer[numberOfStructsToAllocate].friendlyName[199]=0; //make sure we have terminated the string
-        printf("test %S\n",cameraIdentPointer[numberOfStructsToAllocate].devicePath);
-        printf("test %S\n",VariantField.bstrVal);
-        //TODO get supported resolutions
-        myBindContext->lpVtbl->Release(myBindContext);
+        memcpy(camerasIdentPointer[*numberOfCameras].devicePath,VariantField.bstrVal,199*sizeof(char32_t ));
+        camerasIdentPointer[*numberOfCameras].friendlyName[199]=0; //make sure we have terminated the string
+        //Increment
+        (*numberOfCameras)++;
+        //Cleanup
+        VariantClear(&VariantField);
+        myPropertyBag->lpVtbl->Release(myPropertyBag);
+        myBindContext->lpVtbl->Release(myBindContext); //After we got the device path and name we release the Context
     }
-
+    printf("Info: Detected %d Cameras\n",*numberOfCameras);
+    return camerasIdentPointer;
 
     /*IGraphBuilder* myGraph=NULL;
     CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
@@ -163,7 +170,47 @@ struct myCameraIdentifier* getCameras(unsigned int* numberOfCameras){ //TODO cha
     return 0;*/
 }
 
+/*void registerCameraCallback(){
+    IGraphBuilder* myGraph=NULL;
+    CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
+    IMediaControl* myMediaControll=NULL;
+    INT_PTR* p=0;
+    CoCreateInstance(&CLSID_FilterGraph,NULL,CLSCTX_INPROC,&IID_IGraphBuilder,(void **)&myGraph);
+    myGraph->lpVtbl->QueryInterface(myGraph,&IID_IMediaControl,(void**)&myMediaControll);
 
+        //Create Filter
+        IBaseFilter* myCameraGraphBaseObj=NULL;
+
+        CreateBindCtx(0,&myBindContext);
+        myCamera->lpVtbl->BindToObject(myCamera,myBindContext,NULL,&IID_IBaseFilter,(void **)&myCameraGraphBaseObj);
+        myGraph->lpVtbl->AddFilter(myGraph,myCameraGraphBaseObj, L"Capture Source");
+        IEnumPins* myOutputpins=0;
+        myCameraGraphBaseObj->lpVtbl->EnumPins(myCameraGraphBaseObj,&myOutputpins);
+        IPin* myOutputpin=0;
+        unsigned long numberOfFetchedOutputPins=0;
+        myOutputpins->lpVtbl->Next(myOutputpins,1,&myOutputpin,&numberOfFetchedOutputPins); //get one output pin
+        myGraph->lpVtbl->Render(myGraph,myOutputpin); //Render this output
+
+        IEnumFilters* myFilter=NULL;
+        myGraph->lpVtbl->EnumFilters(myGraph,&myFilter);
+        IBaseFilter* rnd=NULL;
+        myFilter->lpVtbl->Next(myFilter,1,&rnd,0);
+        IEnumPins* myRenderPins=0;
+        rnd->lpVtbl->EnumPins(rnd,&myRenderPins);
+        IPin* myRenderPin=0;
+        myRenderPins->lpVtbl->Next(myRenderPins,1,&myRenderPin, 0);
+        IMemInputPin* myMemoryInputPin= 0;
+        myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
+        p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
+        VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a seperate thread
+    }
+    *p=(INT_PTR*)callbackForGraphviewFPointer;
+    while(1){
+        myMediaControll->lpVtbl->Run(myMediaControll);
+    }
+
+    return;
+}*/
 
 HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
 HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
@@ -182,6 +229,8 @@ HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
 //
 int main(void){
     struct myCameraIdentifier* AllAvailableCameras=NULL;
-    unsigned int* numberOfAllocatedCams=0;
-    AllAvailableCameras=getCameras(numberOfAllocatedCams); //Get the address of our function which we wish to inject into the object for callback
+    unsigned int numberOfAllocatedCams=0;
+    AllAvailableCameras=getCameras(&numberOfAllocatedCams); //Get the address of our function which we wish to inject into the object for callback
+    printf("FriendlyName: %S\n",AllAvailableCameras[0].friendlyName);
+    printf("Path: %S\n",AllAvailableCameras[0].devicePath);
 }
