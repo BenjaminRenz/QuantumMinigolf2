@@ -124,7 +124,7 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras){ //TODO change 
     }
     IMoniker* myCamera=NULL;
     struct CameraListItem* CameraListItem=NULL;        //create a pointer for the CameraIdentifier-structs we wish to alloacate
-    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,NULL)){
+    while(S_OK==myCameralist->lpVtbl->Next(myCameralist,1,&myCamera,NULL)){ //TODO replace numverOfFetched with nullptr
         CameraListItem=(struct CameraListItem*) realloc(CameraListItem,((*numberOfCameras)+1)*sizeof(struct CameraListItem));
         CameraListItem[*numberOfCameras].MonikerPointer=myCamera;//Store the moniker object for later use
         //IBindCtx* myBindContext=NULL;
@@ -135,6 +135,7 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras){ //TODO change 
 
         //Get specific data such as name and device path for camera
         hr=myCamera->lpVtbl->BindToStorage(myCamera,0,NULL,&IID_IPropertyBag,(void**)&myPropertyBag); //TODO test if it also works with a nullpointer
+        printf("HR %d \n",hr);
         myPropertyBag->lpVtbl->Read(myPropertyBag,L"FriendlyName",&VariantField,0);
         memcpy(CameraListItem[*numberOfCameras].friendlyName, VariantField.bstrVal ,28*sizeof(char32_t ));//Fill our structs with info and leve last character as null string terminator
         CameraListItem[*numberOfCameras].friendlyName[29]=0; //set string termination character
@@ -180,28 +181,26 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     int numberOfPossibleRes=0;
     int sizeOfCFGStructureInByte=0;
     StreamCfg->lpVtbl->GetNumberOfCapabilities(StreamCfg,&numberOfPossibleRes,&sizeOfCFGStructureInByte);
-    printf("Info: found %d possible formats\n",numberOfPossibleRes);
-    byte* pUnusedSSC=(byte*) malloc(sizeof(byte)*sizeOfCFGStructureInByte);
+    printf("Debug: Number %d , %d\n",numberOfPossibleRes,sizeOfCFGStructureInByte);
     //get VideoSteamConfigSturcure
-    long** resolutionPointerArray=(long**) malloc((2*sizeof(long)+sizeof(long*))*numberOfPossibleRes); //we create an array for x,y resolution (sizeof(long)*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (size_t size of general pointer)
-    for(int numOfRes=0;numOfRes<numberOfPossibleRes;numOfRes++){
+    long** resolutionPointerArray=(long**)malloc(3*sizeof(size_t)*numberOfPossibleRes); //we create an array for x,y resolution (*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (1.5*)
+    int usableRes=0;
+    for(unusableRes=0;(usableRes+unusableRes)<numberOfPossibleRes;){
         AM_MEDIA_TYPE* pAmMedia=NULL;
-        StreamCfg->lpVtbl->GetStreamCaps(StreamCfg,numOfRes,&pAmMedia,pUnusedSSC);
-        printf("\nInfo: Returning Info for item %d of %d\n",numOfRes+1,numberOfPossibleRes);
+        StreamCfg->lpVtbl->GetStreamCaps(StreamCfg,--numberOfPossibleRes,&pAmMedia,unusedPSCC);
         if(pAmMedia->formattype.Data1==FORMAT_VideoInfo.Data1 && (pAmMedia->cbFormat >= sizeof(VIDEOINFOHEADER)) && pAmMedia->pbFormat!=NULL){ //Check if right format, If the space at pointer location is valid memory and if the pointer is actually filled with something
             VIDEOINFOHEADER* pVideoInfoHead=(VIDEOINFOHEADER*) pAmMedia->pbFormat; //Get video info header
-            resolutionPointerArray[numOfRes]=((long*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2); //point to the first element of the resolution tuples stored after the pointer table
-            resolutionPointerArray[numOfRes][0]=pVideoInfoHead->bmiHeader.biWidth;
-            resolutionPointerArray[numOfRes][1]=pVideoInfoHead->bmiHeader.biHeight;
-            printf("Info width:%d\n",resolutionPointerArray[numOfRes][0]);
-            printf("Info height:%d\n",resolutionPointerArray[numOfRes][1]);
+            usableRes++;
+            resolutionPointerArray[usableRes]=resolutionPointerArray+numberOfPossibleRes+
+            printf("Info width:%d\n",pVideoInfoHead->bmiHeader.biWidth);
+            printf("Info height:%d\n",pVideoInfoHead->bmiHeader.biHeight);
+            resolutionPointerArray[Res][0]=pVideoInfoHead->bmiHeader.biWidth;
+            resolutionPointerArray[Res][1]=pVideoInfoHead->bmiHeader.biHeight;
         }else{
-            printf("Warn: unusable format, resolution won't be extracted!\n");
-            resolutionPointerArray[numOfRes]=((long*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2);
-            resolutionPointerArray[numOfRes][0]=0;
-            resolutionPointerArray[numOfRes][1]=0;
+            printf("Error: wrong format info or other error in dshow, format not usable!\n");
+            unusableRes++;
         }
-        //if(numberOfPossibleRes)
+        if(numberOfPossibleRes)
         //Code checks for format
         /*if(AmMedia->majortype.Data1!=MEDIATYPE_Video.Data1){
             //Free this MEDIATYPE_FORMAT
@@ -225,8 +224,6 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
         */
 
     }
-    free(pUnusedSSC);
-    printf("returned");
     return CameraOut;
 }
 //TODO copy to render CameraOut->_CameraGraph->lpVtbl->Render(CameraOut->_CameraGraph,outputPin); //Render this output
@@ -236,7 +233,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
 
 
 
-void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution){ //selected resolution is position in array
+/*void registerCameraCallback(struct CameraStorageObject* CameraIn){
     IMediaControl* myMediaControll=NULL;
     INT_PTR* p=0;
     CameraIn->_CameraGraph->lpVtbl->QueryInterface(CameraIn->_CameraGraph,&IID_IMediaControl,(void**)&myMediaControll);

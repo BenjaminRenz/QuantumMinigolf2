@@ -34,6 +34,7 @@
 			<Add option="-m64" />
 			<Add option="-g" />
 			<Add directory="C:/Program Files/Msys2/mingw64/x86_64-w64-mingw32/include" />
+			<Add directory="C:/msys2/mingw64/include" />
 		</Compiler>
 		<Linker>
 			<Add option="-m64" />
