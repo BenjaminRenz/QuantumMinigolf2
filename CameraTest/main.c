@@ -19,6 +19,9 @@ struct CameraStorageObject{
     IMediaControl* _MediaControl;
     unsigned int numberOfSupportedResolutions;
     unsigned long** reolutionsXYPointer;  //treat as if it would be a 2d array e.g.: resolutionsXYPointer[resolutionNum][0] for width ... [width=0,height=1]
+    AM_MEDIA_TYPE* _amMediaPointer;
+    IAMStreamConfig* _StreamCfg;
+    IPin* _outputpinPointer;
 };
 
 size_t utf8_to_utf32(unsigned char* inputString, size_t numberOfChars, char32_t* outputString){
@@ -97,6 +100,14 @@ void closeCameras(struct CameraStorageObject* Camera){
     CoUninitialize(); //Must be called once for every CoInitialize(Ex) to unload the dll
 }
 
+HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
+HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
+HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
+    BYTE* pictureBuffer=NULL;
+    smp->lpVtbl->GetPointer(smp,&pictureBuffer);
+    printf("%d\n",pictureBuffer[0]);
+    return S_OK;
+}
 
 
 struct CameraListItem* getCameras(unsigned int* numberOfCameras){ //TODO change to return char list with names
@@ -169,13 +180,14 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     IEnumPins* CameraOutputPins=0;
     CameraFilter->lpVtbl->EnumPins(CameraFilter,&CameraOutputPins);
     //get output pin of CameraInputFilter
-    IPin* outputPin=0;
-    CameraOutputPins->lpVtbl->Next(CameraOutputPins,1,&outputPin,0);
-
+    IPin* pOutputPin=(IPin*) malloc(sizeof(IPin));
+    CameraOutputPins->lpVtbl->Next(CameraOutputPins,1,&pOutputPin,0);
+    CameraOut->_outputpinPointer=pOutputPin;
     //Get Resolution
     //get pin configuration-interface
-    IAMStreamConfig* StreamCfg=NULL;
-    outputPin->lpVtbl->QueryInterface(outputPin,&IID_IAMStreamConfig, (void**) &StreamCfg);
+    IAMStreamConfig* StreamCfg=(IAMStreamConfig*)malloc(sizeof(IAMStreamConfig));
+    pOutputPin->lpVtbl->QueryInterface(pOutputPin,&IID_IAMStreamConfig, (void**) &StreamCfg);
+    CameraOut->_StreamCfg=StreamCfg;
     //Get size of config-structure for pin
     int numberOfPossibleRes=0;
     int sizeOfCFGStructureInByte=0;
@@ -183,10 +195,12 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     printf("Info: found %d possible formats\n",numberOfPossibleRes);
     byte* pUnusedSSC=(byte*) malloc(sizeof(byte)*sizeOfCFGStructureInByte);
     //get VideoSteamConfigSturcure
+    CameraOut->_amMediaPointer=(AM_MEDIA_TYPE*) malloc(sizeof(AM_MEDIA_TYPE)*numberOfPossibleRes);
     long** resolutionPointerArray=(long**) malloc((2*sizeof(long)+sizeof(long*))*numberOfPossibleRes); //we create an array for x,y resolution (sizeof(long)*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (size_t size of general pointer)
     for(int numOfRes=0;numOfRes<numberOfPossibleRes;numOfRes++){
         AM_MEDIA_TYPE* pAmMedia=NULL;
         StreamCfg->lpVtbl->GetStreamCaps(StreamCfg,numOfRes,&pAmMedia,pUnusedSSC);
+        CameraOut->_amMediaPointer=pAmMedia;
         printf("\nInfo: Returning Info for item %d of %d\n",numOfRes+1,numberOfPossibleRes);
         if(pAmMedia->formattype.Data1==FORMAT_VideoInfo.Data1 && (pAmMedia->cbFormat >= sizeof(VIDEOINFOHEADER)) && pAmMedia->pbFormat!=NULL){ //Check if right format, If the space at pointer location is valid memory and if the pointer is actually filled with something
             VIDEOINFOHEADER* pVideoInfoHead=(VIDEOINFOHEADER*) pAmMedia->pbFormat; //Get video info header
@@ -237,23 +251,27 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
 
 
 void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution){ //selected resolution is position in array
-    IMediaControl* myMediaControll=NULL;
+    int no=0;
+    printf("test2");
     INT_PTR* p=0;
-    CameraIn->_CameraGraph->lpVtbl->QueryInterface(CameraIn->_CameraGraph,&IID_IMediaControl,(void**)&myMediaControll);
-
-        //Create Filter
-        IBaseFilter* myCameraGraphBaseObj=NULL;
-
-        CreateBindCtx(0,&myBindContext);
-        myCamera->lpVtbl->BindToObject(myCamera,myBindContext,NULL,&IID_IBaseFilter,(void **)&myCameraGraphBaseObj);
-        CameraIn->_CameraGraph->lpVtbl->AddFilter(CameraIn->_CameraGraph,myCameraGraphBaseObj, L"Capture Source");
-        IEnumPins* myOutputpins=0;
-        myCameraGraphBaseObj->lpVtbl->EnumPins(myCameraGraphBaseObj,&myOutputpins);
-        IPin* myOutputpin=0;
-        unsigned long numberOfFetchedOutputPins=0;
-        myOutputpins->lpVtbl->Next(myOutputpins,1,&myOutputpin,&numberOfFetchedOutputPins); //get one output pin
-        CameraIn->_CameraGraph->lpVtbl->Render(CameraIn->_CameraGraph,myOutputpin); //Render this output
-
+    CameraIn->_StreamCfg->lpVtbl->SetFormat(CameraIn->_StreamCfg,&(CameraIn->_amMediaPointer[selectedResolution]));
+    //Free unused formats
+    for(int formatIter=0;formatIter<CameraIn->numberOfSupportedResolutions;formatIter++){
+        if(formatIter==selectedResolution){
+            continue;
+        }
+        if((CameraIn->_amMediaPointer+selectedResolution)->pbFormat!=0){ //Block with detailed format description
+            CoTaskMemFree((void*)(CameraIn->_amMediaPointer+selectedResolution)->pbFormat);
+        }
+        if((CameraIn->_amMediaPointer+selectedResolution)->pUnk!=NULL){
+            (CameraIn->_amMediaPointer+selectedResolution)->pUnk->lpVtbl->Release(CameraIn->_amMediaPointer->pUnk);
+        }
+        CoTaskMemFree((CameraIn->_amMediaPointer+selectedResolution));
+        printf("Info: Free unused Format\n");
+    }
+    CameraIn->_CameraGraph->lpVtbl->Render(CameraIn->_CameraGraph,CameraIn->_outputpinPointer); //Render this output
+ //gerenderPin
+ printf("test3");
         IEnumFilters* myFilter=NULL;
         CameraIn->_CameraGraph->lpVtbl->EnumFilters(CameraIn->_CameraGraph,&myFilter);
         IBaseFilter* rnd=NULL;
@@ -265,24 +283,16 @@ void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedRes
         IMemInputPin* myMemoryInputPin= 0;
         myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
         p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
+        printf("reste\n");
         VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a seperate thread
-    }
+
     *p=(INT_PTR*)callbackForGraphviewFPointer;
     while(1){
-        myMediaControll->lpVtbl->Run(myMediaControll);
+        CameraIn->_MediaControl->lpVtbl->Run(CameraIn->_MediaControl);
     }
-
     return;
-}*/
-
-HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
-HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
-HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
-    BYTE* pictureBuffer=NULL;
-    smp->lpVtbl->GetPointer(smp,&pictureBuffer);
-    printf("%d\n",pictureBuffer[0]);
-    return S_OK;
 }
+
 
 
 
@@ -293,7 +303,9 @@ HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
 int main(void){
     unsigned int numberOfAllocatedCams=0;
     struct CameraListItem* AllAvailableCameras=getCameras(&numberOfAllocatedCams); //Get the address of our function which we wish to inject into the object for callback
-    getAvailableCameraResolutions(&AllAvailableCameras[0]);
+    struct CameraStorageObject* allRes=getAvailableCameraResolutions(&AllAvailableCameras[0]);
     printf("FriendlyName: %S\n",AllAvailableCameras[0].friendlyName);
     printf("Path: %S\n",AllAvailableCameras[0].devicePath);
+    registerCameraCallback(allRes,0); //Access violation0xc00000000005 caused
+
 }
