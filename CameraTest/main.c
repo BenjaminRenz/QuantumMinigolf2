@@ -252,9 +252,9 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
 
 
 
-void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution){ //selected resolution is position in array
+void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer){ //selected resolution is position in array
     DWORD no;
-    INT_PTR* p=0;
+    INT_PTR* p=0; //will be pointer to the input function of the render filter
     CameraIn->_StreamCfg->lpVtbl->SetFormat(CameraIn->_StreamCfg,(CameraIn->_amMediaPointerArray[selectedResolution]));
     //Free unused formats
     for(int formatIter=0;formatIter<CameraIn->numberOfSupportedResolutions;formatIter++){
@@ -271,24 +271,25 @@ void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedRes
         printf("Info: Free unused Format\n");
     }
     CameraIn->_CameraGraph->lpVtbl->Render(CameraIn->_CameraGraph,CameraIn->_outputpinPointer); //Render this output
- //get renderPin
-        IEnumFilters* myFilter=NULL;
-        CameraIn->_CameraGraph->lpVtbl->EnumFilters(CameraIn->_CameraGraph,&myFilter);//OK
-        IBaseFilter* rnd=NULL;
-        myFilter->lpVtbl->Next(myFilter,1,&rnd,0);//Does not work, no filter recieved
-        IEnumPins* myRenderPins=0;
-        rnd->lpVtbl->EnumPins(rnd,&myRenderPins);
-        IPin* myRenderPin=0;
-        myRenderPins->lpVtbl->Next(myRenderPins,1,&myRenderPin, 0);
-        IMemInputPin* myMemoryInputPin= 0;
-        myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
-        p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
-        VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a seperate thread
-
-   // *p=(INT_PTR*)callbackForGraphviewFPointer;
-    while(1){
-        CameraIn->_MediaControl->lpVtbl->Run(CameraIn->_MediaControl);
-    }
+    //get renderPin and hijack the method which recieves the inputdata from the last filter in the graph
+    IEnumFilters* myFilter=NULL;
+    CameraIn->_CameraGraph->lpVtbl->EnumFilters(CameraIn->_CameraGraph,&myFilter);//OK
+    IBaseFilter* rnd=NULL;
+    myFilter->lpVtbl->Next(myFilter,1,&rnd,0);//Does not work, no filter recieved
+    IEnumPins* myRenderPins=0;
+    rnd->lpVtbl->EnumPins(rnd,&myRenderPins);
+    IPin* myRenderPin=0;
+    myRenderPins->lpVtbl->Next(myRenderPins,1,&myRenderPin, 0);
+    IMemInputPin* myMemoryInputPin=NULL;
+    myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
+    p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
+    VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a seperate thread
+    //Hide the (now empty/black) popup window
+    IVideoWindow* myVideoWindow=NULL;
+    CameraIn->_CameraGraph->lpVtbl->QueryInterface(CameraIn->_CameraGraph,&IID_IVideoWindow,&myVideoWindow);
+    CameraIn->_MediaControl->lpVtbl->Run(CameraIn->_MediaControl);
+    myVideoWindow->lpVtbl->put_Visible(myVideoWindow,0);
+    *p=callbackForGraphviewFPointer;
     return;
 }
 
@@ -301,10 +302,13 @@ void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedRes
 //
 int main(void){
     unsigned int numberOfAllocatedCams=0;
-    callbackForGraphviewFPointer=&callbackForGraphview;
     struct CameraListItem* AllAvailableCameras=getCameras(&numberOfAllocatedCams); //Get the address of our function which we wish to inject into the object for callback
     struct CameraStorageObject* allRes=getAvailableCameraResolutions(&AllAvailableCameras[0]);
     printf("FriendlyName: %S\n",AllAvailableCameras[0].friendlyName);
     printf("Path: %S\n",AllAvailableCameras[0].devicePath);
-    registerCameraCallback(allRes, 0);
+    registerCameraCallback(allRes, 0, &callbackForGraphview);
+    printf("Test");
+    while(1){
+        allRes->_MediaControl->lpVtbl->Run(allRes->_MediaControl);
+    }
 }
