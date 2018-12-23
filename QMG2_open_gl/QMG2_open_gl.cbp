@@ -12,8 +12,22 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-m64" />
 					<Add option="-g" />
+					<Add directory="C:/Msys2/mingw64/x86_64-w64-mingw32/include" />
+					<Add directory="libraries/LINMATH/include" />
+					<Add directory="libraries/FFTW_3.3.5/include" />
+					<Add directory="libraries/GLEW_2.1.0/include" />
+					<Add directory="libraries/GLFW_3.2.1/include" />
 				</Compiler>
+				<Linker>
+					<Add option="-m64" />
+					<Add library="libraries/GLFW_3.2.1/lib_mingw_64/libglfw3.a" />
+					<Add library="libraries/GLEW_2.1.0/lib_mingw_64/glew32s.lib" />
+					<Add directory="libraries/FFTW_3.3.5/lin_mingw_64" />
+					<Add directory="libraries/GLEW_2.1.0/lib_mingw_64" />
+					<Add directory="libraries/GLFW_3.2.1/lib_mingw_64" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/QMG2" prefix_auto="1" extension_auto="1" />

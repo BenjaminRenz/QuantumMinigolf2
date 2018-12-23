@@ -1014,7 +1014,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
         unsigned int buffernumber;
         //Smooth lines?
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glLineWidth(1.3);
+        glLineWidth(1.0);
         //Draw all vertices but those in the last index buffer
         for(buffernumber = 0; buffernumber < (indexBufferCountGrid - 1); buffernumber++) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboGridPointer[buffernumber]);
