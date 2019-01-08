@@ -739,7 +739,7 @@ int main(int argc, char* argv[]) {
         cent_vec[2]=0.0f;
         vec3_add(eye_vec,eye_vec,cent_vec); //apply offset to eye to have folloging effect
         mat4x4_look_at(mvp4x4, eye_vec, cent_vec, up_vec);
-        mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.15f, 10.0f);
+        mat4x4_perspective(persp4x4, FOV, 16.0f / 9.0f, 0.15f, 10.0f); //TODO don't hardcode aspect ratio!!
         mat4x4_mul(mvp4x4, persp4x4, mvp4x4);
 
 
