@@ -5,6 +5,16 @@
 #include <strmif.h>
 #include <uchar.h>
 
+int camResolutionX=0; //needed for callback function because we can't specify any parameters
+int camResolutionY=0;
+
+struct inputForBrightspotfinder{
+    float* cam_current_xpos;
+    float* cam_current_ypos;
+    int xres;
+    int yres;
+};
+
 struct CameraListItem{
     IMoniker* MonikerPointer;
     char32_t friendlyName[30];
@@ -18,7 +28,7 @@ struct CameraStorageObject{
     IGraphBuilder* _CameraGraph;
     IMediaControl* _MediaControl;
     unsigned int numberOfSupportedResolutions;
-    unsigned long** reolutionsXYPointer;  //treat as if it would be a 2d array e.g.: resolutionsXYPointer[resolutionNum][0] for width ... [width=0,height=1]
+    unsigned long** resolutionsXYPointer;  //treat as if it would be a 2d array e.g.: resolutionsXYPointer[resolutionNum][0] for width ... [width=0,height=1]
     AM_MEDIA_TYPE** _amMediaPointerArray;
     IAMStreamConfig* _StreamCfg;
     IPin* _outputpinPointer;
@@ -55,7 +65,7 @@ size_t utf8_to_utf32(unsigned char* inputString, size_t numberOfChars, char32_t*
     return output_array_index;
 }
 
-size_t utf16_to_utf32(char16_t* inputString, size_t numberOfChar16s, char32_t* outputString){ //Make sure the supplied output buffer is able to hold at least
+size_t utf16_to_utf32(char16_t* inputString, size_t numberOfChar16s, char32_t* outputString){ //Make sure the supplied output buffer is able to hold at least TODO characters
     size_t input_array_index=0;
     size_t output_array_index=0;
     while(input_array_index<numberOfChar16s){
@@ -100,13 +110,38 @@ void closeCameras(struct CameraStorageObject* Camera){
     CoUninitialize(); //Must be called once for every CoInitialize(Ex) to unload the dll
 }
 
-HRESULT callbackForGraphview(void* inst, IMediaSample *smp);
-HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample *smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
-HRESULT callbackForGraphview(void* inst, IMediaSample *smp){
-    BYTE* pictureBuffer=NULL;
-    smp->lpVtbl->GetPointer(smp,&pictureBuffer);
-    printf("%d\n",pictureBuffer[0]);
-    return S_OK;
+HRESULT callbackForGraphview(void* inst, IMediaSample* smp);
+HRESULT (*callbackForGraphviewFPointer)(void* inst, IMediaSample* smp); //create a function pointer which we will to inject our custom function into the RenderPinObject
+HRESULT callbackForGraphview(void* inst, IMediaSample* smp){
+    static int xres;
+    static int yres;
+    static float* current_xpos;
+    static float* current_ypos;
+    if(smp==NULL){ //Recieve initialisation not normal operation
+        xres=((struct inputForBrightspotfinder*)inst)->xres;
+        yres=((struct inputForBrightspotfinder*)inst)->yres;
+        current_xpos=((struct inputForBrightspotfinder*)inst)->cam_current_xpos;
+        current_ypos=((struct inputForBrightspotfinder*)inst)->cam_current_ypos;
+        return;
+    }else{
+        BYTE* pictureBuffer=NULL;
+        smp->lpVtbl->GetPointer(smp,&pictureBuffer);
+        int brightestVal=0;
+        int search_current_max_pixel=0;
+        for(unsigned int pixel=0;pixel<xres*yres;pixel+=19){ //*3 because of rgb
+            int pixel_brightness=pictureBuffer[pixel*3]+pictureBuffer[1+pixel*3]+pictureBuffer[2+pixel*3];
+            if(brightestVal<pixel_brightness){
+                //printf("brighter one found%d",pixel/3);
+                search_current_max_pixel=pixel;
+                brightestVal=pixel_brightness;
+            }
+        }
+        *current_xpos=((float)(search_current_max_pixel%xres))/xres;
+        *current_ypos=((float)(search_current_max_pixel/xres))/yres;
+        printf("x%f,y%f\n",*current_xpos,*current_ypos);
+        //printf("%d\n",pictureBuffer[0]);
+        return S_OK;
+    }
 }
 
 
@@ -241,16 +276,11 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
         */
 
     }
+    CameraOut->resolutionsXYPointer=resolutionPointerArray;
     free(pUnusedSSC);
     printf("returned");
     return CameraOut;
 }
-//TODO copy to render CameraOut->_CameraGraph->lpVtbl->Render(CameraOut->_CameraGraph,outputPin); //Render this output
-
-        //pAmMedia->
-        //StreamCfg->lpVtbl->SetFormat();
-
-
 
 void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer){ //selected resolution is position in array
     DWORD no;
@@ -307,8 +337,20 @@ int main(void){
     printf("FriendlyName: %S\n",AllAvailableCameras[0].friendlyName);
     printf("Path: %S\n",AllAvailableCameras[0].devicePath);
     registerCameraCallback(allRes, 0, &callbackForGraphview);
-    printf("Test");
+    float cam_refreshed_xpos=1;
+    float cam_refreshed_ypos=2;
+    struct inputForBrightspotfinder* BrightSpotInput=(struct inputForBrightspotfinder*)malloc(sizeof(struct inputForBrightspotfinder));
+    printf("Test6\n");
+    BrightSpotInput->xres=allRes->resolutionsXYPointer[0][0]; //
+    BrightSpotInput->yres=allRes->resolutionsXYPointer[0][1]; //Hardcoded for first camera [0][xy]
+    printf("Test7\n");
+    BrightSpotInput->cam_current_xpos=&cam_refreshed_xpos;
+    BrightSpotInput->cam_current_ypos=&cam_refreshed_ypos;
+    printf("Test8\n");
+    callbackForGraphview(BrightSpotInput,NULL); //We want to pass data before first call of this function so that it knows the resolution
+    printf("Test6\n");
     while(1){
         allRes->_MediaControl->lpVtbl->Run(allRes->_MediaControl);
     }
+
 }
