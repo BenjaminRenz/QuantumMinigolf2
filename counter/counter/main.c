@@ -3,6 +3,6 @@
 #include "count.h"
 
 int main(){
-    printf("%d,%d",count_step,counter(5));
+    printf("%d,%d",test_step,counter(test_step));
     return 0;
 }
