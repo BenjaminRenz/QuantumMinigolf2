@@ -247,6 +247,7 @@ float Movement_angle = PI / 2.0f; //angle for particle
 int AnimationStep = 0;
 int pos = 0;
 int draw_new_wave = 1; //render next frame?
+float wave_proportion = 1.0f;
 int momentum_prop = 1;
 #define MovementBorderWave 0.4f
 #define Speed_change 0.05f
@@ -697,8 +698,8 @@ int main(int argc, char* argv[]) {
                 for(int i = 0; i < Resolutionx; i++) {
                         //TODO radial cutoff for faster initialisation
                     if((abs(i-((int)wave_offset_x)))<(Resolutionx/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolutiony/10.0f))){
-                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * 2.0f);
-                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * 2.0f);
+                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * 2.0f);
+                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * 2.0f);
                     }
                 }
             }
