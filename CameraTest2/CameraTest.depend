@@ -1012,3 +1012,26 @@
 	"camera_dshow.h"
 	"utf_convert.h"
 
+1548948403 source:r:\studium\projekte\qmg2\cameratest2\camera_dshow.c
+	"camera_dshow.h"
+
+1548944746 r:\studium\projekte\qmg2\cameratest2\camera_dshow.h
+	<dshow.h>
+	<guiddef.h>
+	<stdio.h>
+	<strmif.h>
+	<uchar.h>
+	<stddef.h>
+
+1548948120 source:r:\studium\projekte\qmg2\cameratest2\main.c
+	"camera_dshow.h"
+	"utf_convert.h"
+
+1548942122 r:\studium\projekte\qmg2\cameratest2\utf_convert.h
+	<uchar.h>
+	<stddef.h>
+	<stdio.h>
+
+1548804902 source:r:\studium\projekte\qmg2\cameratest2\utf_convert.c
+	"utf_convert.h"
+

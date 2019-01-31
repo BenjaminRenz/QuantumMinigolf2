@@ -1,5 +1,6 @@
 #include <uchar.h>
 #include <stddef.h>
+#include <stdio.h>
 #ifndef utf_convert_h
 #define utf_convert_h
 size_t utf8_to_utf32(unsigned char* inputString, size_t numberOfChars, char32_t* outputString);

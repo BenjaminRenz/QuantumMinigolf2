@@ -50,4 +50,4 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras);
 
 
 struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem* CameraInList);
-void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer);  //selected resolution is position in array
+int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer);  //selected resolution is position in array

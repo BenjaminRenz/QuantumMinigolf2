@@ -45,7 +45,11 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras)  //TODO change 
         printf("Info: Successfully created DeviceEnumerator\n");
     }
     IEnumMoniker* myCameralist=NULL;
-    hr=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0);
+    if(S_OK!=myDeviceEnum->lpVtbl->CreateClassEnumerator(myDeviceEnum,&CLSID_VideoInputDeviceCategory, &myCameralist, 0)){
+        numberOfCameras=0;
+        printf("No camera found!\n");
+        return NULL;
+    }
     myDeviceEnum->lpVtbl->Release(myDeviceEnum);//Release the DeviceEnumerator after we have retrieved all available Video Devices
     if(hr!=S_OK)
     {
@@ -175,7 +179,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     return CameraOut;
 }
 
-void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer) //selected resolution is position in array
+int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer) //selected resolution is position in array
 {
     DWORD no;
     INT_PTR* p=0; //will be pointer to the input function of the render filter
@@ -211,12 +215,21 @@ void registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedRes
     IMemInputPin* myMemoryInputPin=NULL;
     myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
     p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
+    printf("Debug: callback address location: %x\n",p);
+    printf("Debug: address before change: %x\n",*p);
     VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a separate thread
     //Hide the (now empty/black) popup window
     IVideoWindow* myVideoWindow=NULL;
     CameraIn->_CameraGraph->lpVtbl->QueryInterface(CameraIn->_CameraGraph,&IID_IVideoWindow,&myVideoWindow);
-    CameraIn->_MediaControl->lpVtbl->Run(CameraIn->_MediaControl);
+    CameraIn->_MediaControl->lpVtbl->Pause(CameraIn->_MediaControl); //do this to make return of run dependent on if the camera is already in use
+    if(S_OK!=CameraIn->_MediaControl->lpVtbl->Run(CameraIn->_MediaControl)){
+        printf("Alert camera already in use abort!\n");
+        return S_FALSE;
+    }else{
+        printf("Debug: Camera not in use, continue\n");
+    }
     myVideoWindow->lpVtbl->put_Visible(myVideoWindow,0);
     *p=callbackForGraphviewFPointer;
-    return;
+    printf("Debug: address after change: %x\n",*p);
+    return S_OK;
 }
