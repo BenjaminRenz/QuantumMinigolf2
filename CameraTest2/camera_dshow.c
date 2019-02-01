@@ -173,6 +173,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
         */
 
     }
+    CameraOut->numberOfSupportedResolutions=numberOfPossibleRes;
     CameraOut->resolutionsXYPointer=resolutionPointerArray;
     free(pUnusedSSC);
     printf("returned");
@@ -187,20 +188,18 @@ int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedReso
     //Free unused formats
     for(int formatIter=0; formatIter<CameraIn->numberOfSupportedResolutions; formatIter++)
     {
-        if(formatIter==selectedResolution)
-        {
-            continue;
+        if(formatIter!=selectedResolution){
+            if((CameraIn->_amMediaPointerArray[formatIter])->pbFormat!=0)  //Block with detailed format description
+            {
+                CoTaskMemFree((void*)(CameraIn->_amMediaPointerArray[formatIter])->pbFormat);
+            }
+            if((CameraIn->_amMediaPointerArray[formatIter])->pUnk!=NULL)
+            {
+                (CameraIn->_amMediaPointerArray[formatIter])->pUnk->lpVtbl->Release(CameraIn->_amMediaPointerArray[formatIter]->pUnk);
+            }
+            CoTaskMemFree((CameraIn->_amMediaPointerArray[formatIter]));
+            printf("Info: Free unused Format\n");
         }
-        if((CameraIn->_amMediaPointerArray[selectedResolution])->pbFormat!=0)  //Block with detailed format description
-        {
-            CoTaskMemFree((void*)(CameraIn->_amMediaPointerArray[selectedResolution])->pbFormat);
-        }
-        if((CameraIn->_amMediaPointerArray[selectedResolution])->pUnk!=NULL)
-        {
-            (CameraIn->_amMediaPointerArray[selectedResolution])->pUnk->lpVtbl->Release(CameraIn->_amMediaPointerArray[selectedResolution]->pUnk);
-        }
-        CoTaskMemFree((CameraIn->_amMediaPointerArray[selectedResolution]));
-        printf("Info: Free unused Format\n");
     }
     CameraIn->_CameraGraph->lpVtbl->Render(CameraIn->_CameraGraph,CameraIn->_outputpinPointer); //Render this output
     //get renderPin and hijack the method which recieves the inputdata from the last filter in the graph
