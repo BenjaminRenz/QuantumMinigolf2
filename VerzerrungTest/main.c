@@ -4,11 +4,11 @@
 
 float x, y;
 
-int Punktx=125;
-int Punkty=25;
+int Punktx=30;
+int Punkty=10;
 
 //int Randpunkt[8]={0,0,100,50,50,100,100,100};
-int Randpunkt[8]={0,0,250,0,100,50,150,50};
+int Randpunkt[8]={0,0,50,-50,25,50,75,50};
 
 struct CalibData{
     int FocusPointsMask;
@@ -30,13 +30,16 @@ struct CalibData* perspec_calibrating(int CalibPoints[7]){ //CalibPoints contain
     //length between P1 and C
     float L1=sqrt((P1x-CalibPoints[4])*(P1x-CalibPoints[4])+(P1y-CalibPoints[5])*(P1y-CalibPoints[5]));
     float sign1=((CalibPoints[2]-CalibPoints[4])*(CalibPoints[7]-CalibPoints[1])-(CalibPoints[3]-CalibPoints[5])*(CalibPoints[6]-CalibPoints[0])); //Mirroring correction
-    float alpha=asin(((CalibPoints[1]-CalibPoints[5])*(CalibPoints[2]-CalibPoints[6])-(CalibPoints[0]-CalibPoints[4])*(CalibPoints[3]-CalibPoints[7]))/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))/sqrt((CalibPoints[0]-CalibPoints[4])*(CalibPoints[0]-CalibPoints[4])+(CalibPoints[1]-CalibPoints[5])*(CalibPoints[1]-CalibPoints[5])));
+    //float alpha=asin(((CalibPoints[1]-CalibPoints[5])*(CalibPoints[2]-CalibPoints[6])-(CalibPoints[0]-CalibPoints[4])*(CalibPoints[3]-CalibPoints[7]))/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))/sqrt((CalibPoints[0]-CalibPoints[4])*(CalibPoints[0]-CalibPoints[4])+(CalibPoints[1]-CalibPoints[5])*(CalibPoints[1]-CalibPoints[5])));
+    float alpha=acos(((CalibPoints[0]-CalibPoints[4])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[1]-CalibPoints[5])*(CalibPoints[3]-CalibPoints[7]))/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))/sqrt((CalibPoints[0]-CalibPoints[4])*(CalibPoints[0]-CalibPoints[4])+(CalibPoints[1]-CalibPoints[5])*(CalibPoints[1]-CalibPoints[5])));
+    printf("alpha=%f\n",alpha/3.14159*180);
+    printf("%f,%f\n",P1x,P1y);
     if(alpha>0.05||alpha<-0.05){ //if focuspoints
         CalibDataOut->FocusPointsMask=1;
         CalibDataOut->AngleOrLength[0]=alpha;
         float Abs1=L1/tan(alpha);
-        CalibDataOut->PointsOrVec[0]=P1x+((sign1>0)-(sign1<0))*(CalibPoints[2]-CalibPoints[6])/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))*Abs1;
-        CalibDataOut->PointsOrVec[1]=P1y+((sign1>0)-(sign1<0))*(CalibPoints[3]-CalibPoints[7])/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))*Abs1;
+        CalibDataOut->PointsOrVec[0]=P1x-((sign1>0)-(sign1<0))*(CalibPoints[2]-CalibPoints[6])/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))*Abs1;
+        CalibDataOut->PointsOrVec[1]=P1y-((sign1>0)-(sign1<0))*(CalibPoints[3]-CalibPoints[7])/sqrt((CalibPoints[2]-CalibPoints[6])*(CalibPoints[2]-CalibPoints[6])+(CalibPoints[3]-CalibPoints[7])*(CalibPoints[3]-CalibPoints[7]))*Abs1;
     }else {
         u1x=(CalibPoints[4]-CalibPoints[0])/sqrt((CalibPoints[4]-CalibPoints[0])*(CalibPoints[4]-CalibPoints[0])+(CalibPoints[5]-CalibPoints[1])*(CalibPoints[5]-CalibPoints[1]));
         u1y=(CalibPoints[5]-CalibPoints[1])/sqrt((CalibPoints[4]-CalibPoints[0])*(CalibPoints[4]-CalibPoints[0])+(CalibPoints[5]-CalibPoints[1])*(CalibPoints[5]-CalibPoints[1]));
@@ -52,13 +55,14 @@ struct CalibData* perspec_calibrating(int CalibPoints[7]){ //CalibPoints contain
     float P2y=CalibPoints[5]+((CalibPoints[0]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[1]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))*(CalibPoints[7]-CalibPoints[5])/((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]));
     float L2=sqrt((P2x-CalibPoints[0])*(P2x-CalibPoints[0])+(P2y-CalibPoints[1])*(P2y-CalibPoints[1]));
     float sign2=((CalibPoints[6]-CalibPoints[0])*(CalibPoints[5]-CalibPoints[3])-(CalibPoints[7]-CalibPoints[1])*(CalibPoints[4]-CalibPoints[2])); //Mirroring correction
-    float beta=asin(((CalibPoints[3]-CalibPoints[1])*(CalibPoints[6]-CalibPoints[4])-(CalibPoints[2]-CalibPoints[0])*(CalibPoints[7]-CalibPoints[5]))/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))/sqrt((CalibPoints[2]-CalibPoints[0])*(CalibPoints[2]-CalibPoints[0])+(CalibPoints[3]-CalibPoints[1])*(CalibPoints[3]-CalibPoints[1])));
+    //float beta=asin(((CalibPoints[3]-CalibPoints[1])*(CalibPoints[6]-CalibPoints[4])-(CalibPoints[2]-CalibPoints[0])*(CalibPoints[7]-CalibPoints[5]))/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))/sqrt((CalibPoints[2]-CalibPoints[0])*(CalibPoints[2]-CalibPoints[0])+(CalibPoints[3]-CalibPoints[1])*(CalibPoints[3]-CalibPoints[1])));
+    float beta=acos(((CalibPoints[2]-CalibPoints[0])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[3]-CalibPoints[1])*(CalibPoints[7]-CalibPoints[5]))/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))/sqrt((CalibPoints[2]-CalibPoints[0])*(CalibPoints[2]-CalibPoints[0])+(CalibPoints[3]-CalibPoints[1])*(CalibPoints[3]-CalibPoints[1])));
     if(beta>0.05||beta<-0.05){
         CalibDataOut->FocusPointsMask+=2;
         CalibDataOut->AngleOrLength[1]=beta;
         float Abs2=L2/tan(beta);
-        CalibDataOut->PointsOrVec[2]=P2x+((sign2>0)-(sign2<0))*(CalibPoints[6]-CalibPoints[4])/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))*Abs2;
-        CalibDataOut->PointsOrVec[3]=P2y+((sign2>0)-(sign2<0))*(CalibPoints[7]-CalibPoints[5])/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))*Abs2;
+        CalibDataOut->PointsOrVec[2]=P2x-((sign2>0)-(sign2<0))*(CalibPoints[6]-CalibPoints[4])/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))*Abs2;
+        CalibDataOut->PointsOrVec[3]=P2y-((sign2>0)-(sign2<0))*(CalibPoints[7]-CalibPoints[5])/sqrt((CalibPoints[6]-CalibPoints[4])*(CalibPoints[6]-CalibPoints[4])+(CalibPoints[7]-CalibPoints[5])*(CalibPoints[7]-CalibPoints[5]))*Abs2;
     }else{
         u2x=(CalibPoints[2]-CalibPoints[0])/sqrt((CalibPoints[2]-CalibPoints[0])*(CalibPoints[2]-CalibPoints[0])+(CalibPoints[3]-CalibPoints[1])*(CalibPoints[3]-CalibPoints[1]));
         u2y=(CalibPoints[3]-CalibPoints[1])/sqrt((CalibPoints[2]-CalibPoints[0])*(CalibPoints[2]-CalibPoints[0])+(CalibPoints[3]-CalibPoints[1])*(CalibPoints[3]-CalibPoints[1]));
@@ -85,7 +89,7 @@ void calculatePosCurs(struct CalibData* CalibDataIn){
         printf("%f,%f\n",CalibDataIn->AngleOrLength[0],CalibDataIn->AngleOrLength[1]);
         NormF1A=    sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1]));
         NormF1Punkt=sqrt((Punktx-CalibDataIn->PointsOrVec[0])*(Punktx-CalibDataIn->PointsOrVec[0])+(Punkty-CalibDataIn->PointsOrVec[1])*(Punkty-CalibDataIn->PointsOrVec[1]));
-        x=asin(((CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(Punktx-CalibDataIn->PointsOrVec[0])-(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(Punkty-CalibDataIn->PointsOrVec[1]))/NormF1A/NormF1Punkt)/CalibDataIn->AngleOrLength[0];
+        x=asin(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(Punkty-CalibDataIn->PointsOrVec[1])-(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(Punktx-CalibDataIn->PointsOrVec[0]))/NormF1A/NormF1Punkt)/CalibDataIn->AngleOrLength[0];
         y=((Punktx-CalibDataIn->A[0])*CalibDataIn->PointsOrVec[2]+(Punkty-CalibDataIn->A[1])*CalibDataIn->PointsOrVec[3])/CalibDataIn->AngleOrLength[1];
         break;
     case 2:
