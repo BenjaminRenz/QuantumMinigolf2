@@ -8,6 +8,9 @@
 #include "libraries/FFTW_3.3.5/include/fftw3.h"
 #include "libraries/LINMATH/include/linmath.h"
 
+#include "verzerrung.h"
+#include "camera_dshow.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -17,6 +20,7 @@
 #include <math.h>
 #define PI 3.14159265358979323846
 #include <limits.h>
+
 #ifdef _WIN32
  #define filepath_potentials ".\\res\\potentials"
  #define filepath_gui_bmp ".\\res\\textures\\GUI2.bmp"  //CHANGED!!!
@@ -289,7 +293,8 @@ int main(int argc, char* argv[]) {
             while((subdirectory=readdir(directory))!=0){
                 char* fileEnding=strrchr(subdirectory->d_name,'.');
                 if(fileEnding && !strcmp(fileEnding, ".bmp")){
-                    strcpy(PotentialFilesList[CountOfPotentialFiles++],(subdirectory->d_name));
+                    //strcpy(PotentialFilesList[CountOfPotentialFiles++],(subdirectory->d_name));
+                    StringCbCopy(PotentialFilesList[CountOfPotentialFiles++],256,(subdirectory->d_name));
                     printf("Info: Found Potential File '%s'\n",subdirectory->d_name);
                 }
             }
@@ -2147,13 +2152,16 @@ void update_potential(){
     static uint8_t SelectedPotential=0;
     char PotentialSourceFile[256];
     PotentialSourceFile[0]=0;
-    strcat(PotentialSourceFile,filepath_potentials);
+    //strcat(PotentialSourceFile,filepath_potentials);
+    StringCbCat(PotentialSourceFile,256,filepath_potentials);
     #ifdef _WIN32
-    strcat(PotentialSourceFile,"\\");
+    //strcat(PotentialSourceFile,"\\");
+    StringCbCat(PotentialSourceFile,256,"\\");
     #elif __linux__
     strcat(PotentialSourceFile,"/");
     #endif
-    strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
+    //strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
+    StringCbCat(PotentialSourceFile,256,PotentialFilesList[SelectedPotential]);
     printf("Loading: %s",PotentialSourceFile);
 
     /*if(PotentialSourceFile[0]==1){
