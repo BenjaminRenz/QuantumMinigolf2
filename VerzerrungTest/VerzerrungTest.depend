@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1549047172 source:c:\msys64\home\pud\quantumminigolf2\verzerrungtest\main.c
+1549296670 source:c:\msys64\home\pud\quantumminigolf2\verzerrungtest\main.c
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
