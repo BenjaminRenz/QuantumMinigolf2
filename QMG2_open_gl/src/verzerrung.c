@@ -14,7 +14,7 @@ int Randpunkt[8]={50,-50,0,0,75,50,25,50};
 */
 
 
-struct CalibData* perspec_calibrating(int CalibPoints[7]){ //CalibPoints contains CalibPoints[0],CalibPoints[1],CalibPoints[2]... (outer field border)
+struct CalibData* perspec_calibrating(int CalibPoints[8]){ //CalibPoints contains CalibPoints[0],CalibPoints[1],CalibPoints[2]... (outer field border)
     struct CalibData* CalibDataOut=(struct CalibData*)malloc(sizeof(struct CalibData));
     CalibDataOut->A[0]=CalibPoints[0];
     CalibDataOut->A[1]=CalibPoints[1];
@@ -108,10 +108,10 @@ float* calculatePosCurs(struct CalibData* CalibDataIn,float Punktx, float Punkty
         NormF2A=    sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3]));
         NormF2Punkt=sqrt((Punktx-CalibDataIn->PointsOrVec[2])*(Punktx-CalibDataIn->PointsOrVec[2])+(Punkty-CalibDataIn->PointsOrVec[3])*(Punkty-CalibDataIn->PointsOrVec[3]));
         resultPoint[0]=asin(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(Punkty-CalibDataIn->PointsOrVec[1])-(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(Punktx-CalibDataIn->PointsOrVec[0]))/NormF1A/NormF1Punkt)/CalibDataIn->AngleOrLength[0];
-        resultPoint[1]=acos(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(Punktx-CalibDataIn->PointsOrVec[2])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(Punkty-CalibDataIn->PointsOrVec[3]))/NormF2A/NormF2Punkt)/CalibDataIn->AngleOrLength[1];
+        resultPoint[1]=asin(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(Punkty-CalibDataIn->PointsOrVec[3])-(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(Punktx-CalibDataIn->PointsOrVec[2]))/NormF2A/NormF2Punkt)/CalibDataIn->AngleOrLength[1];
         break;
     default:
         break;
     }
-
+    return resultPoint;
 }

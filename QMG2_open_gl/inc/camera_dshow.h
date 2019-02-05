@@ -1,3 +1,7 @@
+#ifndef CAMERA_DSHOW_INCLUDED
+#define CAMERA_DSHOW_INCLUDED
+
+
 #include <dshow.h>
 #include <guiddef.h>
 #include <stdio.h>
@@ -51,3 +55,4 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras);
 
 struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem* CameraInList);
 int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer);  //selected resolution is position in array
+#endif

@@ -2,6 +2,8 @@
 -compile GLEW as static library
 -implement webcam brightest spot detection https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
 */
+#define STRSAFE_NO_DEPRECATE //allow use of strcpy and strcat
+
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
@@ -10,6 +12,7 @@
 
 #include "verzerrung.h"
 #include "camera_dshow.h"
+#include "image_analyse.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +42,7 @@
  #define filepath_shader_fragment_gui "./res/shaders/fragment_gui.glsl"
  #define filepath_shader_vertex_graph "./res/shaders/vertex_graph.glsl"
  #define filepath_shader_fragment_graph "./res/shaders/fragment_graph.glsl"
-  #define filepath_shader_vertex_target "./res/shaders/vertex_target.glsl"
+ #define filepath_shader_vertex_target "./res/shaders/vertex_target.glsl"
  #define filepath_shader_fragment_target "./res/shaders/fragment_target.glsl"
 #endif
 
@@ -62,7 +65,7 @@ float update_delta_time();
 float timerForBlink(int restart);
 void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
 void drawGui(int G_OBJECT_STATE, float aspectRatio);
-void drawTrackPoint(int G_OBJECT_STATE,float xpos,float ypos);
+void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp,float xpos, float ypos);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
 GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 void JoystickControll();
@@ -293,8 +296,8 @@ int main(int argc, char* argv[]) {
             while((subdirectory=readdir(directory))!=0){
                 char* fileEnding=strrchr(subdirectory->d_name,'.');
                 if(fileEnding && !strcmp(fileEnding, ".bmp")){
-                    //strcpy(PotentialFilesList[CountOfPotentialFiles++],(subdirectory->d_name));
-                    StringCbCopy(PotentialFilesList[CountOfPotentialFiles++],256,(subdirectory->d_name));
+                    strcpy(PotentialFilesList[CountOfPotentialFiles++],(subdirectory->d_name));
+                    //StringCbCopy(PotentialFilesList[CountOfPotentialFiles++],256,(subdirectory->d_name));
                     printf("Info: Found Potential File '%s'\n",subdirectory->d_name);
                 }
             }
@@ -486,9 +489,30 @@ int main(int argc, char* argv[]) {
     printf("Info: Generation of plane and grid successfull!\n");
     //Init target box
     drawTargetBox(G_OBJECT_INIT,0,0.0f);
-    drawTrackPoint(G_OBJECT_INIT,0.0f,0.0f);
+    drawTrackPoint(G_OBJECT_INIT,0,0.0f,0.0f);
     //Graphics@@
+
+    //Camera@@
+    int CamXpos=0;
+    int CamYpos=0;
+    IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
+    MediaControl->lpVtbl->Run(MediaControl);
+    int CalibPoints[8]={305,558, 480,774, 516,117, 778,166};
+    struct CalibData* CalibTest=perspec_calibrating(CalibPoints);
+    //Camera@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
+        //Camera
+        if((CamXpos!=0)&&(CamYpos!=0)){ //Got Frame update
+            printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
+            float* calculatedXY=calculatePosCurs(CalibTest,(float) CamXpos, (float) CamYpos);
+            printf("Debug: x,%f y%f\n",calculatedXY[0],calculatedXY[1]);
+            drawTrackPoint(G_OBJECT_UPDATE,0,(calculatedXY[0]-0.5f),(calculatedXY[1]-0.5f));
+            CamYpos=CamXpos=0;
+            MediaControl->lpVtbl->Run(MediaControl);
+        }else{
+            //printf("Debug: Frameskip of camera\n");
+        }
+        //Camera
         delta_time = update_delta_time();
 
         if(timerForBlink(0)>5.0f){
@@ -777,8 +801,9 @@ int main(int argc, char* argv[]) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
         drawTargetBox(G_OBJECT_DRAW,mvp4x4,ColorIntensity);//,sin(glfwGetTime()*3.0));
-        drawTrackPoint(G_OBJECT_DRAW,0.4f,0.4f);
-        drawGui(G_OBJECT_DRAW, 0);
+
+        drawTrackPoint(G_OBJECT_DRAW,mvp4x4,0,0);
+        drawGui(G_OBJECT_DRAW,0);
         //Swap Buffers
         glFinish();
         glfwSwapBuffers(MainWindow);
@@ -791,27 +816,31 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void drawTrackPoint(int G_OBJECT_STATE,float xpos, float ypos){
+void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
     static GLuint trackShaderID=0;
     static GLuint vertexBufferID=0;
     float data[18];
+    static float savedxpos=0;
+    static float savedypos=0;
+    static GLuint mvpMatrixUniform=0;
     if(G_OBJECT_STATE==G_OBJECT_INIT){
         trackShaderID=glCreateProgram();
         glAttachShader(trackShaderID,CompileShaderFromFile(".\\res\\shaders\\vertex_track.glsl",GL_VERTEX_SHADER));
         glAttachShader(trackShaderID,CompileShaderFromFile(".\\res\\shaders\\fragment_track.glsl",GL_FRAGMENT_SHADER));
         glLinkProgram(trackShaderID);
+        glUseProgram(trackShaderID);
+        mvpMatrixUniform=glGetUniformLocation(trackShaderID,"MVPmatrix");
         glGenBuffers(1,&vertexBufferID);
-        printf("Test111111111111111111111111111\n");
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         data[2]=data[5]=data[8]=data[11]=data[14]=data[17]=1.0f; //Z=0
-        data[0]=xpos-0.01f;
-        data[1]=ypos-0.01f;
-        data[3]=data[9]=xpos-0.01f;
-        data[4]=data[10]=ypos+0.01f;
-        data[6]=data[12]=xpos+0.01f;
-        data[7]=data[13]=ypos-0.01f;
-        data[15]=xpos+0.01f;
-        data[16]=ypos+0.01f;
+        data[0]=savedxpos-0.01f;
+        data[1]=savedypos-0.01f;
+        data[3]=data[9]=savedxpos-0.01f;
+        data[4]=data[10]=savedypos+0.01f;
+        data[6]=data[12]=savedxpos+0.01f;
+        data[7]=data[13]=savedypos-0.01f;
+        data[15]=savedxpos+0.01f;
+        data[16]=savedypos+0.01f;
 
         glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
         glBufferData(GL_ARRAY_BUFFER, sizeof(data),data,GL_DYNAMIC_DRAW);
@@ -819,11 +848,17 @@ void drawTrackPoint(int G_OBJECT_STATE,float xpos, float ypos){
         glEnableVertexAttribArray(0);   //x,y
         //Enabler Shader
         glUseProgram(trackShaderID);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
         //Set Shader Uniforms to render Grid
         glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
         glDrawArrays(GL_TRIANGLES,0,6);
         glDisableVertexAttribArray(0);
         glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+    }else if(G_OBJECT_STATE==G_OBJECT_UPDATE){
+        savedxpos=xpos;
+        savedypos=ypos;
     }
 }
 
@@ -1925,7 +1960,7 @@ GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType) {
     GLint compStatus = 0;
     glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &compStatus);
     if(compStatus != GL_TRUE) {
-        printf("Error: Compilation of shader %d failed!\n", ShaderId);
+        printf("Error: Compilation of shader %d from %s failed!\n", ShaderId, FilePath);
         //TODO free resources
         //return;
     }
@@ -2152,16 +2187,16 @@ void update_potential(){
     static uint8_t SelectedPotential=0;
     char PotentialSourceFile[256];
     PotentialSourceFile[0]=0;
-    //strcat(PotentialSourceFile,filepath_potentials);
-    StringCbCat(PotentialSourceFile,256,filepath_potentials);
+    strcat(PotentialSourceFile,filepath_potentials);
+    //StringCbCat(PotentialSourceFile,256,filepath_potentials);
     #ifdef _WIN32
-    //strcat(PotentialSourceFile,"\\");
-    StringCbCat(PotentialSourceFile,256,"\\");
+    strcat(PotentialSourceFile,"\\");
+    //StringCbCat(PotentialSourceFile,256,"\\");
     #elif __linux__
     strcat(PotentialSourceFile,"/");
     #endif
-    //strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
-    StringCbCat(PotentialSourceFile,256,PotentialFilesList[SelectedPotential]);
+    strcat(PotentialSourceFile,PotentialFilesList[SelectedPotential]);
+    //StringCbCat(PotentialSourceFile,256,PotentialFilesList[SelectedPotential]);
     printf("Loading: %s",PotentialSourceFile);
 
     /*if(PotentialSourceFile[0]==1){
