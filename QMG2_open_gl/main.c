@@ -497,7 +497,7 @@ int main(int argc, char* argv[]) {
     int CamYpos=0;
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
     MediaControl->lpVtbl->Run(MediaControl);
-    int CalibPoints[8]={305,558, 480,774, 516,117, 778,166};
+    int CalibPoints[8]={504,576,1000,391,288,369,694,256};
     struct CalibData* CalibTest=perspec_calibrating(CalibPoints);
     //Camera@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop

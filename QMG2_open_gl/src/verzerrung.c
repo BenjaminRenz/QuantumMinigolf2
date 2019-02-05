@@ -88,27 +88,62 @@ float* calculatePosCurs(struct CalibData* CalibDataIn,float Punktx, float Punkty
         resultPoint[1]=((Punktx-CalibDataIn->A[0])*CalibDataIn->PointsOrVec[2]+(Punkty-CalibDataIn->A[1])*CalibDataIn->PointsOrVec[3])/CalibDataIn->AngleOrLength[1];
         break;
     case 1:
+        resultPoint[1]=((Punktx-CalibDataIn->A[0])*CalibDataIn->PointsOrVec[2]+(Punkty-CalibDataIn->A[1])*CalibDataIn->PointsOrVec[3])/CalibDataIn->AngleOrLength[1];
+        {
+            //X calc
+            float gamma1=atan2(Punkty-CalibDataIn->PointsOrVec[1],Punktx-CalibDataIn->PointsOrVec[0]); //angle of F1P to x-Axyis atan2(py-f1y,px-f1x)
+            float gamma2=atan2(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1],CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0]); //angle of F1 to x-Axyis atan2(ay-f1y,ax-f1x)
+            float gamma=gamma1-gamma2; //angle between CA and DB which is angle in focus in mathematical defined way
+            gamma=gamma-((gamma>M_PI)-(gamma<-M_PI))*2*M_PI;//Map angle to [-PI,PI]
+            resultPoint[0]=gamma/CalibDataIn->AngleOrLength[0];
+        }
+        /*
         printf("Debug: Case first fp\n");
         printf("%f,%f\n",CalibDataIn->AngleOrLength[0],CalibDataIn->AngleOrLength[1]);
         NormF1A=    sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1]));
         NormF1Punkt=sqrt((Punktx-CalibDataIn->PointsOrVec[0])*(Punktx-CalibDataIn->PointsOrVec[0])+(Punkty-CalibDataIn->PointsOrVec[1])*(Punkty-CalibDataIn->PointsOrVec[1]));
         resultPoint[0]=asin(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(Punkty-CalibDataIn->PointsOrVec[1])-(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(Punktx-CalibDataIn->PointsOrVec[0]))/NormF1A/NormF1Punkt)/CalibDataIn->AngleOrLength[0];
         resultPoint[1]=((Punktx-CalibDataIn->A[0])*CalibDataIn->PointsOrVec[2]+(Punkty-CalibDataIn->A[1])*CalibDataIn->PointsOrVec[3])/CalibDataIn->AngleOrLength[1];
+        */
+        printf("case1\n");
         break;
     case 2:
-        printf("Debug: Case second fp\n");
-        resultPoint[0]=((Punktx-CalibDataIn->A[0])*CalibDataIn->PointsOrVec[0]+(Punkty-CalibDataIn->A[1])*CalibDataIn->PointsOrVec[1])/CalibDataIn->AngleOrLength[0];
-        resultPoint[1]=acos(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(Punktx-CalibDataIn->PointsOrVec[2])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(Punkty-CalibDataIn->PointsOrVec[3]))/sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3]))/sqrt((Punktx-CalibDataIn->PointsOrVec[2])*(Punktx-CalibDataIn->PointsOrVec[2])+(Punkty-CalibDataIn->PointsOrVec[3])*(Punkty-CalibDataIn->PointsOrVec[3])))/CalibDataIn->AngleOrLength[1];
+        {
+            resultPoint[0]=((Punktx-CalibDataIn->A[0])*CalibDataIn->PointsOrVec[0]+(Punkty-CalibDataIn->A[1])*CalibDataIn->PointsOrVec[1])/CalibDataIn->AngleOrLength[0];
+            //Y calc
+            float delta1=atan2(Punkty-CalibDataIn->PointsOrVec[3],Punktx-CalibDataIn->PointsOrVec[2]); //angle of F1P to x-Axyis atan2(py-f1y,px-f1x)
+            float delta2=atan2(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3],CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2]); //angle of F1 to x-Axyis atan2(ay-f1y,ax-f1x)
+            float delta=delta1-delta2; //angle between CA and DB which is angle in focus in mathematical defined way
+            delta=delta-((delta>M_PI)-(delta<-M_PI))*2*M_PI;//Map angle to [-PI,PI]
+            resultPoint[1]=delta/CalibDataIn->AngleOrLength[1];
+            printf("case2\n");
+        }
         break;
     case 3:
         printf("Debug: Case two fp\n");
         printf("%f,%f\n",CalibDataIn->AngleOrLength[0],CalibDataIn->AngleOrLength[1]);
-        NormF1A=    sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1]));
+
+
+        /*NormF1A=    sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1]));
         NormF1Punkt=sqrt((Punktx-CalibDataIn->PointsOrVec[0])*(Punktx-CalibDataIn->PointsOrVec[0])+(Punkty-CalibDataIn->PointsOrVec[1])*(Punkty-CalibDataIn->PointsOrVec[1]));
         NormF2A=    sqrt((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])+(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3]));
         NormF2Punkt=sqrt((Punktx-CalibDataIn->PointsOrVec[2])*(Punktx-CalibDataIn->PointsOrVec[2])+(Punkty-CalibDataIn->PointsOrVec[3])*(Punkty-CalibDataIn->PointsOrVec[3]));
         resultPoint[0]=asin(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0])*(Punkty-CalibDataIn->PointsOrVec[1])-(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1])*(Punktx-CalibDataIn->PointsOrVec[0]))/NormF1A/NormF1Punkt)/CalibDataIn->AngleOrLength[0];
         resultPoint[1]=asin(((CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2])*(Punkty-CalibDataIn->PointsOrVec[3])-(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3])*(Punktx-CalibDataIn->PointsOrVec[2]))/NormF2A/NormF2Punkt)/CalibDataIn->AngleOrLength[1];
+        */
+        //X calc
+        float gamma1=atan2(Punkty-CalibDataIn->PointsOrVec[1],Punktx-CalibDataIn->PointsOrVec[0]); //angle of F1P to x-Axyis atan2(py-f1y,px-f1x)
+        float gamma2=atan2(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[1],CalibDataIn->A[0]-CalibDataIn->PointsOrVec[0]); //angle of F1 to x-Axyis atan2(ay-f1y,ax-f1x)
+        float gamma=gamma1-gamma2; //angle between CA and DB which is angle in focus in mathematical defined way
+        gamma=gamma-((gamma>M_PI)-(gamma<-M_PI))*2*M_PI;//Map angle to [-PI,PI]
+        resultPoint[0]=gamma/CalibDataIn->AngleOrLength[0];
+        //Y calc
+        float delta1=atan2(Punkty-CalibDataIn->PointsOrVec[3],Punktx-CalibDataIn->PointsOrVec[2]); //angle of F1P to x-Axyis atan2(py-f1y,px-f1x)
+        float delta2=atan2(CalibDataIn->A[1]-CalibDataIn->PointsOrVec[3],CalibDataIn->A[0]-CalibDataIn->PointsOrVec[2]); //angle of F1 to x-Axyis atan2(ay-f1y,ax-f1x)
+        float delta=delta1-delta2; //angle between CA and DB which is angle in focus in mathematical defined way
+        delta=delta-((delta>M_PI)-(delta<-M_PI))*2*M_PI;//Map angle to [-PI,PI]
+        resultPoint[1]=delta/CalibDataIn->AngleOrLength[1];
+        printf("gamma, delta, %f, %f",gamma,delta);
         break;
     default:
         break;
