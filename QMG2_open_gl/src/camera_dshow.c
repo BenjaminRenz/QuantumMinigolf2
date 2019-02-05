@@ -78,7 +78,7 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras)  //TODO change 
         CameraListItem[*numberOfCameras].friendlyName[29]=0; //set string termination character
         myPropertyBag->lpVtbl->Read(myPropertyBag,L"DevicePath",&VariantField,0);
         memcpy(CameraListItem[*numberOfCameras].devicePath,VariantField.bstrVal,198*sizeof(char32_t ));
-        CameraListItem[*numberOfCameras].friendlyName[199]=0; //make sure we have terminated the string
+        CameraListItem[*numberOfCameras].devicePath[199]=0; //make sure we have terminated the string
         //Increment
         (*numberOfCameras)++;
         //Cleanup
@@ -126,7 +126,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     byte* pUnusedSSC=(byte*) malloc(sizeof(byte)*sizeOfCFGStructureInByte);
     //get VideoSteamConfigSturcure
     CameraOut->_amMediaPointerArray=(AM_MEDIA_TYPE**) malloc(sizeof(AM_MEDIA_TYPE)*numberOfPossibleRes);
-    long** resolutionPointerArray=(long**) malloc((2*sizeof(long)+sizeof(long*))*numberOfPossibleRes); //we create an array for x,y resolution (sizeof(long)*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (size_t size of general pointer)
+    unsigned long** resolutionPointerArray=(unsigned long**) malloc((2*sizeof(long)+sizeof(long*))*numberOfPossibleRes); //we create an array for x,y resolution (sizeof(long)*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (size_t size of general pointer)
     for(int numOfRes=0; numOfRes<numberOfPossibleRes; numOfRes++)
     {
         AM_MEDIA_TYPE* pAmMedia=NULL;
@@ -136,7 +136,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
         if(pAmMedia->formattype.Data1==FORMAT_VideoInfo.Data1 && (pAmMedia->cbFormat >= sizeof(VIDEOINFOHEADER)) && pAmMedia->pbFormat!=NULL)  //Check if right format, If the space at pointer location is valid memory and if the pointer is actually filled with something
         {
             VIDEOINFOHEADER* pVideoInfoHead=(VIDEOINFOHEADER*) pAmMedia->pbFormat; //Get video info header
-            resolutionPointerArray[numOfRes]=((long*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2); //point to the first element of the resolution tuples stored after the pointer table
+            resolutionPointerArray[numOfRes]=((unsigned long*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2); //point to the first element of the resolution tuples stored after the pointer table
             resolutionPointerArray[numOfRes][0]=pVideoInfoHead->bmiHeader.biWidth;
             resolutionPointerArray[numOfRes][1]=pVideoInfoHead->bmiHeader.biHeight;
             printf("Info width:%d\n",resolutionPointerArray[numOfRes][0]);
