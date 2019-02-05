@@ -31,6 +31,7 @@ struct CameraStorageObject
     char32_t devicePath[200];
     IGraphBuilder* _CameraGraph;
     IMediaControl* _MediaControl;
+    IAMCameraControl* _CameraControl;
     unsigned int numberOfSupportedResolutions;
     unsigned long** resolutionsXYPointer;  //treat as if it would be a 2d array e.g.: resolutionsXYPointer[resolutionNum][0] for width ... [width=0,height=1]
     AM_MEDIA_TYPE** _amMediaPointerArray;

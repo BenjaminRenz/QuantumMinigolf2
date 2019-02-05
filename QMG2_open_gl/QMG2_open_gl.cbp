@@ -33,7 +33,6 @@
 		<Compiler>
 			<Add option="-O3" />
 			<Add option="-Wall" />
-			<Add option="-std=c99" />
 			<Add option="-m64" />
 			<Add directory="libraries/GLEW_2.1.0/include" />
 			<Add directory="libraries/GLFW_3.2.1/include" />
@@ -41,9 +40,10 @@
 			<Add directory="libraries/LINMATH/include" />
 			<Add directory="inc" />
 			<Add directory="src" />
-			<Add directory="../../../../mingw64/x86_64-w64-mingw32/include" />
+			<Add directory="../../../../Software/msys2/mingw64/x86_64-w64-mingw32" />
 		</Compiler>
 		<Linker>
+			<Add option="-static-libgcc" />
 			<Add option="-m64" />
 			<Add library="glew32s" />
 			<Add library="libglfw3.a" />
@@ -57,7 +57,7 @@
 			<Add directory="libraries/GLEW_2.1.0/lib_mingw_64" />
 			<Add directory="libraries/GLFW_3.2.1/lib_mingw_64" />
 			<Add directory="libraries/FFTW_3.3.5/lib_mingw_64" />
-			<Add directory="../../../../mingw64/x86_64-w64-mingw32/lib" />
+			<Add directory="../../../../Software/msys2/mingw64/x86_64-w64-mingw32/lib" />
 		</Linker>
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />

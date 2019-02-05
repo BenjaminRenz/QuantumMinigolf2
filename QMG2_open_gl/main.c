@@ -503,14 +503,15 @@ int main(int argc, char* argv[]) {
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         //Camera
         if((CamXpos!=0)&&(CamYpos!=0)){ //Got Frame update
-            printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
+            //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             float* calculatedXY=calculatePosCurs(CalibTest,(float) CamXpos, (float) CamYpos);
-            printf("Debug: x,%f y%f\n",calculatedXY[0],calculatedXY[1]);
+            //printf("Debug: x,%f y%f\n",calculatedXY[0],calculatedXY[1]);
             drawTrackPoint(G_OBJECT_UPDATE,0,(calculatedXY[0]-0.5f),(calculatedXY[1]-0.5f));
             CamYpos=CamXpos=0;
             MediaControl->lpVtbl->Run(MediaControl);
+
         }else{
-            //printf("Debug: Frameskip of camera\n");
+            printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
         }
         //Camera
         delta_time = update_delta_time();

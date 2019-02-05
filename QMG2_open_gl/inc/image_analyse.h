@@ -1,5 +1,5 @@
 #include "camera_dshow.h"
-#define camera_big_grid_points_x 200 //The y gridpoints will be calculated based on the aspect ratio
+#define camera_big_grid_points_x 100 //The y gridpoints will be calculated based on the aspect ratio
 #define camera_testspots 1
 
 HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called will set smp==0 and recieve a inputForBrightspotfinder Sruct to sore camera resolution and pointer for bright spot coordinates
@@ -33,6 +33,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
     }
     else
     {
+        printf("Debug: Frame analyse started \\/ \\/ \\/ \\/ \n");
         int bitperPixel=smp->lpVtbl->GetActualDataLength(smp)/(xres*yres);
         BYTE* pictureBuffer=NULL;
         smp->lpVtbl->GetPointer(smp,&pictureBuffer);
@@ -125,11 +126,12 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
         //printf("%d\n",pictureBuffer[0]);
         */
         free(BrightSpots);
+        printf("Debug: Frame analyse ended /\\ /\\ /\\ /\\ \n");
         return S_OK;
     }
 }
 
-#define cameraNum 1
+#define cameraNum 0
 
 IMediaControl* getPositionPointer(int* Posx, int* Posy){
     printf("first test\n");
@@ -163,6 +165,32 @@ IMediaControl* getPositionPointer(int* Posx, int* Posy){
     printf("Test8\n");
     callbackForGraphview(BrightSpotInput,0); //We want to pass data before first call of this function so that it knows the resolution
     printf("Test9\n");
+
+
+
+    printf("Debug: try to set manual exposure\n");
+    long prop_Min=0;
+    long prop_Max=0;
+    long prop_SteppingDelta=0;
+    long prop_Default=0;
+    long prop_CapsFlags=0;
+    if(S_OK==allRes->_CameraControl->lpVtbl->GetRange(allRes->_CameraControl,CameraControl_Exposure,&prop_Min,&prop_Max,&prop_SteppingDelta,&prop_Default,&prop_CapsFlags)){
+        printf("Debug: successfully queried camera exposure range\n");
+        if(prop_CapsFlags&CameraControl_Flags_Manual!=0){
+            printf("Debug: Property can be changed from %ld to %ld, default %ld, with %ld stepwidth\n",prop_Min,prop_Max,prop_Default,prop_SteppingDelta);
+            int hr=allRes->_CameraControl->lpVtbl->Set(allRes->_CameraControl,CameraControl_Exposure,prop_Min,CameraControl_Flags_Manual);
+            if(hr==S_OK){
+                printf("Debug: Changed exposure time successfully");
+            }else{
+                printf("Error: Could not change exposure time, error %d",hr);
+            }
+        }else{
+            printf("Debug: Property can be changed by manually\n");
+        }
+    }else{
+        printf("Error: could not query camera exposure range\n");
+    }
+
     return allRes->_MediaControl;
     /*while(1)
     {

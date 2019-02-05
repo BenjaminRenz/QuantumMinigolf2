@@ -92,6 +92,7 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras)  //TODO change 
 
 struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem* CameraInList)
 {
+    int hr=0;
     struct CameraStorageObject* CameraOut=(struct CameraStorageObject*) malloc(sizeof(struct CameraStorageObject));
 
     //Create Graph and Filter
@@ -109,6 +110,15 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     CameraOut->_CameraGraph->lpVtbl->AddFilter(CameraOut->_CameraGraph, CameraFilter, L"Capture Source");
     IEnumPins* CameraOutputPins=0;
     CameraFilter->lpVtbl->EnumPins(CameraFilter,&CameraOutputPins);
+
+    //
+    printf("Experimental feature\n");
+    IAMCameraControl *pCameraControl=0;
+    CameraFilter->lpVtbl->QueryInterface(CameraFilter,&IID_IAMCameraControl,(void **)&pCameraControl);
+
+    CameraOut->_CameraControl=pCameraControl;
+
+
     //get output pin of CameraInputFilter
     IPin* pOutputPin=(IPin*) malloc(sizeof(IPin));
     CameraOutputPins->lpVtbl->Next(CameraOutputPins,1,&pOutputPin,0);
