@@ -31,6 +31,14 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="linmath.h" />
+		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="map_camera_plane.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="map_camera_plane.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

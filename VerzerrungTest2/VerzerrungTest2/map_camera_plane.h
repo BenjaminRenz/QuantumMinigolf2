@@ -69,7 +69,7 @@ static inline void mat3x3_rotate_delayed_Z(mat3x3 Q, mat3x3 M, float angle)
 	mat3x3_mul(Q, R, M);
 }
 
-void camera_perspec_calibrating(mat3x3 CalibMatrixOut,int CalibPointsIn[8]);
+void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]);
 void camera_perspec_map_point(vec2 MappedVecOut,mat3x3 CalibrationMatrixIn,vec2 CameraBrightSpotIn);
 
 #endif // MAP_CAMERA_PLANE_INCLUDED
