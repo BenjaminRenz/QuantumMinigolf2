@@ -4,7 +4,7 @@
 	<ActiveTarget name="Release" />
 	<File name="main.c" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="1" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="21423" topLine="471" />
+			<Cursor1 position="21423" topLine="495" />
 		</Cursor>
 	</File>
 	<File name="res\shaders\vertex_gui.glsl" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -12,12 +12,12 @@
 			<Cursor1 position="46" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="src\camera_dshow.c" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="4" zoom_2="0">
+	<File name="src\camera_dshow.c" open="0" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="4" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="12557" topLine="189" />
+			<Cursor1 position="12557" topLine="169" />
 		</Cursor>
 	</File>
-	<File name="src\verzerrung.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="src\verzerrung.c" open="0" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="2407" topLine="0" />
 		</Cursor>

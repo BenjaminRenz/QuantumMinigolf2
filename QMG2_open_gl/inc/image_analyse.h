@@ -1,5 +1,5 @@
 #include "camera_dshow.h"
-#define camera_big_grid_points_x 100 //The y gridpoints will be calculated based on the aspect ratio
+#define camera_big_grid_points_x 200 //The y gridpoints will be calculated based on the aspect ratio
 #define camera_testspots 1
 
 HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called will set smp==0 and recieve a inputForBrightspotfinder Sruct to sore camera resolution and pointer for bright spot coordinates
@@ -33,7 +33,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
     }
     else
     {
-        printf("Debug: Frame analyse started \\/ \\/ \\/ \\/ \n");
+        //printf("Debug: Frame analyse started \\/ \\/ \\/ \\/ \n");
         int bitperPixel=smp->lpVtbl->GetActualDataLength(smp)/(xres*yres);
         BYTE* pictureBuffer=NULL;
         smp->lpVtbl->GetPointer(smp,&pictureBuffer);
@@ -100,7 +100,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
         }
         averagebrightspot_x/=camera_testspots;
         averagebrightspot_y/=camera_testspots; //Calculate the mean
-        //printf("%d\t%d\n",averagebrightspot_x,averagebrightspot_y);
+        printf("%d\t%d\n",averagebrightspot_x,averagebrightspot_y);
         *current_xpos=averagebrightspot_x;
         *current_ypos=averagebrightspot_y;
         //Do a scanline search around this point
@@ -126,7 +126,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
         //printf("%d\n",pictureBuffer[0]);
         */
         free(BrightSpots);
-        printf("Debug: Frame analyse ended /\\ /\\ /\\ /\\ \n");
+        //printf("Debug: Frame analyse ended /\\ /\\ /\\ /\\ \n");
         return S_OK;
     }
 }
@@ -157,7 +157,7 @@ IMediaControl* getPositionPointer(int* Posx, int* Posy){
     struct inputForBrightspotfinder* BrightSpotInput=(struct inputForBrightspotfinder*)malloc(sizeof(struct inputForBrightspotfinder));
     printf("Test6\n");
     BrightSpotInput->xres=allRes->resolutionsXYPointer[(allRes->numberOfSupportedResolutions)-1][0]; //
-    BrightSpotInput->yres=allRes->resolutionsXYPointer[(allRes->numberOfSupportedResolutions)-1][1]; //Hardcoded for first camera [0][xy]
+    BrightSpotInput->yres=allRes->resolutionsXYPointer[(allRes->numberOfSupportedResolutions)-1][1]; //
     printf("Test7\n");
     printf("INPUTVAL REMOVE add %d,%d val%d,%d\n",Posx,Posy,*Posx,*Posy);
     BrightSpotInput->cam_current_xpos=Posx;

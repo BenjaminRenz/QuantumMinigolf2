@@ -1,10 +1,10 @@
 # depslib dependency file v1.0
-1549400586 source:r:\studium\projekte\qmg2\qmg2_open_gl\main.c
+1549577666 source:r:\studium\projekte\qmg2\qmg2_open_gl\main.c
 	"libraries/GLEW_2.1.0/include/glew.h"
 	"libraries/GLFW_3.2.1/include/glfw3.h"
 	"libraries/FFTW_3.3.5/include/fftw3.h"
 	"libraries/LINMATH/include/linmath.h"
-	"verzerrung.h"
+	"map_camera_plane.h"
 	"camera_dshow.h"
 	"image_analyse.h"
 	<stdio.h>
@@ -62,10 +62,10 @@
 	<uchar.h>
 	<stddef.h>
 
-1549401190 r:\studium\projekte\qmg2\qmg2_open_gl\inc\image_analyse.h
+1549577495 r:\studium\projekte\qmg2\qmg2_open_gl\inc\image_analyse.h
 	"camera_dshow.h"
 
-1549399968 source:r:\studium\projekte\qmg2\qmg2_open_gl\src\camera_dshow.c
+1549577487 source:r:\studium\projekte\qmg2\qmg2_open_gl\src\camera_dshow.c
 	"camera_dshow.h"
 
 1549389440 source:r:\studium\projekte\qmg2\qmg2_open_gl\src\verzerrung.c
@@ -73,4 +73,16 @@
 	<stdlib.h>
 	<math.h>
 	"verzerrung.h"
+
+1549577764 source:r:\studium\projekte\qmg2\qmg2_open_gl\src\map_camera_plane.c
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	"map_camera_plane.h"
+
+1549561044 r:\studium\projekte\qmg2\qmg2_open_gl\inc\map_camera_plane.h
+	"linmath.h"
+
+1454850632 r:\studium\projekte\qmg2\qmg2_open_gl\inc\linmath.h
+	<math.h>
 

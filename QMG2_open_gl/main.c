@@ -10,7 +10,7 @@
 #include "libraries/FFTW_3.3.5/include/fftw3.h"
 #include "libraries/LINMATH/include/linmath.h"
 
-#include "verzerrung.h"
+#include "map_camera_plane.h"
 #include "camera_dshow.h"
 #include "image_analyse.h"
 
@@ -497,21 +497,24 @@ int main(int argc, char* argv[]) {
     int CamYpos=0;
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
     MediaControl->lpVtbl->Run(MediaControl);
-    int CalibPoints[8]={504,576,1000,391,288,369,694,256};
-    struct CalibData* CalibTest=perspec_calibrating(CalibPoints);
-    //Camera@@
+    float CalibPoints[8]={0.f,0.f, 800.f,0.f, 808.f,804.f, 0.f,800.f};
+    mat3x3 CalibData;
+    vec2 BrighspotMapped;
+    camera_perspec_calibrating(CalibData,CalibPoints);
+    //end Camera@@
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         //Camera
         if((CamXpos!=0)&&(CamYpos!=0)){ //Got Frame update
-            //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
-            float* calculatedXY=calculatePosCurs(CalibTest,(float) CamXpos, (float) CamYpos);
-            //printf("Debug: x,%f y%f\n",calculatedXY[0],calculatedXY[1]);
-            drawTrackPoint(G_OBJECT_UPDATE,0,(calculatedXY[0]-0.5f),(calculatedXY[1]-0.5f));
+            printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
+            vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
+            camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
+            printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
+            drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
             CamYpos=CamXpos=0;
             MediaControl->lpVtbl->Run(MediaControl);
 
         }else{
-            printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
+            //printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
         }
         //Camera
         delta_time = update_delta_time();
