@@ -46,7 +46,8 @@
  #define filepath_shader_fragment_target "./res/shaders/fragment_target.glsl"
 #endif
 
-
+#define C_OBJECT_INIT 0
+#define C_OBJECT_UPDATE 1
 
 #define G_OBJECT_INIT 0
 #define G_OBJECT_DRAW 1
@@ -81,6 +82,7 @@ void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos);
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 void update_potential();
 void refereshGUI();
+void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn);
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -493,24 +495,36 @@ int main(int argc, char* argv[]) {
     //Graphics@@
 
     //Camera@@
-    int CamXpos=0;
-    int CamYpos=0;
+    volatile int CamXpos=-1;
+    volatile int CamYpos=-1;
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
     MediaControl->lpVtbl->Run(MediaControl);
-    float CalibPoints[8]={0.f,0.f, 800.f,0.f, 808.f,804.f, 0.f,800.f};
+    float CalibPoints[8]={946.f,643.f, 700.f,270.f, 222.f,370.f, 414.f,837.f};
     mat3x3 CalibData;
     vec2 BrighspotMapped;
     camera_perspec_calibrating(CalibData,CalibPoints);
     //end Camera@@
+    while((CamXpos==-1)||(CamYpos==-1)){
+            //printf("Wait\n");
+    }
+    vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
+    camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
+    camera_collider(C_OBJECT_INIT ,BrighspotMapped);
+    CamXpos=-1;
+    CamYpos=-1;
+    MediaControl->lpVtbl->Run(MediaControl);
+    //printf("testtestsetset\n");
+
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         //Camera
-        if((CamXpos!=0)&&(CamYpos!=0)){ //Got Frame update
+        if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
             printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
             camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
             printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
             drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
-            CamYpos=CamXpos=0;
+            CamYpos=CamXpos=-1;
+            camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
             MediaControl->lpVtbl->Run(MediaControl);
 
         }else{
@@ -818,6 +832,58 @@ int main(int argc, char* argv[]) {
     fftw_destroy_plan(fft);
     fftw_free(psi);
     return 0;
+}
+typedef vec2 mat2x2[2];
+static inline void mat2x2_mul_vec2(vec2 r, mat2x2 M, vec2 v)
+{
+	int i, j;
+	for(j=0; j<2; ++j) {
+		r[j] = 0.f;
+		for(i=0; i<2; ++i)
+			r[j] += M[i][j] * v[i];
+	}
+}
+
+#define HalbeSchlaegerbreiteY 0.05f/2.f
+
+void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
+    static vec2 posOld;
+    static vec2 tempNewIn;
+    tempNewIn[0]=posNewIn[0];
+    tempNewIn[1]=posNewIn[1];
+    if(C_OBJECT_STATE==C_OBJECT_INIT){
+        posOld[0]=posNewIn[0];
+        posOld[1]=posNewIn[1];
+    }else{
+        vec2 wavePos={wave_offset_x/Resolutionx,wave_offset_y/Resolutiony};
+        //printf("wavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
+        //printf("oldPosraw: %f, %f\n",posOld[0],posOld[1]);
+        //printf("newPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
+        vec2_sub(wavePos,wavePos,posOld);
+        vec2_sub(posNewIn,posNewIn,posOld);
+        //printf("subwavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
+        //printf("subnewPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
+
+        float angle=atan2(posNewIn[1],posNewIn[0]);
+        //printf("angle %f", angle*180.f/M_PI);
+        float c=cosf(-angle);
+        float s=sinf(-angle);
+        mat2x2 Rot = {
+            {   c,   s},
+            {  -s,   c}
+        };
+        mat2x2_mul_vec2(wavePos,Rot,wavePos);
+        mat2x2_mul_vec2(posNewIn,Rot,posNewIn);
+        //printf("NewPos: %f, %f\n",posNewIn[0],posNewIn[1]);
+        //printf("wavPos: %f, %f\n",wavePos[0],wavePos[1]);
+        if(wavePos[1]<HalbeSchlaegerbreiteY&&wavePos[1]>-HalbeSchlaegerbreiteY){
+            if(wavePos[0]>0&&wavePos[0]<posNewIn[0]){
+                printf("Debug: Collision----------------------------------\n");
+            }
+        }
+        posOld[0]=tempNewIn[0];
+        posOld[1]=tempNewIn[1];
+    }
 }
 
 void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){

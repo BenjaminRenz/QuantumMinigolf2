@@ -100,7 +100,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
         }
         averagebrightspot_x/=camera_testspots;
         averagebrightspot_y/=camera_testspots; //Calculate the mean
-        printf("%d\t%d\n",averagebrightspot_x,averagebrightspot_y);
+        //printf("Image thread: %d\t%d\n",averagebrightspot_x,averagebrightspot_y);
         *current_xpos=averagebrightspot_x;
         *current_ypos=averagebrightspot_y;
         //Do a scanline search around this point
@@ -131,7 +131,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
     }
 }
 
-#define cameraNum 0
+#define cameraNum 1
 
 IMediaControl* getPositionPointer(int* Posx, int* Posy){
     printf("first test\n");
