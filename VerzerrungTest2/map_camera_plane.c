@@ -66,7 +66,7 @@ void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]){
     mat3x3_mul(CalibMatrixOut,mapPointCMatrix,translationRotationShearScaleMatrix);
 
     //Final Test
-    /*vec3 testPoint1;
+    vec3 testPoint1;
     vec3 testPoint2;
     vec3 testPoint3;
     vec3 testPoint4;
@@ -78,7 +78,7 @@ void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]){
     printf("Debug: Point B final info %f, %f, %f\n",testPoint2[0]/testPoint2[2],testPoint2[1]/testPoint2[2]);
     printf("Debug: Point C final info %f, %f, %f\n",testPoint3[0]/testPoint3[2],testPoint3[1]/testPoint3[2]);
     printf("Debug: Point D final info %f, %f, %f\n",testPoint4[0]/testPoint4[2],testPoint4[1]/testPoint4[2]);
-    */
+
 
 }
 void camera_perspec_map_point(vec2 MappedVecOut,mat3x3 CalibrationMatrixIn,vec2 CameraBrightSpotIn){

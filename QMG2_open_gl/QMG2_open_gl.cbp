@@ -59,6 +59,10 @@
 			<Add directory="libraries/FFTW_3.3.5/lib_mingw_64" />
 			<Add directory="../../../../Software/msys2/mingw64/x86_64-w64-mingw32/lib" />
 		</Linker>
+		<Unit filename="inc/camera_dshow.h" />
+		<Unit filename="inc/image_analyse.h" />
+		<Unit filename="inc/linmath.h" />
+		<Unit filename="inc/map_camera_plane.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -73,7 +77,7 @@
 		<Unit filename="src/camera_dshow.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="src/verzerrung.c">
+		<Unit filename="src/map_camera_plane.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>
