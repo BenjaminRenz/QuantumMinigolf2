@@ -499,12 +499,13 @@ int main(int argc, char* argv[]) {
     volatile int CamYpos=-1;
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
     MediaControl->lpVtbl->Run(MediaControl);
-    float CalibPoints[8]={946.f,643.f, 700.f,270.f, 222.f,370.f, 414.f,837.f};
+    float CalibPoints[8]={0.f,200.f, 1919.f,200.f, 1919.f,1079.f, 0.f,1079.f};
     mat3x3 CalibData;
     vec2 BrighspotMapped;
     camera_perspec_calibrating(CalibData,CalibPoints);
     //end Camera@@
     while((CamXpos==-1)||(CamYpos==-1)){
+            //MediaControl->lpVtbl->Run(MediaControl);
             //printf("Wait\n");
     }
     vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
@@ -516,12 +517,30 @@ int main(int argc, char* argv[]) {
     //printf("testtestsetset\n");
 
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
+        printf("%d\n",simulation_state);
+
+        if(draw_new_wave == 1) {
+            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
+            Movement_angle = PI * 2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x+0.25f);
+            memset(&(psi[0][0]),0,Resolutionx*Resolutiony*4*sizeof(float));
+            for(int j = 0; j < Resolutiony; j++) {
+                for(int i = 0; i < Resolutionx; i++) {
+                        //TODO radial cutoff for faster initialisation
+                    if((abs(i-((int)wave_offset_x)))<(Resolutionx/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolutiony/10.0f))){
+                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
+                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
+                    }
+                }
+            }
+            draw_new_wave = 0;
+        }
+
         //Camera
         if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
-            printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
+            //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
             camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-            printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
+            //printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
             drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
             CamYpos=CamXpos=-1;
             camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
@@ -739,21 +758,7 @@ int main(int argc, char* argv[]) {
         glBindTexture(GL_TEXTURE_2D, psiTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolutionx, Resolutiony, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
-        if(draw_new_wave == 1) {
-            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
-            Movement_angle = PI * -2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x+0.25f);
-            memset(&(psi[0][0]),0,Resolutionx*Resolutiony*4*sizeof(float));
-            for(int j = 0; j < Resolutiony; j++) {
-                for(int i = 0; i < Resolutionx; i++) {
-                        //TODO radial cutoff for faster initialisation
-                    if((abs(i-((int)wave_offset_x)))<(Resolutionx/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolutiony/10.0f))){
-                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
-                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
-                    }
-                }
-            }
-            draw_new_wave = 0;
-        }
+
 
         if(momentum_prop == 1) { //Because fft is shifted we need to calculate the propagator for each section
             for(int y = 0; y < Resolutiony / 2; y++) {
@@ -865,20 +870,33 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
         //printf("subnewPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
 
         float angle=atan2(posNewIn[1],posNewIn[0]);
-        //printf("angle %f", angle*180.f/M_PI);
+
         float c=cosf(-angle);
         float s=sinf(-angle);
         mat2x2 Rot = {
             {   c,   s},
             {  -s,   c}
         };
-        mat2x2_mul_vec2(wavePos,Rot,wavePos);
-        mat2x2_mul_vec2(posNewIn,Rot,posNewIn);
-        //printf("NewPos: %f, %f\n",posNewIn[0],posNewIn[1]);
-        //printf("wavPos: %f, %f\n",wavePos[0],wavePos[1]);
-        if(wavePos[1]<HalbeSchlaegerbreiteY&&wavePos[1]>-HalbeSchlaegerbreiteY){
-            if(wavePos[0]>0&&wavePos[0]<posNewIn[0]){
-                printf("Debug: Collision----------------------------------\n");
+        vec2 wavePosRot,posNewInRot;
+        //printf("Matrix%f,%f\n       %f,%f\n", Rot[0][0],Rot[0][1],Rot[1][0],Rot[1][1]);
+        mat2x2_mul_vec2(wavePosRot,Rot,wavePos);
+        mat2x2_mul_vec2(posNewInRot,Rot,posNewIn);
+       // printf("NewPos: %f, %f\n",posNewInRot[0],posNewInRot[1]);
+       // printf("wavPos: %f, %f\n",wavePosRot[0],wavePosRot[1]);
+        if(wavePosRot[1]<HalbeSchlaegerbreiteY&&wavePosRot[1]>-HalbeSchlaegerbreiteY){
+            if(wavePosRot[0]>0&&wavePosRot[0]<posNewInRot[0]){
+                //printf("Debug: Collision----------------------------------\n");
+                if(simulation_state=simulation_state_create_and_wait_for_start){
+                    printf("angle %f\n", angle*180.f/M_PI);
+                    angle=angle-M_PI/2.0f;
+                    if(angle<0){
+                        angle=2.0f*M_PI-angle;
+                    }
+
+                    guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x=angle/2.0f/M_PI;
+                    draw_new_wave=1;
+                    simulation_state=simulation_state_simulate;
+                }
             }
         }
         posOld[0]=tempNewIn[0];

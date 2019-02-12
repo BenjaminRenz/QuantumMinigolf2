@@ -44,7 +44,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
         for(int y_pos=0;y_pos<yres;y_pos+=ystepwidth){
             for(int x_pos=0;x_pos<xres;x_pos+=xstepwidth){
                 int arrayposWithoutRGB=(x_pos*yres+y_pos);
-                int birghtness=pictureBuffer[arrayposWithoutRGB*bitperPixel+2];
+                int birghtness=pictureBuffer[arrayposWithoutRGB*bitperPixel+1];
                 if(birghtness>BrightSpots[2*(camera_testspots-1)+1]){ //check if brighter then the least bright spot
                     int i=0; //non local offset for bright spot array
                     for(;i<(camera_testspots-1);i++){ //compare to the other four brighter spots (will from this point on definitively override an existing brightspot)
@@ -61,6 +61,9 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
             }
 
         }
+
+        printf("Image thread: %d\t%d\t%d\n",BrightSpots[0]/xres,BrightSpots[0]%xres,BrightSpots[1]);
+
         /*int* BrightSpots=(int*)malloc(2*sizeof(int)*camera_testspots); //first val is coordinate as x_coord+y_coord*xres, second is brightness val, 0 index is the brightest, 1 index the second brightest and so on
         memset(BrightSpots,0,2*sizeof(int)*camera_testspots);
         for(int y_pos=0,y_counter=0;y_pos<yres;y_pos=((yres*++y_counter)/ysteps)){ //Loop over picture array with larger grid and find 5 brightest spots
@@ -100,7 +103,6 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
         }
         averagebrightspot_x/=camera_testspots;
         averagebrightspot_y/=camera_testspots; //Calculate the mean
-        //printf("Image thread: %d\t%d\n",averagebrightspot_x,averagebrightspot_y);
         *current_xpos=averagebrightspot_x;
         *current_ypos=averagebrightspot_y;
         //Do a scanline search around this point
@@ -132,6 +134,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
 }
 
 #define cameraNum 1
+#define cameraResNum 0
 
 IMediaControl* getPositionPointer(int* Posx, int* Posy){
     printf("first test\n");
@@ -145,7 +148,7 @@ IMediaControl* getPositionPointer(int* Posx, int* Posy){
     printf("FriendlyName: %S\n",AllAvailableCameras[cameraNum].friendlyName);
     printf("Path: %S\n",AllAvailableCameras[cameraNum].devicePath);
     printf("NumSupRes: %d",(allRes->numberOfSupportedResolutions));
-    if(S_OK!=registerCameraCallback(allRes, (allRes->numberOfSupportedResolutions)-1, &callbackForGraphview)){
+    if(S_OK!=registerCameraCallback(allRes, cameraResNum, &callbackForGraphview)){
         printf("ERROR: Camera in use abort!\n");
         return 0;
     }
@@ -156,8 +159,9 @@ IMediaControl* getPositionPointer(int* Posx, int* Posy){
     //Set values to -1 or something like that and check for that in callback to block values
     struct inputForBrightspotfinder* BrightSpotInput=(struct inputForBrightspotfinder*)malloc(sizeof(struct inputForBrightspotfinder));
     printf("Test6\n");
-    BrightSpotInput->xres=allRes->resolutionsXYPointer[(allRes->numberOfSupportedResolutions)-1][0]; //
-    BrightSpotInput->yres=allRes->resolutionsXYPointer[(allRes->numberOfSupportedResolutions)-1][1]; //
+    //TODO check if format is allowed to be used
+    BrightSpotInput->xres=allRes->resolutionsXYPointer[cameraResNum][0]; //
+    BrightSpotInput->yres=allRes->resolutionsXYPointer[cameraResNum][1]; //(allRes->numberOfSupportedResolutions)-1
     printf("Test7\n");
     printf("INPUTVAL REMOVE add %d,%d val%d,%d\n",Posx,Posy,*Posx,*Posy);
     BrightSpotInput->cam_current_xpos=Posx;
@@ -178,12 +182,12 @@ IMediaControl* getPositionPointer(int* Posx, int* Posy){
         printf("Debug: successfully queried camera exposure range\n");
         if(prop_CapsFlags&CameraControl_Flags_Manual!=0){
             printf("Debug: Property can be changed from %ld to %ld, default %ld, with %ld stepwidth\n",prop_Min,prop_Max,prop_Default,prop_SteppingDelta);
-            int hr=allRes->_CameraControl->lpVtbl->Set(allRes->_CameraControl,CameraControl_Exposure,prop_Min,CameraControl_Flags_Manual);
+            /*int hr=allRes->_CameraControl->lpVtbl->Set(allRes->_CameraControl,CameraControl_Exposure,prop_Min,CameraControl_Flags_Manual);
             if(hr==S_OK){
                 printf("Debug: Changed exposure time successfully");
             }else{
                 printf("Error: Could not change exposure time, error %d",hr);
-            }
+            }*/
         }else{
             printf("Debug: Property can be changed by manually\n");
         }
