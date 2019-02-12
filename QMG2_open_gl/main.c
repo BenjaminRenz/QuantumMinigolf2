@@ -283,11 +283,6 @@ uint8_t* pot;
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
-#define simulation_state_simulate 0
-#define simulation_state_measurement_animation 1
-#define simulation_state_create_and_wait_for_start 2
-#define simulation_state_wait_for_restart 5
-int simulation_state = 2; //mode of operation
 int main(int argc, char* argv[]) {
     //Index and initialize Potential Files
     {
@@ -517,25 +512,10 @@ int main(int argc, char* argv[]) {
     //printf("testtestsetset\n");
 
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
-        printf("%d\n",simulation_state);
+        //Initialize Gaus wave packet for simulation in position space
+        simulation_redraw_wave();
 
-        if(draw_new_wave == 1) {
-            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
-            Movement_angle = PI * 2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x+0.25f);
-            memset(&(psi[0][0]),0,Resolutionx*Resolutiony*4*sizeof(float));
-            for(int j = 0; j < Resolutiony; j++) {
-                for(int i = 0; i < Resolutionx; i++) {
-                        //TODO radial cutoff for faster initialisation
-                    if((abs(i-((int)wave_offset_x)))<(Resolutionx/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolutiony/10.0f))){
-                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
-                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
-                    }
-                }
-            }
-            draw_new_wave = 0;
-        }
-
-        //Camera
+        //Check for Camera frame update
         if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
             //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
@@ -552,7 +532,7 @@ int main(int argc, char* argv[]) {
         //Camera
         delta_time = update_delta_time();
 
-        if(timerForBlink(0)>5.0f){
+        /*if(timerForBlink(0)>5.0f){
             //Same as Reset Button
             if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation||simulation_state==simulation_state_create_and_wait_for_start){
                 draw_new_wave = 1;
@@ -575,122 +555,8 @@ int main(int argc, char* argv[]) {
                 BlinkStep=1;
             }
             //TODO RESET
-        }
-        if(simulation_state == simulation_state_simulate) {
-            timerForBlink(1); //reset standby counter so simulation isn't interrupted
-            fftw_execute(fft);
-            //momentum space
-            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                double psi_re_temp = psi_transform[i][0];
-                psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
-                psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
-            }
-            fftw_execute(ifft);
-            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                psi[i][0] = psi[i][0] / (double)(norm);
-                psi[i][1] = psi[i][1] / (double)(norm);
-            }
-            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                double psi_re_temp = psi[i][0];
-                psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
-                psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
-            }
-            //Delete the border of the wavefunction horizontal
-            for(int i = 0; i < Resolutionx; i++) {
-                psi[i][0] = 0;
-                psi[i][1] = 0;
-                psi[i+1*Resolutionx][0] = 0;
-                psi[i+1*Resolutionx][1] = 0;
-                psi[i+2*Resolutionx][0] = 0;
-                psi[i+2*Resolutionx][1] = 0;
-                psi[i+3*Resolutionx][0] = 0;
-                psi[i+3*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 1)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 1)*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 2)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 2)*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 3)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 3)*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 4)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 4)*Resolutionx][1] = 0;
-            }
-            //Delete the border of the wavefunction vertical
-            for(int i = 0; i < Resolutiony; i++) {
-                psi[1 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[1 + i * Resolutionx][1] = 0;
-                psi[2 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[2 + i * Resolutionx][1] = 0;
-                psi[3 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[3 + i * Resolutionx][1] = 0;
-                psi[4 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[4 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 1 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 1 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 2 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 2 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 3 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 3 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 4 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 4 + i * Resolutionx][1] = 0;
-            }
-        }
+        }*/
 
-        if(simulation_state == simulation_state_measurement_animation) {
-            timerForBlink(1);
-            if(!AnimationStep) {
-                srand((long)(10000.0f * glfwGetTime()));
-                double random = (rand() % 1001) / 1000.0f;
-                double sum = 0;
-                double norm_sum = 0;
-                for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                    norm_sum = norm_sum + (psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
-                }
-                for(pos = 0; pos < Resolutionx * Resolutiony; pos++) {
-                    sum = sum + ((psi[pos][0] * psi[pos][0] + psi[pos][1] * psi[pos][1]) / norm_sum);
-                    if(sum > random) {
-                        printf("Sum:  %f\n",sum);
-                        printf("Rand: %f\n",random);
-                        printf("Norm %f\n",norm_sum);
-                        break;
-                    }
-                }
-                if((pos%Resolutionx)>((VertMinX+0.5f)*Resolutionx)&&(pos%Resolutionx)<((VertMaxX+0.5f)*Resolutionx)&&(pos/Resolutiony)>((VertMinY+0.5f)*Resolutiony)&&(pos/Resolutiony)<((VertMaxY+0.5f)*Resolutiony)){
-                    ColorIntensity=1.99f;
-                    printf("HIT\n\n\n");
-                }
-                else{
-                    ColorIntensity=0.99f;
-                    printf("NO HIT\n\n\n");
-                }
-                //Animation for mess
-                for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
-                    animation_start[x][0]=psi_transform[x][0];
-                    animation_start[x][1]=psi_transform[x][1];
-                    if((((pos % Resolutionx) - x%Resolutionx) * ((pos % Resolutionx) - x%Resolutionx) + ((pos / Resolutiony) - x/Resolutiony) * ((pos / Resolutiony) - x/Resolutiony))<10.0f){
-                        psi[x][0]=1.0f;
-                    }else{
-                        psi[x][0]=0.0f;
-                    }
-                    psi[x][1]=0.0f;
-                }
-                fftw_execute(fft);
-                for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
-                    animation_end[x][0]=psi_transform[x][0];
-                    animation_end[x][1]=psi_transform[x][1];
-                }
-                AnimationStep=0;
-            }
-            for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
-                psi_transform[x][0]=animation_start[x][0]*(1.0f-AnimationStep/30.0f)+animation_end[x][0]*(AnimationStep/30.0f);
-                psi_transform[x][1]=animation_start[x][1]*(1.0f-AnimationStep/30.0f)+animation_end[x][1]*(AnimationStep/30.0f);
-            }
-            fftw_execute(ifft);
-            AnimationStep++;
-            if(AnimationStep == 30) {
-                AnimationStep = 0;
-                simulation_state = simulation_state_wait_for_restart;
-            }
-        }
 
         if(selectedGuiElement!= (-1)){
             switch(selectedGuiElement) {
@@ -716,6 +582,8 @@ int main(int argc, char* argv[]) {
             }
         }
 
+
+        //this probably takes ages
         int biggest = 0;
         biggest = 0;
 
@@ -753,6 +621,7 @@ int main(int argc, char* argv[]) {
             speicher[i * 4 + 1] = (unsigned char)(0.5f * 255 * (psi[i][1] * norming + 1.0f));
             speicher[i * 4 + 3] = pot[i * 4 + 1];
         }
+
         //@@Graphics
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, psiTexture);
