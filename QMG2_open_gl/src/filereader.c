@@ -1,4 +1,5 @@
 #include "filereader.h"
+#include <stdlib.h>
 
 unsigned int read_uint_from_endian_file(FILE* file) {
     unsigned char data[4];

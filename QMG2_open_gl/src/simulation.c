@@ -1,13 +1,19 @@
 #include "simulation.h"
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
-int simulation_resolution_total;
+#define Meas_hole_rad 0.15f
+#define Meas_hole_x 0.5f
+#define Meas_hole_y 0.8f
+
 enum {simulation_state_not_allocated,simulation_state_simulate,simulation_state_measurement_animation,simulation_state_created_and_wait_for_start,simulation_state_wait_for_restart};
+
 int simulation_state=simulation_state_not_allocated;
+int simulation_paused;
 //typedef double fftw_complex[2];
 
-fftw_complex *psi;
+//fftw_complex *psi;
 fftw_complex *psi_transform;
 fftw_complex *prop;
 fftw_complex *animation_start;
@@ -17,30 +23,43 @@ fftw_plan ifft;
 
 double* potential;
 
+void simulation_pause(){
+    simulation_paused=1;
+}
+void simulation_unpause(){
+    simulation_paused=0;
+}
+
 
 void simulation_alloc(){
-    simulation_resolution_total=simulation_resolution_x*simulation_resolution_y;
-    psi = fftw_alloc_complex(simulation_resolution_total);
-    psi_transform = (fftw_complex*) fftw_alloc_complex(simulation_resolution_total);
-    prop = (fftw_complex*) fftw_alloc_complex(simulation_resolution_total);
+    sim_res_x=512;
+    sim_res_y=512;
+    sim_res_total=sim_res_x*sim_res_y;
 
-    animation_start = (fftw_complex*) fftw_alloc_complex(simulation_resolution_total);
-    animation_end = (fftw_complex*) fftw_alloc_complex(simulation_resolution_total);
+    psi = fftw_alloc_complex(sim_res_total);
+    psi_transform = (fftw_complex*) fftw_alloc_complex(sim_res_total);
+    prop = (fftw_complex*) fftw_alloc_complex(sim_res_total);
 
-    fft = fftw_plan_dft_2d(simulation_resolution_x, simulation_resolution_y, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
-    ifft = fftw_plan_dft_2d(simulation_resolution_x, simulation_resolution_y, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
+    animation_start = (fftw_complex*) fftw_alloc_complex(sim_res_total);
+    animation_end = (fftw_complex*) fftw_alloc_complex(sim_res_total);
 
-    potential = (double*) malloc(Resolutionx * Resolutiony * sizeof(double));
+    fft = fftw_plan_dft_2d(sim_res_x, sim_res_y, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
+    ifft = fftw_plan_dft_2d(sim_res_x, sim_res_y, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
+
+    potential = (double*) malloc(sim_res_total* sizeof(double));
     simulation_state=simulation_state_wait_for_restart;
 }
 
 void simulation_dealloc(){
-    free(prop);
-    free(psi_transform);
-    free(psi);
+    fftw_destroy_plan(fft);
+    fftw_destroy_plan(ifft);
 
-    free(animation_start);
-    free(animation_end);
+    fftw_free(prop);
+    fftw_free(psi_transform);
+    fftw_free(psi);
+
+    fftw_free(animation_start);
+    fftw_free(animation_end);
 
     free(potential);
     simulation_state=simulation_state_not_allocated;
@@ -58,56 +77,64 @@ int simulation_redraw_wave(int offset_x,int offset_y,float angle,float momentum,
         return 2;
     }
     //for gauss function will be cut off to increase performance at redraw
-    int cutSquareHalf=(int)(gauss_width*gauss_width*5.0f);
-    memset(&(psi[0][0]),0,simulation_resolution_total*4*sizeof(float));
-    for(int j = 0; j < simulation_resolution_y; j++) {
-        for(int i = 0; i < simulation_resolution_x; i++) {
+    int cutSquareHalf=(int)(gauss_width*gauss_width*10.f);
+    memset(&(psi[0][0]),0,sim_res_total*4*sizeof(float));
+    for(int j = 0; j < sim_res_y; j++) {
+        for(int i = 0; i < sim_res_x; i++) {
             int gauss_x_squared=(i-offset_x)*(i-offset_x);
-            int gauss_y_squared=(i-offset_y)*(i-offset_y);
+            int gauss_y_squared=(j-offset_y)*(j-offset_y);
             int gauss_r_squared=gauss_x_squared+gauss_y_squared;
             if(gauss_r_squared<cutSquareHalf){
-                psi[i+j*simulation_resolution_x][0]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * cos((i - simulation_resolution_x / 2.0f) * cos(angle) + ((j - simulation_resolution_y / 2.0f) * sin(angle)) * momentum);
-                psi[i+j*simulation_resolution_x][1]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * sin((i - simulation_resolution_x / 2.0f) * cos(angle) + ((j - simulation_resolution_y / 2.0f) * sin(angle)) * momentum);
+                psi[i+j*sim_res_x][0]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * cos((i - sim_res_x / 2.0f) * cos(angle) + ((j - sim_res_y / 2.0f) * sin(angle)) * momentum);
+                psi[i+j*sim_res_x][1]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * sin((i - sim_res_x / 2.0f) * cos(angle) + ((j - sim_res_y / 2.0f) * sin(angle)) * momentum);
             }
         }
     }
     simulation_state=simulation_state_created_and_wait_for_start;
+    simulation_paused=1;
+    return 0;
 }
 
 int simulation_run(float dt){
     static float dt_old=0.f;
     if(dt_old!=dt){ //Generate new momentum prop
-        for(int y = 0; y < simulation_resolution_y / 2; y++) {
-            for(int x = 0; x < simulation_resolution_x / 2; x++) { //e^(-*p^2/2m) from Hamilton
-                prop[y * simulation_resolution_x + x][0] = cos(dt * (-x * x - y * y));
-                prop[y * simulation_resolution_x + x][1] = sin(dt * (-x * x - y * y));
+        for(int y = 0; y < sim_res_y / 2; y++) {
+            for(int x = 0; x < sim_res_x / 2; x++) { //e^(-*p^2/2m) from Hamilton
+                prop[y * sim_res_x + x][0] = cos(dt * (-x * x - y * y));
+                prop[y * sim_res_x + x][1] = sin(dt * (-x * x - y * y));
             }
-            for(int x = simulation_resolution_x / 2; x < simulation_resolution_x; x++) {
-                prop[y * simulation_resolution_x + x][0] = cos(dt * (-(x - simulation_resolution_x) * (x - simulation_resolution_x) - y * y));
-                prop[y * simulation_resolution_x + x][1] = sin(dt * (-(x - simulation_resolution_x) * (x - simulation_resolution_x) - y * y));
+            for(int x = sim_res_x / 2; x < sim_res_x; x++) {
+                prop[y * sim_res_x + x][0] = cos(dt * (-(x - sim_res_x) * (x - sim_res_x) - y * y));
+                prop[y * sim_res_x + x][1] = sin(dt * (-(x - sim_res_x) * (x - sim_res_x) - y * y));
             }
         }
-        for(int y = simulation_resolution_y / 2; y < simulation_resolution_y; y++) {
-            for(int x = 0; x < simulation_resolution_x / 2; x++) {
-                prop[y * simulation_resolution_x + x][0] = cos(dt * (-x * x - (y - simulation_resolution_y) * (y - simulation_resolution_y)));
-                prop[y * simulation_resolution_x + x][1] = sin(dt * (-x * x - (y - simulation_resolution_y) * (y - simulation_resolution_y)));
+        for(int y = sim_res_y / 2; y < sim_res_y; y++) {
+            for(int x = 0; x < sim_res_x / 2; x++) {
+                prop[y * sim_res_x + x][0] = cos(dt * (-x * x - (y - sim_res_y) * (y - sim_res_y)));
+                prop[y * sim_res_x + x][1] = sin(dt * (-x * x - (y - sim_res_y) * (y - sim_res_y)));
             }
-            for(int x = simulation_resolution_x / 2; x < simulation_resolution_x; x++) {
-                prop[y * simulation_resolution_x + x][0] = cos(dt * (-(x - simulation_resolution_x) * (x - simulation_resolution_x) - (y - simulation_resolution_y) * (y - simulation_resolution_y)));
-                prop[y * simulation_resolution_x + x][1] = sin(dt * (-(x - simulation_resolution_x) * (x - simulation_resolution_x) - (y - simulation_resolution_y) * (y - simulation_resolution_y)));
+            for(int x = sim_res_x / 2; x < sim_res_x; x++) {
+                prop[y * sim_res_x + x][0] = cos(dt * (-(x - sim_res_x) * (x - sim_res_x) - (y - sim_res_y) * (y - sim_res_y)));
+                prop[y * sim_res_x + x][1] = sin(dt * (-(x - sim_res_x) * (x - sim_res_x) - (y - sim_res_y) * (y - sim_res_y)));
             }
         }
         dt_old=dt;
     }
-    if(simulation_state!=simulation_state_created_and_wait_for_start){
+    if((simulation_state!=simulation_state_created_and_wait_for_start)&&(simulation_state!=simulation_state_simulate)){
         printf("Error: Wave packet not initialized, won't start simulation!\n");
         return 1;
     }
+    //printf("Paused:? %d\n",simulation_paused);
+    if(simulation_paused){
+
+        return 2;
+    }
+
     //Change to momentum space (same as fourier transform)
     fftw_execute(fft);
     //Complex multiplication of the wave function in the momentum space with the squared momentum propagator e^(1/(i*hbar)*)?? TODO
     //Which applies the -p^2/2*m of the Hamilton Operator H=(-p^2/2*m+V(x))
-    for(int i = 0; i < simulation_resolution_total; i++) {
+    for(int i = 0; i < sim_res_total; i++) {
         double psi_re_temp = psi_transform[i][0];
         psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
         psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
@@ -115,75 +142,84 @@ int simulation_run(float dt){
     //Change back to position space
     fftw_execute(ifft);
     //apply the potential part of the Hamilton operator
-    for(int i = 0; i < simulation_resolution_total; i++) {
+    for(int i = 0; i < sim_res_total; i++) {
         double psi_re_temp = psi[i][0];
         psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
         psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
     }
+
+    int biggest = 0;
+    biggest = 0;
+
+    for(int i = 0; i < sim_res_total; i++) {
+        if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1]){
+            biggest = i;
+        }
+    }
+    float norm=sqrt(psi[biggest][0]*psi[biggest][0]+psi[biggest][1]*psi[biggest][1]);
+
+    for(int i = 0; i < sim_res_total; i++) {
+        psi[i][0]/=norm;
+        psi[i][1]/=norm;
+    }
+    printf("Debug %f %f %f\n",norm,psi[biggest][0],psi[biggest][1]);
+
+
+
+
+    simulation_state=simulation_state_simulate;
     return 0;
 }
 
-int simulation_animate_measurement(){
+int simulation_measurement(double glfwTime){
+    if(simulation_state!=simulation_state_simulate){
+        return 42;
+    }
     //Internal variable which holds information of what part of the animation will get executed in this frame
-    static int AnimationStep=0;
-    if(!AnimationStep) { //first frame of animation, will do the measurement
-        srand((long)(10000.0f * glfwGetTime()));
-        double random = (rand() % 1001) / 1000.0f;
-        double sum = 0;
-        double norm_sum = 0;
-        for(int i = 0; i < simulation_resolution_x * simulation_resolution_y; i++) {
-            norm_sum = norm_sum + (psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
-        }
-        int measurement_pos=0;
-        for(; measurement_pos < simulation_resolution_total; measurement_pos++) {
-            sum = sum + ((psi[measurement_pos][0] * psi[measurement_pos][0] + psi[measurement_pos][1] * psi[measurement_pos][1]) / norm_sum);
-            if(sum > random) {
-                printf("Sum:  %f\n",sum);
-                printf("Rand: %f\n",random);
-                printf("Norm %f\n",norm_sum);
-                break;
-            }
-        }
-        if((measurement_pos%simulation_resolution_x)>((VertMinX+0.5f)*simulation_resolution_x)&&(measurement_pos%simulation_resolution_x)<((VertMaxX+0.5f)*simulation_resolution_x)&&(measurement_pos/simulation_resolution_y)>((VertMinY+0.5f)*simulation_resolution_y)&&(measurement_pos/simulation_resolution_y)<((VertMaxY+0.5f)*Resolutiony)){
-            ColorIntensity=1.99f;
-            printf("HIT\n\n\n");
-        }
-        else{
-            ColorIntensity=0.99f;
-            printf("NO HIT\n\n\n");
-        }
-        //Animation for mess
-        for(int x = 0; x<simulation_resolution_total;x++){
-            animation_start[x][0]=psi_transform[x][0];
-            animation_start[x][1]=psi_transform[x][1];
-            if((((measurement_pos % simulation_resolution_x) - x%simulation_resolution_x) * ((measurement_pos % simulation_resolution_x) - x%simulation_resolution_x) + ((measurement_pos / simulation_resolution_y) - x/simulation_resolution_y) * ((measurement_pos / simulation_resolution_y) - x/simulation_resolution_y))<10.0f){
-                psi[x][0]=1.0f;
-            }else{
-                psi[x][0]=0.0f;
-            }
-            psi[x][1]=0.0f;
-        }
-        fftw_execute(fft);
-        for(int x = 0; x<simulation_resolution_total;x++){
-            animation_end[x][0]=psi_transform[x][0];
-            animation_end[x][1]=psi_transform[x][1];
-        }
-        AnimationStep=0;
+    srand((long)(10000.0f * glfwTime));
+    double random = (rand() % 1001) / 1000.0f;
+    double sum = 0;
+    double norm_sum = 0;
+    for(int i = 0; i < sim_res_total; i++) {
+        norm_sum = norm_sum + (psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
     }
-    for(int x = 0; x<simulation_resolution_total;x++){
-        psi_transform[x][0]=animation_start[x][0]*(1.0f-AnimationStep/30.0f)+animation_end[x][0]*(AnimationStep/30.0f);
-        psi_transform[x][1]=animation_start[x][1]*(1.0f-AnimationStep/30.0f)+animation_end[x][1]*(AnimationStep/30.0f);
+    int meas_pos=0;
+    for(; meas_pos < sim_res_total; meas_pos++) {
+        sum = sum + ((psi[meas_pos][0] * psi[meas_pos][0] + psi[meas_pos][1] * psi[meas_pos][1]) / norm_sum);
+        if(sum > random) {
+            printf("Sum:  %f\n",sum);
+            printf("Rand: %f\n",random);
+            printf("Norm %f\n",norm_sum);
+            break;
+        }
     }
-    fftw_execute(ifft);
-    AnimationStep++;
-    if(AnimationStep==30){
-        AnimationStep=0;
-        simulation_state=simulation_state_wait_for_restart;
+    memset(&(psi[0][0]),0,sim_res_total*4*sizeof(float));
+    int meas_x=meas_pos%sim_res_x;
+    int meas_y=meas_pos/sim_res_y;
+    int meas_x_hole_dist_sqr=(meas_x-Meas_hole_x)*(meas_x-Meas_hole_x);
+    int meas_y_hole_dist_sqr=(meas_y-Meas_hole_y)*(meas_y-Meas_hole_y);
+    simulation_pause();
+    simulation_state=simulation_state_wait_for_restart;
+    if((meas_x_hole_dist_sqr+meas_y_hole_dist_sqr)<Meas_hole_rad*Meas_hole_rad){
+        printf("Inside hole.\n");
+        psi[meas_pos][0]=1.0f;
+        psi[meas_pos+1][0]=1.0f;
+        psi[meas_pos+sim_res_x][0]=1.0f;
+        psi[meas_pos+sim_res_x+1][0]=1.0f;
+        return meas_hit;
+    }else{
+        printf("Outside hole.\n");
+        psi[meas_pos][1]=0.0f;
+        psi[meas_pos+1][1]=1.0f;
+        psi[meas_pos+sim_res_x][1]=1.0f;
+        psi[meas_pos+sim_res_x+1][1]=1.0f;
+        return meas_no_hit;
     }
+
 }
 
 void simulation_load_potential(uint8_t* pot){
-    for(int i = 0; i < simulation_resolution_total; i++) {
+    for(int i = 0; i < sim_res_total; i++) {
         potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
     }
 }
