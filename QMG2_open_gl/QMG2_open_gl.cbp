@@ -60,9 +60,11 @@
 			<Add directory="../../../../Software/msys2/mingw64/x86_64-w64-mingw32/lib" />
 		</Linker>
 		<Unit filename="inc/camera_dshow.h" />
+		<Unit filename="inc/filereader.h" />
 		<Unit filename="inc/image_analyse.h" />
 		<Unit filename="inc/linmath.h" />
 		<Unit filename="inc/map_camera_plane.h" />
+		<Unit filename="inc/simulation.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -75,6 +77,9 @@
 		<Unit filename="res/shaders/vertex_target.glsl" />
 		<Unit filename="res/textures/GUI2.bmp" />
 		<Unit filename="src/camera_dshow.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/filereader.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/map_camera_plane.c">

@@ -3,15 +3,18 @@
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
-#include "libraries/FFTW_3.3.5/include/fftw3.h"
 #include "libraries/LINMATH/include/linmath.h"
 
 //Functions to correct for perspective
 #include "map_camera_plane.h"
-//functions to get raw data from camera
+//Functions to get raw data from camera
 #include "camera_dshow.h"
 //Functions for analyzing the data in the raw frams
 #include "image_analyse.h"
+//Functions for simulating the wave function
+#include "simulation.h"
+//Functions for file handling
+#include "filereader.h"
 
 
 #include <stdio.h>
@@ -252,15 +255,11 @@ double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolutionx*Resolutiony
 float Movement_angle = M_PI / 2.0f; //angle for particle
 
-int AnimationStep = 0;
 int pos = 0;
 int draw_new_wave = 1; //render next frame?
-float wave_proportion = 1.0f;
-int momentum_prop = 1;
 #define MovementBorderWave 0.4f
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
-float momentum_multi = 2.0f;
 float dt = SLIDER_SPEED_START * SPEED_MULTI;
 #define Offset_change 10
 #define offset_x_start Resolutionx/2
@@ -275,13 +274,17 @@ char PotentialFilesList[20][256]; //Currently limited to 20 .bmp files
 uint8_t CountOfPotentialFiles=0;
 
 //Potential Pointer
-double* potential;
+
 uint8_t* pot;
 
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
 int main(int argc, char* argv[]) {
+    //@Simulation
+    simulation_alloc();
+    //@Simulation
+
     //Index and initialize Potential Files
     {
         DIR* directory;
@@ -302,6 +305,7 @@ int main(int argc, char* argv[]) {
         }
         printf("\nInfo: Will use '%s' as Potential\n",&(PotentialFilesList[0][0]));
     }
+
     //GUI INIT
     guiElementsStorage = malloc(numberOfGuiElements * sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
@@ -440,24 +444,6 @@ int main(int argc, char* argv[]) {
     vec3 eye_vec = {1.0f, 1.0f, 1.0f};
     vec3 cent_vec = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 0.0f, 1.0f};
-
-    fftw_complex *psi;
-    fftw_complex *psi_transform;
-    fftw_complex *prop;
-    fftw_complex *animation_start;
-    fftw_complex *animation_end;
-    psi = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-    prop = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-
-    animation_start = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-    animation_end = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-
-    fftw_plan fft = fftw_plan_dft_2d(Resolutionx, Resolutiony, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
-    fftw_plan ifft = fftw_plan_dft_2d(Resolutionx, Resolutiony, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
-
-    //
-
     //GUI
     //Init gui
     drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
@@ -465,8 +451,8 @@ int main(int argc, char* argv[]) {
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
     unsigned char* speicher = calloc(Resolutionx * Resolutiony * 4, 1);
-    potential = (double*) malloc(Resolutionx * Resolutiony * sizeof(double));
-    update_potential();
+
+    update_potential(speicher);
     //Create wave
     delta_time = update_delta_time();
     //@@Graphics
@@ -625,32 +611,6 @@ int main(int argc, char* argv[]) {
         glBindTexture(GL_TEXTURE_2D, psiTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolutionx, Resolutiony, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
-
-
-        if(momentum_prop == 1) { //Because fft is shifted we need to calculate the propagator for each section
-            for(int y = 0; y < Resolutiony / 2; y++) {
-                for(int x = 0; x < Resolutionx / 2; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-x * x - y * y));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-x * x - y * y));
-                }
-                for(int x = Resolutionx / 2; x < Resolutionx; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-(x - Resolutionx) * (x - Resolutionx) - y * y));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-(x - Resolutionx) * (x - Resolutionx) - y * y));
-                }
-            }
-            for(int y = Resolutiony / 2; y < Resolutiony; y++) {
-                for(int x = 0; x < Resolutionx / 2; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-x * x - (y - Resolutiony) * (y - Resolutiony)));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-x * x - (y - Resolutiony) * (y - Resolutiony)));
-                }
-                for(int x = Resolutionx / 2; x < Resolutionx; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-(x - Resolutionx) * (x - Resolutionx) - (y - Resolutiony) * (y - Resolutiony)));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-(x - Resolutionx) * (x - Resolutionx) - (y - Resolutiony) * (y - Resolutiony)));
-                }
-            }
-            momentum_prop = 0;
-        }
-
         //camera projection an transformation matrix calculation
         JoystickControll();
         /*eye_vec[0] = 1.5f * sin(rotation_left_right) * cos(atan(rotation_up_down));
@@ -1872,12 +1832,6 @@ void joystick_reset(int selectedGuiElement){
     printf("Debug: Reset Pos of Joystick %d\n", selectedGuiElement);
 }
 
-void draw_wave(){
-    if(simulation_state == simulation_state_create_and_wait_for_start) {
-        draw_new_wave = 1;
-    }
-}
-
 void change_speed(){
     dt = guiElementsStorage[selectedGuiElement].position_x * SPEED_MULTI;
     if(simulation_state == simulation_state_simulate) {
@@ -1975,171 +1929,9 @@ void drop_file_callback(GLFWwindow* window, int count, const char** paths) {
     }
 }
 
-//Read and write files
 
-unsigned int read_uint_from_endian_file(FILE* file) {
-    unsigned char data[4];
-    unsigned int data_return_int;
-    if(fread(data, 1, 4, file) < 4) {     //total number of read elements is less than 4
-        return 0;
-    }
-    //little endian
-    data_return_int = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
-    //big endian (comment out and comment little endian if needed)
-    //data_return_int=(data[0]<<24)|(data[1]<<16)|(data[2]<<8)|data[3];
-    return data_return_int;
-}
-
-unsigned short read_short_from_endian_file(FILE* file) {
-    //http://cpansearch.perl.org/src/DHUNT/PDL-Planet-0.05/libimage/bmp.c
-    unsigned char data[2];
-    unsigned short data_return_short;
-    if(fread(data, 1, 2, file) < 2) {     //total number of read elements is less than 4
-        return 0;
-    }
-    //little endian
-    data_return_short = (data[1] << 8) | data[0];
-    //big endian (comment out and comment little endian if needed)
-    //data_return_short=(data[0]<<8)|data[1];
-    return data_return_short;
-}
-
-unsigned char* read_bmp(char* filepath) {
-    //source https://github.com/ndd314/sjsu_cmpe295_cuda_fft_opengl/blob/master/opengl/plane/readBMPV2.c#L50
-    //https://stackoverflow.com/questions/7990273/converting-256-color-bitmap-to-rgba-bitmap
-    FILE *filepointer = fopen(filepath, "rb");
-
-    if(filepointer == NULL) {
-        printf("Error: File :%s could not be found\n", filepath);
-        fclose(filepointer);
-        return 0;
-    }
-
-    fseek(filepointer, 0, SEEK_SET);   //Jump to beginning of file
-    if(read_short_from_endian_file(filepointer) != 0x4D42) {     // (equals BM in ASCII)
-        fclose(filepointer);
-        printf("Error: File :%s is not an BMP\n", filepath);
-        return 0;
-    }
-
-    fseek(filepointer, 10, SEEK_SET);
-    unsigned int BitmapOffset = read_uint_from_endian_file(filepointer);
-    printf("Info: BMP data offset:%d\n", BitmapOffset);
-
-    if(read_uint_from_endian_file(filepointer) != 124) {
-        printf("Error: BitmapHeader is not BITMAPV5HEADER / 124 \n");
-        fclose(filepointer);
-        return 0;
-    }
-    unsigned int BitmapWidth = read_uint_from_endian_file(filepointer);
-    printf("Info: BitmapWidth is %d.\n", BitmapWidth);
-
-    unsigned int BitmapHeight = read_uint_from_endian_file(filepointer);
-    printf("Info: BitmapHeight is %d.\n", BitmapHeight);
-
-    if(read_short_from_endian_file(filepointer) != 1) {
-        printf("Error: Unsupported plane count\n");
-        return 0;
-    }
-
-    unsigned int BitmapColorDepth = read_short_from_endian_file(filepointer);
-    printf("Info: BMP color depth:%d", BitmapColorDepth);
-    unsigned int BitmapSizeCalculated = (BitmapColorDepth / 8) * (BitmapWidth + (BitmapWidth % 4)) * BitmapWidth;
-
-    unsigned int BitmapCompression = read_uint_from_endian_file(filepointer);
-    switch(BitmapCompression) {
-    case 0:
-        printf("Error: Compression type: none/BI_RGB\n");
-        fclose(filepointer);
-        return 0; //TODO add support
-        break;
-    case 3:
-        printf("Info: Compression type: Bitfields/BI_BITFIELDS\n");
-        break;
-    default:
-        printf("Error: Unsupported compression %d\n", BitmapCompression);
-        fclose(filepointer);
-        return 0;
-        break;
-    }
-    unsigned int BitmapImageSize = read_uint_from_endian_file(filepointer);
-    if(BitmapImageSize != BitmapSizeCalculated) {
-        printf("Error: Reading image size: Calculated Image Size: %d.\nRead Image size: %d\n", BitmapSizeCalculated, BitmapImageSize);
-        fclose(filepointer);
-        return 0;
-    }
-    printf("Info: Image Size:%d\n", BitmapSizeCalculated);
-    /*unsigned int BitmapXPpM=*/read_uint_from_endian_file(filepointer);
-    /*unsigned int BitmapYPpM=*/read_uint_from_endian_file(filepointer);
-    unsigned int BitmapColorsInPalette = read_uint_from_endian_file(filepointer);
-    printf("Info: Colors in palette: %d.\n", BitmapColorsInPalette);
-    fseek(filepointer, 4, SEEK_CUR);   //skip over important color count
-    if(BitmapCompression == 3) {
-        unsigned char RGBA_mask[4];
-        for(unsigned int color_channel = 0; color_channel < 4; color_channel++) {
-            unsigned int color_channel_mask = read_uint_from_endian_file(filepointer);
-            switch(color_channel_mask) {   //read shift value for color_channel
-            case 0xFF000000:
-                RGBA_mask[color_channel] = 3;
-                break;
-            case 0x00FF0000:
-                RGBA_mask[color_channel] = 2;
-                break;
-            case 0x0000FF00:
-                RGBA_mask[color_channel] = 1;
-                break;
-            case 0x000000FF:
-                RGBA_mask[color_channel] = 0;
-                break;
-            default:
-                printf("Error: Invalid BITMASK. Value: %x!\n", color_channel_mask);
-                fclose(filepointer);
-                return 0;
-                break;
-            }
-        }
-        //TODO implement swapping routine if brga!=[3,2,1,0]
-        printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n", RGBA_mask[0], RGBA_mask[1], RGBA_mask[2], RGBA_mask[3]);
-        uint8_t* imageData = malloc(BitmapSizeCalculated);
-        printf("Info: BMOFFST: %d\n", BitmapOffset);
-        fseek(filepointer, BitmapOffset, SEEK_SET);   //jump to pixel data
-        printf("Info: Calsize: %d\n", BitmapSizeCalculated);
-        if(fread(imageData, BitmapSizeCalculated, 1, filepointer) == 0) {
-            printf("Error: Reading failed!");
-        }
-        fclose(filepointer);
-        return imageData;
-    }
-    printf("Error: Currently not implemented!");
-    fclose(filepointer);
-    return 0;
-}
-
-void write_bmp(char* filepath, unsigned int width, unsigned int height) {
-    FILE* filepointer = fopen(filepath, "wb");
-    //bytes_per_line=(3*(width+1)/4)*4;
-    const char* String_to_write = "BMP";
-    fwrite(&String_to_write, sizeof(char), 3, filepointer);
-    return;
-}
-
-//window size
-
-void windows_size_callback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-    //Refresh lower GUI Border
-    guiElementsStorage[GUI_BUTTON_CONTROL].top_left_y = (height / (float)width) - guiElementsStorage[GUI_BUTTON_CONTROL].percentOfWidth * 0.25f;
-    guiElementsStorage[GUI_BUTTON_POTENTIAL].top_left_y = ((height / (float)width) - guiElementsStorage[GUI_BUTTON_POTENTIAL].percentOfWidth * 0.25f) -0.06f; //-0.1f because button should be on top of other button
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth;
-    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].percentOfWidth;
-    drawGui(G_OBJECT_UPDATE, width / (float)height);
-}
-
-//Potential
-
-void update_potential(){
-    static uint8_t SelectedPotential=0;
+void update_potential(unsigned char* graphic_local_texture){
+    static unsigned int SelectedPotential=0;
     char PotentialSourceFile[256];
     PotentialSourceFile[0]=0;
     strcat(PotentialSourceFile,filepath_potentials);
@@ -2160,9 +1952,7 @@ void update_potential(){
         pot = read_bmp(PotentialSourceFile);
     }*/
     pot=read_bmp(PotentialSourceFile);
-    for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-        potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
-    }
+    simulation_load_potential(pot);
     if((++SelectedPotential)==CountOfPotentialFiles){
         SelectedPotential=0;
     }
@@ -2174,8 +1964,20 @@ void update_potential(){
     ColorIntensity=2.9f;
 }
 
-//GUI
 
+//window size
+void windows_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+    //Refresh lower GUI Border
+    guiElementsStorage[GUI_BUTTON_CONTROL].top_left_y = (height / (float)width) - guiElementsStorage[GUI_BUTTON_CONTROL].percentOfWidth * 0.25f;
+    guiElementsStorage[GUI_BUTTON_POTENTIAL].top_left_y = ((height / (float)width) - guiElementsStorage[GUI_BUTTON_POTENTIAL].percentOfWidth * 0.25f) -0.06f; //-0.1f because button should be on top of other button
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth;
+    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].percentOfWidth;
+    drawGui(G_OBJECT_UPDATE, width / (float)height);
+}
+
+//GUI
 void refereshGUI(){
     int width=0;
     int height=0;
