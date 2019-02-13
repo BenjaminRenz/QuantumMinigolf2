@@ -1,5 +1,5 @@
 #include "camera_dshow.h"
-#define camera_big_grid_points_x 200 //The y gridpoints will be calculated based on the aspect ratio
+#define camera_big_grid_points_x 800 //The y gridpoints will be calculated based on the aspect ratio
 #define camera_testspots 1
 
 HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called will set smp==0 and recieve a inputForBrightspotfinder Sruct to sore camera resolution and pointer for bright spot coordinates
@@ -62,7 +62,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
 
         }
 
-        printf("Image thread: %d\t%d\t%d\n",BrightSpots[0]/xres,BrightSpots[0]%xres,BrightSpots[1]);
+        printf("Image thread: %d\t%d\t%d\n",BrightSpots[0]%xres,BrightSpots[0]/xres,BrightSpots[1]);
 
         /*int* BrightSpots=(int*)malloc(2*sizeof(int)*camera_testspots); //first val is coordinate as x_coord+y_coord*xres, second is brightness val, 0 index is the brightest, 1 index the second brightest and so on
         memset(BrightSpots,0,2*sizeof(int)*camera_testspots);

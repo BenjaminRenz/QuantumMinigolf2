@@ -499,7 +499,8 @@ int main(int argc, char* argv[]) {
     volatile int CamYpos=-1;
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
     MediaControl->lpVtbl->Run(MediaControl);
-    float CalibPoints[8]={0.f,200.f, 1919.f,200.f, 1919.f,1079.f, 0.f,1079.f};
+    //float CalibPoints[8]={750.f,780.f,752.f,1372.f,210.0f, 1340.f,  270.f,854.f};
+    float CalibPoints[8]={780.f,750.f,1372.f,752.f, 1340.f,210.0f,  854.f,270.f};
     mat3x3 CalibData;
     vec2 BrighspotMapped;
     camera_perspec_calibrating(CalibData,CalibPoints);
@@ -537,10 +538,11 @@ int main(int argc, char* argv[]) {
 
         //Camera
         if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
-            //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
+            printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
+            //vec2 CurrentPos={463.0f, 1066.0f};
             camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-            //printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
+            printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
             drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
             CamYpos=CamXpos=-1;
             camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
