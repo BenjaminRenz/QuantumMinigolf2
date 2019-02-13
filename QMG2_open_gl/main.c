@@ -1,7 +1,3 @@
-/*TODO list
--compile GLEW as static library
--implement webcam brightest spot detection https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
-*/
 #define STRSAFE_NO_DEPRECATE //allow use of strcpy and strcat
 
 #define GLEW_STATIC
@@ -10,9 +6,13 @@
 #include "libraries/FFTW_3.3.5/include/fftw3.h"
 #include "libraries/LINMATH/include/linmath.h"
 
+//Functions to correct for perspective
 #include "map_camera_plane.h"
+//functions to get raw data from camera
 #include "camera_dshow.h"
+//Functions for analyzing the data in the raw frams
 #include "image_analyse.h"
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +21,11 @@
 #include <dirent.h>
 
 #include <math.h>
-#define PI 3.14159265358979323846
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif
 #include <limits.h>
+
 
 #ifdef _WIN32
  #define filepath_potentials ".\\res\\potentials"
@@ -45,13 +48,8 @@
  #define filepath_shader_vertex_target "./res/shaders/vertex_target.glsl"
  #define filepath_shader_fragment_target "./res/shaders/fragment_target.glsl"
 #endif
-
-#define C_OBJECT_INIT 0
-#define C_OBJECT_UPDATE 1
-
-#define G_OBJECT_INIT 0
-#define G_OBJECT_DRAW 1
-#define G_OBJECT_UPDATE 2
+enum {C_OBJECT_INIT,C_OBJECT_UPDATE};
+enum {G_OBJECT_INIT,G_OBJECT_DRAW,G_OBJECT_UPDATE};
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -252,7 +250,7 @@ double position_y_axis = 0.0;
 #define SIZE_MULTI 600.0f
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolutionx*Resolutiony
-float Movement_angle = PI / 2.0f; //angle for particle
+float Movement_angle = M_PI / 2.0f; //angle for particle
 
 int AnimationStep = 0;
 int pos = 0;

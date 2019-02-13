@@ -23,8 +23,6 @@ int simulation_redraw_wave(int offset_x,int offset_y,float angle,float momentum,
         }
     }
 
-
-
     simulation_state=simulation_state_redrawn_and_wait_for_start;
 }
 

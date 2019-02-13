@@ -80,7 +80,7 @@
 		<Unit filename="src/map_camera_plane.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="src/simulate.c">
+		<Unit filename="src/simulation.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>
