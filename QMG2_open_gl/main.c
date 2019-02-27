@@ -82,7 +82,7 @@ void change_speed();
 void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos);
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 void update_potential();
-void refereshGUI();
+void GUI_refresh();
 void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn);
 void standard_draw();
 
@@ -255,6 +255,8 @@ int draw_new_wave = 1; //render next frame?
 #define MovementBorderWave 0.4f
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
+
+#define CAMERA_SPEED_MULTI 0.1f
 
 #define Offset_change 10
 
@@ -452,7 +454,7 @@ int main(int argc, char* argv[]) {
     //GUI
     //Init gui
     drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
-    refereshGUI();
+    GUI_refresh();
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
     unsigned char* speicher = calloc(sim_res_total * 4, 1);
@@ -481,9 +483,11 @@ int main(int argc, char* argv[]) {
     //begin Camera@@
     volatile int CamXpos=-1;
     volatile int CamYpos=-1;
+
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
+
     MediaControl->lpVtbl->Run(MediaControl);
-    float CalibPoints[8]={0.f,200.f, 1919.f,200.f, 1919.f,1079.f, 0.f,1079.f};
+    float CalibPoints[8]={765.f,759.f, 1380.f,749.f, 1347.f,298.f, 846.f,354.f};
     mat3x3 CalibData;
     vec2 BrighspotMapped;
     camera_perspec_calibrating(CalibData,CalibPoints);
@@ -527,7 +531,7 @@ int main(int argc, char* argv[]) {
             if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation||simulation_state==simulation_state_create_and_wait_for_start){
                 draw_new_wave = 1;
                 guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
-                refereshGUI();
+                GUI_refresh();
                 simulation_state = 2;
                 rotation_left_right = PI;
                 rotation_up_down = PI/3;
@@ -537,7 +541,7 @@ int main(int argc, char* argv[]) {
             guiElementsStorage[GUI_SLIDER_SIZE].position_x = 0.5f;
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = 0.5f;
             guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x = 0.5f;
-            refereshGUI();
+            GUI_refresh();
 
             //Animation Only
             ColorIntensity=0.4f*cos(((BlinkStep++)*PI/50.0f))+2.5f;
@@ -718,7 +722,11 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
         if(wavePosRot[1]<HalbeSchlaegerbreiteY&&wavePosRot[1]>-HalbeSchlaegerbreiteY){
             if(wavePosRot[0]>0&&wavePosRot[0]<posNewInRot[0]){
                 printf("TODO MOMENTUM\n");
-                simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,angle,wave_momentum,wave_gauss_width);
+                if(!simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,angle,posNewInRot[0]/CAMERA_SPEED_MULTI,wave_gauss_width)){
+                    simulation_unpause();
+                    guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_MESS;
+                    GUI_refresh();
+                }
 
                 /*printf("angle %f\n", angle*180.f/M_PI);
                 angle=angle-M_PI/2.0f;
@@ -1576,7 +1584,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             jerk_for_autocenter=jerk_for_autocenter-0.1f;
         }
     }
-    refereshGUI();
+    GUI_refresh();
 }
 
 //XYZ
@@ -1621,17 +1629,17 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         standard_draw();
                         printf("TODO BLINK\n");
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
-                        drawGui(G_OBJECT_UPDATE, width / (float)height);
+                        GUI_refresh();
                         return;
                     }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
                         simulation_unpause();
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
-                        drawGui(G_OBJECT_UPDATE, width / (float)height);
+                        GUI_refresh();
                         return;
                     }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
                         if(42!=simulation_measurement(glfwGetTime())){
                             guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_RESET;
-                            drawGui(G_OBJECT_UPDATE, width / (float)height);
+                            GUI_refresh();
                         }
                         return;
                     }
@@ -1944,7 +1952,7 @@ void update_potential(unsigned char* graphic_local_texture){
     }
     //TODO update buttons
     guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
-    refereshGUI();
+    GUI_refresh();
     standard_draw();
     ColorIntensity=2.9f;
 }
@@ -1991,9 +1999,10 @@ float mapValue(int type,float input){
 }
 
 //GUI
-void refereshGUI(){
+void GUI_refresh(){
     int width=0;
     int height=0;
     glfwGetWindowSize(MainWindow,&width,&height);
     windows_size_callback(MainWindow,width,height);
+    drawGui(G_OBJECT_DRAW, width/(float)height);
 }

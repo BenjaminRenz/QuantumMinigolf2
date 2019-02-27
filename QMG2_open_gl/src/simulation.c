@@ -47,7 +47,7 @@ void simulation_alloc(){
     ifft = fftw_plan_dft_2d(sim_res_x, sim_res_y, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
 
     potential = (double*) malloc(sim_res_total* sizeof(double));
-    simulation_state=simulation_state_wait_for_restart;
+    simulation_state=simulation_state_created_and_wait_for_start;
 }
 
 void simulation_dealloc(){
@@ -75,7 +75,10 @@ int simulation_redraw_wave(int offset_x,int offset_y,float angle,float momentum,
     }else if(simulation_state==simulation_state_not_allocated){
         printf("Error: FFTW arrays not allocated!\n");
         return 2;
-    }
+    }/*else if(simulation_state==simulation_state_wait_for_restart){
+        printf("Error: not restarted yet!\n");
+        return 3;
+    }*/
     //for gauss function will be cut off to increase performance at redraw
     int cutSquareHalf=(int)(gauss_width*gauss_width*10.f);
     memset(&(psi[0][0]),0,sim_res_total*4*sizeof(float));
@@ -85,8 +88,8 @@ int simulation_redraw_wave(int offset_x,int offset_y,float angle,float momentum,
             int gauss_y_squared=(j-offset_y)*(j-offset_y);
             int gauss_r_squared=gauss_x_squared+gauss_y_squared;
             if(gauss_r_squared<cutSquareHalf){
-                psi[i+j*sim_res_x][0]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * cos((i - sim_res_x / 2.0f) * cos(angle) + ((j - sim_res_y / 2.0f) * sin(angle)) * momentum);
-                psi[i+j*sim_res_x][1]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * sin((i - sim_res_x / 2.0f) * cos(angle) + ((j - sim_res_y / 2.0f) * sin(angle)) * momentum);
+                psi[i+j*sim_res_x][0]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * cos(((i - sim_res_x / 2.0f) * cos(angle) + ((j - sim_res_y / 2.0f) * sin(angle))) * momentum);
+                psi[i+j*sim_res_x][1]=exp(-gauss_r_squared/(2*gauss_width*gauss_width)) * sin(((i - sim_res_x / 2.0f) * cos(angle) + ((j - sim_res_y / 2.0f) * sin(angle))) * momentum);
             }
         }
     }
@@ -164,9 +167,6 @@ int simulation_run(float dt){
     }
     printf("Debug %f %f %f\n",norm,psi[biggest][0],psi[biggest][1]);
 
-
-
-
     simulation_state=simulation_state_simulate;
     return 0;
 }
@@ -175,6 +175,7 @@ int simulation_measurement(double glfwTime){
     if(simulation_state!=simulation_state_simulate){
         return 42;
     }
+    simulation_pause();
     //Internal variable which holds information of what part of the animation will get executed in this frame
     srand((long)(10000.0f * glfwTime));
     double random = (rand() % 1001) / 1000.0f;
