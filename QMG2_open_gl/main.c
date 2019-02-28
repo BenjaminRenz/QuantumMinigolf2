@@ -32,6 +32,11 @@
 
 #ifdef _WIN32
  #define filepath_potentials ".\\res\\potentials"
+ #define filepath_calibration_lb ".\\res\\calib\\lb.bmp"
+ #define filepath_calibration_lt ".\\res\\calib\\lt.bmp"
+ #define filepath_calibration_rb ".\\res\\calib\\rb.bmp"
+ #define filepath_calibration_rt ".\\res\\calib\\rt.bmp"
+
  #define filepath_gui_bmp ".\\res\\textures\\GUI2.bmp"  //CHANGED!!!
  #define filepath_potential_bmp ".\\res\\potentials\\double_slit512.bmp"
  #define filepath_shader_vertex_gui ".\\res\\shaders\\vertex_gui.glsl"
@@ -88,6 +93,7 @@ void standard_draw();
 
 enum {type_wave_gauss_width,type_wave_momentum,type_wave_angle,type_wave_dt};
 float mapValue(int type,float input);
+void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods);
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -256,7 +262,7 @@ int draw_new_wave = 1; //render next frame?
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
 
-#define CAMERA_SPEED_MULTI 0.1f
+#define CAMERA_SPEED_MULTI 0.08f
 
 #define Offset_change 10
 
@@ -282,10 +288,173 @@ uint8_t CountOfPotentialFiles=0;
 
 //Potential Pointer
 
+
 uint8_t* pot;
 
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
+
+
+enum {cal_init,cal_left_bottom,cal_left_top,cal_right_bottom,cal_right_top,cal_deinit};
+float* iscalibrated(int mouseClicked,volatile int* OneTimeInCamXpos,volatile int* OneTimeInCamYpos){
+    #define maxNumMeasPoints 5
+    static float* calibArray;
+    uint8_t* texture_for_arrows_from_file;
+    static unsigned int calibrationstate=cal_init;
+    static unsigned char* texture_for_arrows;
+    static unsigned int numMeasPoints;
+    static unsigned int aquisition_running;
+    static volatile int* CamXpos;
+    static volatile int* CamYpos;
+    mat4x4 mvp4x4;
+    switch(calibrationstate){
+        case cal_init:
+            printf("Debug: Calibration Init\n");
+            CamXpos=OneTimeInCamXpos;
+            CamYpos=OneTimeInCamYpos;
+            glfwSetMouseButtonCallback(MainWindow, mouse_button_callback_calibrate);
+            calibArray=malloc(8*sizeof(float));
+            texture_for_arrows = (unsigned char*) calloc(sim_res_total * 4, sizeof(unsigned char));
+            texture_for_arrows_from_file=read_bmp(filepath_calibration_lb);
+            for(int i = 0; i < sim_res_total; i++) {
+                texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                texture_for_arrows[i * 4 + 2] = 128;
+                texture_for_arrows[i * 4 + 1] = 128;
+            }
+            free(texture_for_arrows_from_file);
+            calibrationstate=cal_left_bottom;
+            aquisition_running=0;
+            numMeasPoints=0;
+            break;
+        case cal_left_bottom:
+            printf("Debug: Calibration lb\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[0]+=(float) *CamXpos;
+                    calibArray[1]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[0]/=maxNumMeasPoints;
+                calibArray[1]/=maxNumMeasPoints;
+                texture_for_arrows_from_file=read_bmp(filepath_calibration_rb);
+                for(int i = 0; i < sim_res_total; i++) {
+                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                }
+                free(texture_for_arrows_from_file);
+                calibrationstate=cal_right_bottom;
+                aquisition_running=0;
+                numMeasPoints=0;
+            }
+            break;
+        case cal_right_bottom:
+            printf("Debug: Calibration rb\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[2]+=(float) *CamXpos;
+                    calibArray[3]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[2]/=maxNumMeasPoints;
+                calibArray[3]/=maxNumMeasPoints;
+                texture_for_arrows_from_file=read_bmp(filepath_calibration_rt);
+                for(int i = 0; i < sim_res_total; i++) {
+                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                }
+                free(texture_for_arrows_from_file);
+                calibrationstate=cal_right_top;
+                aquisition_running=0;
+                numMeasPoints=0;
+            }
+            break;
+        case cal_right_top:
+            printf("Debug: Calibration rt\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[4]+=(float) *CamXpos;
+                    calibArray[5]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[4]/=maxNumMeasPoints;
+                calibArray[5]/=maxNumMeasPoints;
+                texture_for_arrows_from_file=read_bmp(filepath_calibration_lt);
+                for(int i = 0; i < sim_res_total; i++) {
+                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                }
+                free(texture_for_arrows_from_file);
+                calibrationstate=cal_left_top;
+                aquisition_running=0;
+                numMeasPoints=0;
+            }
+            break;
+        case cal_left_top:
+            printf("Debug: Calibration rt\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[6]+=(float) *CamXpos;
+                    calibArray[7]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[6]/=maxNumMeasPoints;
+                calibArray[7]/=maxNumMeasPoints;
+                printf("TEESSSSTTTT %f\n",calibArray[7]);
+                calibrationstate=cal_deinit;
+            }
+            break;
+        case cal_deinit:
+            if(!mouseClicked){
+                free(texture_for_arrows);
+                printf("TE %d",calibArray);
+                printf("TS %f",calibArray[0]);
+                return calibArray;
+            }
+            return NULL;
+    }
+    //@@Graphics
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, psiTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sim_res_x, sim_res_y, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_for_arrows);
+
+    int width=0;
+    int height=0;
+    glfwGetWindowSize(MainWindow, &width, &height);
+    glViewport(0, 0, width, height);
+    printf("windows size: %d, %d",width,height);
+    mat4x4_ortho(mvp4x4, -0.55f*width/height, 0.55f*width/height, -0.55f, 0.55f, -1.0f, 5.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
+    //Swap Buffers
+    glFinish();
+    glfwSwapBuffers(MainWindow);
+    //Process Events
+    glfwPollEvents();
+    return NULL;
+}
+
+void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods){
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        iscalibrated(1,NULL,NULL);
+    }
+}
 
 int main(int argc, char* argv[]) {
     //@Simulation
@@ -400,14 +569,6 @@ int main(int argc, char* argv[]) {
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);   //Dont filter messages
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);   //Dont filter messages
 
-
-    //Register Callbacks for user input
-    glfwSetKeyCallback(MainWindow, key_callback);
-    glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
-    glfwSetDropCallback(MainWindow, drop_file_callback);
-    glfwSetScrollCallback(MainWindow, mouse_scroll_callback);
-    glfwSetWindowSizeCallback(MainWindow, windows_size_callback);
-    glfwSetCursorPosCallback(MainWindow, cursor_pos_callback);
     //Get window height
     {
         int maxIndices, maxVertices, maxTexSize, maxTexBufferSize;
@@ -457,7 +618,7 @@ int main(int argc, char* argv[]) {
     GUI_refresh();
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
-    unsigned char* speicher = calloc(sim_res_total * 4, 1);
+    unsigned char* speicher = calloc(sim_res_total * 4, sizeof(unsigned char));
 
     update_potential(speicher);
     //Create wave
@@ -486,31 +647,36 @@ int main(int argc, char* argv[]) {
 
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
 
-    MediaControl->lpVtbl->Run(MediaControl);
-    float CalibPoints[8]={765.f,759.f, 1380.f,749.f, 1347.f,298.f, 846.f,354.f};
+    MediaControl->lpVtbl->Run(MediaControl); //set only once, will start the graph and capture frames
+    //float CalibPoints[8]={580.f,880.f, 1200.f,880.f, 1150.f,330.f, 630.f,370.f};
     mat3x3 CalibData;
     vec2 BrighspotMapped;
-    camera_perspec_calibrating(CalibData,CalibPoints);
-    while((CamXpos==-1)||(CamYpos==-1)){
-            //MediaControl->lpVtbl->Run(MediaControl);
-            //printf("Wait\n");
-    }
-    vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
-    camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-    camera_collider(C_OBJECT_INIT ,BrighspotMapped);
-    CamXpos=-1;
-    CamYpos=-1;
-    MediaControl->lpVtbl->Run(MediaControl);
-    //end Camera@@
-    //printf("testtestsetset\n");
 
-    //Initialize Gaus wave packet for simulation in position space
+    //Register Callbacks for user input
+    iscalibrated(0,&CamXpos,&CamYpos);
+    float* CalibrationRawData;
+    do{
+        CalibrationRawData=iscalibrated(0,NULL,NULL);
+    }while(!CalibrationRawData);
+    printf("Got Points: %f, %f, %f, %f, %f, %f, %f, %f\n",CalibrationRawData[0],CalibrationRawData[1],CalibrationRawData[2],CalibrationRawData[3],CalibrationRawData[4],CalibrationRawData[5],CalibrationRawData[6],CalibrationRawData[7]);
+    camera_perspec_calibrating(CalibData,CalibrationRawData);
+    free(CalibrationRawData);
+    //Register Callbacks for user input
+    glfwSetKeyCallback(MainWindow, key_callback);
+    glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
+    glfwSetDropCallback(MainWindow, drop_file_callback);
+    glfwSetScrollCallback(MainWindow, mouse_scroll_callback);
+    glfwSetWindowSizeCallback(MainWindow, windows_size_callback);
+    glfwSetCursorPosCallback(MainWindow, cursor_pos_callback);
+
+
     standard_draw();
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         simulation_run(dt);
         delta_time = update_delta_time();
         //Check for Camera frame update
         if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
+            printf("122222222222222\n");
             //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
             camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
@@ -518,8 +684,7 @@ int main(int argc, char* argv[]) {
             drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
             CamYpos=CamXpos=-1;
             camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
-            MediaControl->lpVtbl->Run(MediaControl);
-
+            printf("133333333333333<s\n");
         }else{
             //printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
         }
@@ -611,12 +776,12 @@ int main(int argc, char* argv[]) {
         double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
         */
         double norming = 1.0;
+         printf("433333333333333<s\n");
         for(int i = 0; i < sim_res_total; i++) {
             speicher[i * 4 + 2] = (unsigned char)(0.5f * 255 * (psi[i][0] * norming + 1.0f));
             speicher[i * 4 + 1] = (unsigned char)(0.5f * 255 * (psi[i][1] * norming + 1.0f));
             speicher[i * 4 + 3] = pot[i * 4 + 1];
         }
-
         //@@Graphics
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, psiTexture);
@@ -685,7 +850,7 @@ static inline void mat2x2_mul_vec2(vec2 r, mat2x2 M, vec2 v)
 	}
 }
 
-#define HalbeSchlaegerbreiteY 0.05f/2.f
+#define HalbeSchlaegerbreiteY 0.1f/2.f
 
 void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
     static vec2 posOld;
@@ -1580,6 +1745,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
     }
     if(key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
+        if(jerk_for_autocenter>0.2f){
+            jerk_for_autocenter=jerk_for_autocenter-0.1f;
+        }
+    }
+    if(key == GLFW_KEY_C && action == GLFW_PRESS) {
         if(jerk_for_autocenter>0.2f){
             jerk_for_autocenter=jerk_for_autocenter-0.1f;
         }

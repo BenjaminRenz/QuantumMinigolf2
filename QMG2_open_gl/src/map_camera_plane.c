@@ -9,7 +9,7 @@
 
 
 
-void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]){
+void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float* CalibPointsIn){
     //Get Vectors of border points
     /*vec3 PointA={(float)CalibPoints[0],(float)CalibPoints[1],1.0f};
     vec3 PointB={(float)CalibPoints[2],(float)CalibPoints[3],1.0f};
