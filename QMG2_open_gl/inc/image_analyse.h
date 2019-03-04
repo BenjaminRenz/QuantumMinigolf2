@@ -1,5 +1,5 @@
 #include "camera_dshow.h"
-#define camera_big_grid_points_x 800 //The y gridpoints will be calculated based on the aspect ratio
+#define camera_big_grid_points_x 300 //The y gridpoints will be calculated based on the aspect ratio
 #define camera_testspots 1
 
 HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called will set smp==0 and recieve a inputForBrightspotfinder Sruct to sore camera resolution and pointer for bright spot coordinates
@@ -136,7 +136,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
 #define cameraNum 1
 #define cameraResNum 0
 
-IMediaControl* getPositionPointer(int* Posx, int* Posy){
+IMediaControl* getPositionPointer(volatile int* Posx,volatile int* Posy){
     printf("first test\n");
     unsigned int numberOfAllocatedCams=0;
     struct CameraListItem* AllAvailableCameras=getCameras(&numberOfAllocatedCams); //Get the address of our function which we wish to inject into the object for callback
@@ -180,7 +180,7 @@ IMediaControl* getPositionPointer(int* Posx, int* Posy){
     long prop_CapsFlags=0;
     if(S_OK==allRes->_CameraControl->lpVtbl->GetRange(allRes->_CameraControl,CameraControl_Exposure,&prop_Min,&prop_Max,&prop_SteppingDelta,&prop_Default,&prop_CapsFlags)){
         printf("Debug: successfully queried camera exposure range\n");
-        if(prop_CapsFlags&CameraControl_Flags_Manual!=0){
+        if((prop_CapsFlags&CameraControl_Flags_Manual)!=0){
             printf("Debug: Property can be changed from %ld to %ld, default %ld, with %ld stepwidth\n",prop_Min,prop_Max,prop_Default,prop_SteppingDelta);
             /*int hr=allRes->_CameraControl->lpVtbl->Set(allRes->_CameraControl,CameraControl_Exposure,prop_Min,CameraControl_Flags_Manual);
             if(hr==S_OK){

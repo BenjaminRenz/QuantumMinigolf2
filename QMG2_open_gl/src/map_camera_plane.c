@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
 #include "map_camera_plane.h"
 
@@ -10,7 +9,7 @@
 
 
 
-void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]){
+void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float* CalibPointsIn){
     //Get Vectors of border points
     /*vec3 PointA={(float)CalibPoints[0],(float)CalibPoints[1],1.0f};
     vec3 PointB={(float)CalibPoints[2],(float)CalibPoints[3],1.0f};
@@ -66,7 +65,7 @@ void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]){
     mat3x3_mul(CalibMatrixOut,mapPointCMatrix,translationRotationShearScaleMatrix);
 
     //Final Test
-    vec3 testPoint1;
+    /*vec3 testPoint1;
     vec3 testPoint2;
     vec3 testPoint3;
     vec3 testPoint4;
@@ -74,18 +73,17 @@ void camera_perspec_calibrating(mat3x3 CalibMatrixOut,float CalibPointsIn[8]){
     mat3x3_mul_vec3(testPoint2,CalibMatrixOut,PointB);
     mat3x3_mul_vec3(testPoint3,CalibMatrixOut,PointC);
     mat3x3_mul_vec3(testPoint4,CalibMatrixOut,PointD);
-    printf("Debug: Point A was %f, %f, %f  final info %f, %f\n",PointA[0],PointA[1],PointA[2],testPoint1[0]/testPoint1[2],testPoint1[1]/testPoint1[2]);
-    printf("Debug: Point B was %f, %f, %f  final info %f, %f\n",PointB[0],PointB[1],PointB[2],testPoint2[0]/testPoint2[2],testPoint2[1]/testPoint2[2]);
-    printf("Debug: Point C was %f, %f, %f  final info %f, %f\n",PointC[0],PointC[1],PointC[2],testPoint3[0]/testPoint3[2],testPoint3[1]/testPoint3[2]);
-    printf("Debug: Point D was %f, %f, %f  final info %f, %f\n",PointD[0],PointD[1],PointD[2],testPoint4[0]/testPoint4[2],testPoint4[1]/testPoint4[2]);
-    printf("Debug: Matrix %f",CalibMatrixOut[1][0]);
+    printf("Debug: Point A final info %f, %f, %f\n",testPoint1[0]/testPoint1[2],testPoint1[1]/testPoint1[2]);
+    printf("Debug: Point B final info %f, %f, %f\n",testPoint2[0]/testPoint2[2],testPoint2[1]/testPoint2[2]);
+    printf("Debug: Point C final info %f, %f, %f\n",testPoint3[0]/testPoint3[2],testPoint3[1]/testPoint3[2]);
+    printf("Debug: Point D final info %f, %f, %f\n",testPoint4[0]/testPoint4[2],testPoint4[1]/testPoint4[2]);
+    */
 
 }
 void camera_perspec_map_point(vec2 MappedVecOut,mat3x3 CalibrationMatrixIn,vec2 CameraBrightSpotIn){
     vec3 BrightSpot={CameraBrightSpotIn[0],CameraBrightSpotIn[1],1.f};
     vec3 resultVec3;
     mat3x3_mul_vec3(resultVec3,CalibrationMatrixIn,BrightSpot);
-    printf("Debug: Matrix %f",CalibrationMatrixIn[1][0]);
     MappedVecOut[0]=resultVec3[0]/resultVec3[2];
     MappedVecOut[1]=resultVec3[1]/resultVec3[2];
 }

@@ -1,18 +1,21 @@
-/*TODO list
--compile GLEW as static library
--implement webcam brightest spot detection https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
-*/
 #define STRSAFE_NO_DEPRECATE //allow use of strcpy and strcat
 
 #define GLEW_STATIC
 #include "libraries/GLEW_2.1.0/include/glew.h"
 #include "libraries/GLFW_3.2.1/include/glfw3.h"
-#include "libraries/FFTW_3.3.5/include/fftw3.h"
 #include "libraries/LINMATH/include/linmath.h"
 
+//Functions to correct for perspective
 #include "map_camera_plane.h"
+//Functions to get raw data from camera
 #include "camera_dshow.h"
+//Functions for analyzing the data in the raw frams
 #include "image_analyse.h"
+//Functions for simulating the wave function
+#include "simulation.h"
+//Functions for file handling
+#include "filereader.h"
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,11 +24,19 @@
 #include <dirent.h>
 
 #include <math.h>
-#define PI 3.14159265358979323846
+#ifndef M_PI
+  #define M_PI 3.14159265358979323846
+#endif
 #include <limits.h>
+
 
 #ifdef _WIN32
  #define filepath_potentials ".\\res\\potentials"
+ #define filepath_calibration_lb ".\\res\\calib\\lb.bmp"
+ #define filepath_calibration_lt ".\\res\\calib\\lt.bmp"
+ #define filepath_calibration_rb ".\\res\\calib\\rb.bmp"
+ #define filepath_calibration_rt ".\\res\\calib\\rt.bmp"
+
  #define filepath_gui_bmp ".\\res\\textures\\GUI2.bmp"  //CHANGED!!!
  #define filepath_potential_bmp ".\\res\\potentials\\double_slit512.bmp"
  #define filepath_shader_vertex_gui ".\\res\\shaders\\vertex_gui.glsl"
@@ -45,13 +56,8 @@
  #define filepath_shader_vertex_target "./res/shaders/vertex_target.glsl"
  #define filepath_shader_fragment_target "./res/shaders/fragment_target.glsl"
 #endif
-
-#define C_OBJECT_INIT 0
-#define C_OBJECT_UPDATE 1
-
-#define G_OBJECT_INIT 0
-#define G_OBJECT_DRAW 1
-#define G_OBJECT_UPDATE 2
+enum {C_OBJECT_INIT,C_OBJECT_UPDATE};
+enum {G_OBJECT_INIT,G_OBJECT_DRAW,G_OBJECT_UPDATE};
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -74,15 +80,20 @@ void joystick_reset(int selectedGuiElement);
 void set_x_position_slider(int selectedGuiElement, double xpos);
 void set_y_position_slider(int selectedGuiElement, double ypos);
 void rotate_camera(int selectedGuiElement);
-void move_camera(int selectedGuiElement);
-void draw_wave();
-void move_wave(int selectedGuiElement);
+//void move_camera(int selectedGuiElement);
+//void move_wave(int selectedGuiElement);
 void change_speed();
+//void draw_wave();
 void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos);
 void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
 void update_potential();
-void refereshGUI();
+void GUI_refresh();
 void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn);
+void standard_draw();
+
+enum {type_wave_gauss_width,type_wave_momentum,type_wave_angle,type_wave_dt};
+float mapValue(int type,float input);
+void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods);
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -204,13 +215,7 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn);
 
 
 
-//Mess window
-        #define VertMinX -0.1f //width
-        #define VertMaxX 0.1f
-        #define VertMinY 0.25f //length (direction of wave
-        #define VertMaxY 0.45f
-        #define VertMinZ 0.001f
-        #define VertMaxZ 0.01f
+
 
 
 struct GUI_render {
@@ -232,8 +237,8 @@ float delta_time;
 int numberOfGuiElements = SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER+BUTTON_NUMBER;
 int selectedGuiElement = (-1);   //-1 == no element selected
 struct GUI_render* guiElementsStorage;
-double rotation_up_down = PI/3;
-double rotation_left_right = PI;
+double rotation_up_down = M_PI/3;
+double rotation_left_right = M_PI;
 double position_x_axis = 0.0;
 double position_y_axis = 0.0;
 #define MovementBorderCamera 0.5f
@@ -244,31 +249,36 @@ double position_y_axis = 0.0;
 #define GridResy 256
 #define GridRes 256        //must be power of 2 ,vertex resolution of the rendered grid
 
-//Manipulation of simulation
-#define Resolutionx 512      //must be power of 2, size of the bmp file (512*512) and for the fft/simulation
-#define Resolutiony 512
-//#define Resolution 512
+
+
+
 #define Diameter_change 0.02f
-#define SIZE_MULTI 600.0f
+#define SIZE_MULTI 20.0f
 double diameter = SLIDER_SIZE_START * SIZE_MULTI + 1.0f;
 #define norm Resolutionx*Resolutiony
-float Movement_angle = PI / 2.0f; //angle for particle
-
-int AnimationStep = 0;
 int pos = 0;
 int draw_new_wave = 1; //render next frame?
-float wave_proportion = 1.0f;
-int momentum_prop = 1;
 #define MovementBorderWave 0.4f
 #define Speed_change 0.05f
 #define SPEED_MULTI 0.0002f
-float momentum_multi = 2.0f;
-float dt = SLIDER_SPEED_START * SPEED_MULTI;
+
+#define CAMERA_SPEED_MULTI 0.08f
+
 #define Offset_change 10
-#define offset_x_start Resolutionx/2
-float wave_offset_x = offset_x_start; //offset for particle
-#define offset_y_start Resolutiony*0.10f
-float wave_offset_y = offset_y_start; //offset for particle
+
+//@@ begin Simulation
+//Wave Parameters
+float dt = SLIDER_SPEED_START * SPEED_MULTI;
+#define wave_offset_x_start (512*0.5f)
+float wave_offset_x = wave_offset_x_start; //offset for particle
+#define wave_offset_y_start (512*0.10f)
+float wave_offset_y = wave_offset_y_start; //offset for particle
+float wave_angle= M_PI / 2.0f;
+float wave_momentum=1.0f; //TODO initialize properly
+float wave_gauss_width=10.0f;
+//@@ end Simulation
+
+
 
 float ColorIntensity=2.9f;
 int BlinkStep=0;
@@ -277,18 +287,184 @@ char PotentialFilesList[20][256]; //Currently limited to 20 .bmp files
 uint8_t CountOfPotentialFiles=0;
 
 //Potential Pointer
-double* potential;
+
+
 uint8_t* pot;
 
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
-#define simulation_state_simulate 0
-#define simulation_state_measurement_animation 1
-#define simulation_state_create_and_wait_for_start 2
-#define simulation_state_wait_for_restart 5
-int simulation_state = 2; //mode of operation
+#define MaxShot 6
+int ShotCount=0;
+vec2 last_meas_pos_in_grid_coordinates={wave_offset_x_start,wave_offset_y_start};
+
+
+enum {cal_init,cal_left_bottom,cal_left_top,cal_right_bottom,cal_right_top,cal_deinit};
+float* iscalibrated(int mouseClicked,volatile int* OneTimeInCamXpos,volatile int* OneTimeInCamYpos){
+    #define maxNumMeasPoints 5
+    static float* calibArray;
+    uint8_t* texture_for_arrows_from_file;
+    static unsigned int calibrationstate=cal_init;
+    static unsigned char* texture_for_arrows;
+    static unsigned int numMeasPoints;
+    static unsigned int aquisition_running;
+    static volatile int* CamXpos;
+    static volatile int* CamYpos;
+    mat4x4 mvp4x4;
+    switch(calibrationstate){
+        case cal_init:
+            printf("Debug: Calibration Init\n");
+            CamXpos=OneTimeInCamXpos;
+            CamYpos=OneTimeInCamYpos;
+            glfwSetMouseButtonCallback(MainWindow, mouse_button_callback_calibrate);
+            calibArray=calloc(8,sizeof(float));
+            texture_for_arrows = (unsigned char*) calloc(sim_res_total * 4, sizeof(unsigned char));
+            texture_for_arrows_from_file=read_bmp(filepath_calibration_lb);
+            for(int i = 0; i < sim_res_total; i++) {
+                texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                texture_for_arrows[i * 4 + 2] = 128;
+                texture_for_arrows[i * 4 + 1] = 128;
+            }
+            free(texture_for_arrows_from_file);
+            calibrationstate=cal_left_bottom;
+            aquisition_running=0;
+            numMeasPoints=0;
+            break;
+        case cal_left_bottom:
+            printf("Debug: Calibration lb\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[0]+=(float) *CamXpos;
+                    calibArray[1]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[0]/=maxNumMeasPoints;
+                calibArray[1]/=maxNumMeasPoints;
+                texture_for_arrows_from_file=read_bmp(filepath_calibration_rb);
+                for(int i = 0; i < sim_res_total; i++) {
+                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                }
+                free(texture_for_arrows_from_file);
+                calibrationstate=cal_right_bottom;
+                aquisition_running=0;
+                numMeasPoints=0;
+            }
+            break;
+        case cal_right_bottom:
+            printf("Debug: Calibration rb\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[2]+=(float) *CamXpos;
+                    calibArray[3]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[2]/=maxNumMeasPoints;
+                calibArray[3]/=maxNumMeasPoints;
+                texture_for_arrows_from_file=read_bmp(filepath_calibration_rt);
+                for(int i = 0; i < sim_res_total; i++) {
+                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                }
+                free(texture_for_arrows_from_file);
+                calibrationstate=cal_right_top;
+                aquisition_running=0;
+                numMeasPoints=0;
+            }
+            break;
+        case cal_right_top:
+            printf("Debug: Calibration rt\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[4]+=(float) *CamXpos;
+                    calibArray[5]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[4]/=maxNumMeasPoints;
+                calibArray[5]/=maxNumMeasPoints;
+                texture_for_arrows_from_file=read_bmp(filepath_calibration_lt);
+                for(int i = 0; i < sim_res_total; i++) {
+                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
+                }
+                free(texture_for_arrows_from_file);
+                calibrationstate=cal_left_top;
+                aquisition_running=0;
+                numMeasPoints=0;
+            }
+            break;
+        case cal_left_top:
+            printf("Debug: Calibration rt\n");
+            if(numMeasPoints<maxNumMeasPoints){
+                if(mouseClicked&&!aquisition_running){ //for the first frame
+                    aquisition_running=1;
+                }
+                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
+                    calibArray[6]+=(float) *CamXpos;
+                    calibArray[7]+=(float) *CamYpos;
+                    *CamYpos=*CamXpos=-1;
+                    numMeasPoints++;
+                }
+            }else{
+                calibArray[6]/=maxNumMeasPoints;
+                calibArray[7]/=maxNumMeasPoints;
+                printf("TEESSSSTTTT %f\n",calibArray[7]);
+                calibrationstate=cal_deinit;
+            }
+            break;
+        case cal_deinit:
+            if(!mouseClicked){
+                free(texture_for_arrows);
+                printf("TE %d\n",calibArray);
+                printf("TS %f\n",calibArray[0]);
+                return calibArray;
+            }
+            return NULL;
+    }
+    //@@Graphics
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, psiTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sim_res_x, sim_res_y, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_for_arrows);
+
+    int width=0;
+    int height=0;
+    glfwGetWindowSize(MainWindow, &width, &height);
+    glViewport(0, 0, width, height);
+    printf("windows size: %d, %d",width,height);
+    mat4x4_ortho(mvp4x4, -0.55f*width/height, 0.55f*width/height, -0.55f, 0.55f, -1.0f, 5.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
+    //Swap Buffers
+    glFinish();
+    glfwSwapBuffers(MainWindow);
+    //Process Events
+    glfwPollEvents();
+    return NULL;
+}
+
+void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods){
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        iscalibrated(1,NULL,NULL);
+    }
+}
+
 int main(int argc, char* argv[]) {
+    //@Simulation
+    simulation_alloc();
+    //@Simulation
+
     //Index and initialize Potential Files
     {
         DIR* directory;
@@ -309,6 +485,7 @@ int main(int argc, char* argv[]) {
         }
         printf("\nInfo: Will use '%s' as Potential\n",&(PotentialFilesList[0][0]));
     }
+
     //GUI INIT
     guiElementsStorage = malloc(numberOfGuiElements * sizeof(struct GUI_render));
     //Screen coordinates from x[-1.0f,1.0f] y[-1.0f,1.0f]
@@ -374,6 +551,7 @@ int main(int argc, char* argv[]) {
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
     //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetMonitors(NULL)[0], NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -396,14 +574,6 @@ int main(int argc, char* argv[]) {
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);   //Dont filter messages
     glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);   //Dont filter messages
 
-
-    //Register Callbacks for user input
-    glfwSetKeyCallback(MainWindow, key_callback);
-    glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
-    glfwSetDropCallback(MainWindow, drop_file_callback);
-    glfwSetScrollCallback(MainWindow, mouse_scroll_callback);
-    glfwSetWindowSizeCallback(MainWindow, windows_size_callback);
-    glfwSetCursorPosCallback(MainWindow, cursor_pos_callback);
     //Get window height
     {
         int maxIndices, maxVertices, maxTexSize, maxTexBufferSize;
@@ -447,33 +617,15 @@ int main(int argc, char* argv[]) {
     vec3 eye_vec = {1.0f, 1.0f, 1.0f};
     vec3 cent_vec = {0.0f, 0.0f, 0.0f};
     vec3 up_vec = {0.0f, 0.0f, 1.0f};
-
-    fftw_complex *psi;
-    fftw_complex *psi_transform;
-    fftw_complex *prop;
-    fftw_complex *animation_start;
-    fftw_complex *animation_end;
-    psi = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-    psi_transform = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-    prop = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-
-    animation_start = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-    animation_end = (fftw_complex*) fftw_alloc_complex(Resolutionx * Resolutiony);
-
-    fftw_plan fft = fftw_plan_dft_2d(Resolutionx, Resolutiony, psi, psi_transform, FFTW_FORWARD, FFTW_MEASURE);
-    fftw_plan ifft = fftw_plan_dft_2d(Resolutionx, Resolutiony, psi_transform, psi, FFTW_BACKWARD, FFTW_MEASURE);
-
-    //
-
     //GUI
     //Init gui
     drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
-    refereshGUI();
+    GUI_refresh();
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
-    unsigned char* speicher = calloc(Resolutionx * Resolutiony * 4, 1);
-    potential = (double*) malloc(Resolutionx * Resolutiony * sizeof(double));
-    update_potential();
+    unsigned char* speicher = calloc(sim_res_total * 4, sizeof(unsigned char));
+
+    update_potential(speicher);
     //Create wave
     delta_time = update_delta_time();
     //@@Graphics
@@ -490,76 +642,74 @@ int main(int argc, char* argv[]) {
     drawPlaneAndGrid(G_OBJECT_INIT, PlaneRes, GridRes, NULL);   //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
     //Init target box
-    drawTargetBox(G_OBJECT_INIT,0,0.0f);
+    //drawTargetBox(G_OBJECT_INIT,0,0.0f);
     drawTrackPoint(G_OBJECT_INIT,0,0.0f,0.0f);
-    //Graphics@@
+    //end Graphics@@
 
-    //Camera@@
+    //begin Camera@@
     volatile int CamXpos=-1;
     volatile int CamYpos=-1;
+
     IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
-    MediaControl->lpVtbl->Run(MediaControl);
-    //float CalibPoints[8]={750.f,780.f,752.f,1372.f,210.0f, 1340.f,  270.f,854.f};
-    float CalibPoints[8]={780.f,750.f,1372.f,752.f, 1340.f,210.0f,  854.f,270.f};
+
+    MediaControl->lpVtbl->Run(MediaControl); //set only once, will start the graph and capture frames
+    //float CalibPoints[8]={580.f,880.f, 1200.f,880.f, 1150.f,330.f, 630.f,370.f};
     mat3x3 CalibData;
     vec2 BrighspotMapped;
-    camera_perspec_calibrating(CalibData,CalibPoints);
-    //end Camera@@
-    while((CamXpos==-1)||(CamYpos==-1)){
-            //MediaControl->lpVtbl->Run(MediaControl);
-            //printf("Wait\n");
-    }
-    vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
-    camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-    camera_collider(C_OBJECT_INIT ,BrighspotMapped);
-    CamXpos=-1;
-    CamYpos=-1;
-    MediaControl->lpVtbl->Run(MediaControl);
-    //printf("testtestsetset\n");
 
+    //Register Callbacks for user input
+    iscalibrated(0,&CamXpos,&CamYpos);
+    float* CalibrationRawData;
+    do{
+        CalibrationRawData=iscalibrated(0,NULL,NULL);
+    }while(!CalibrationRawData);
+    printf("Got Points: %f, %f, %f, %f, %f, %f, %f, %f\n",CalibrationRawData[0],CalibrationRawData[1],CalibrationRawData[2],CalibrationRawData[3],CalibrationRawData[4],CalibrationRawData[5],CalibrationRawData[6],CalibrationRawData[7]);
+    camera_perspec_calibrating(CalibData,CalibrationRawData);
+    free(CalibrationRawData);
+    //Register Callbacks for user input
+    glfwSetKeyCallback(MainWindow, key_callback);
+    glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
+    glfwSetDropCallback(MainWindow, drop_file_callback);
+    glfwSetScrollCallback(MainWindow, mouse_scroll_callback);
+    glfwSetWindowSizeCallback(MainWindow, windows_size_callback);
+    glfwSetCursorPosCallback(MainWindow, cursor_pos_callback);
+
+
+    standard_draw();
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
-        printf("%d\n",simulation_state);
-
-        if(draw_new_wave == 1) {
-            diameter = guiElementsStorage[GUI_SLIDER_SIZE].position_x * SIZE_MULTI + 10.0f;
-            Movement_angle = PI * 2.0f *(guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x+0.25f);
-            memset(&(psi[0][0]),0,Resolutionx*Resolutiony*4*sizeof(float));
-            for(int j = 0; j < Resolutiony; j++) {
-                for(int i = 0; i < Resolutionx; i++) {
-                        //TODO radial cutoff for faster initialisation
-                    if((abs(i-((int)wave_offset_x)))<(Resolutionx/10.0f)&&(abs(j-((int)wave_offset_y))<(Resolutiony/10.0f))){
-                        psi[i + j * Resolutionx][0] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * cos((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
-                        psi[i + j * Resolutionx][1] = exp(-((i - ((int)wave_offset_x)) * (i - ((int)wave_offset_x)) / wave_proportion + (j - ((int)wave_offset_y)) * (j - ((int)wave_offset_y))) / (diameter)) * sin((i - Resolutionx / 2.0f) * cos(Movement_angle) + ((j - Resolutiony / 2.0f) * sin(Movement_angle)) * momentum_multi);
-                    }
-                }
-            }
-            draw_new_wave = 0;
-        }
-
-        //Camera
+        simulation_run(dt);
+        delta_time = update_delta_time();
+        //Check for Camera frame update
         if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
-            printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
+            //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
-            //vec2 CurrentPos={463.0f, 1066.0f};
             camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
             printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
             drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
             CamYpos=CamXpos=-1;
             camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
-            MediaControl->lpVtbl->Run(MediaControl);
-
+            printf("Brightspot: %f, %f\n",BrighspotMapped[0],BrighspotMapped[1]);
+            if(BrighspotMapped[1]>1.0f){
+                Measurement();
+            }
+            if(ShotCount==MaxShot){//TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                if(BrighspotMapped[1]<0.0f){
+                    standard_draw();
+                    ShotCount=0;
+                }
+            }
         }else{
             //printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
         }
         //Camera
-        delta_time = update_delta_time();
 
-        if(timerForBlink(0)>5.0f){
+
+        /*if(timerForBlink(0)>5.0f){
             //Same as Reset Button
             if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation||simulation_state==simulation_state_create_and_wait_for_start){
                 draw_new_wave = 1;
                 guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
-                refereshGUI();
+                GUI_refresh();
                 simulation_state = 2;
                 rotation_left_right = PI;
                 rotation_up_down = PI/3;
@@ -569,7 +719,7 @@ int main(int argc, char* argv[]) {
             guiElementsStorage[GUI_SLIDER_SIZE].position_x = 0.5f;
             guiElementsStorage[GUI_SLIDER_SPEED].position_x = 0.5f;
             guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x = 0.5f;
-            refereshGUI();
+            GUI_refresh();
 
             //Animation Only
             ColorIntensity=0.4f*cos(((BlinkStep++)*PI/50.0f))+2.5f;
@@ -577,128 +727,14 @@ int main(int argc, char* argv[]) {
                 BlinkStep=1;
             }
             //TODO RESET
-        }
-        if(simulation_state == simulation_state_simulate) {
-            timerForBlink(1); //reset standby counter so simulation isn't interrupted
-            fftw_execute(fft);
-            //momentum space
-            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                double psi_re_temp = psi_transform[i][0];
-                psi_transform[i][0] = psi_re_temp * prop[i][0] - psi_transform[i][1] * prop[i][1];
-                psi_transform[i][1] = psi_re_temp * prop[i][1] + psi_transform[i][1] * prop[i][0];
-            }
-            fftw_execute(ifft);
-            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                psi[i][0] = psi[i][0] / (double)(norm);
-                psi[i][1] = psi[i][1] / (double)(norm);
-            }
-            for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                double psi_re_temp = psi[i][0];
-                psi[i][0] = psi_re_temp * cos(potential[i]) - psi[i][1] * sin(potential[i]);
-                psi[i][1] = psi_re_temp * sin(potential[i]) + psi[i][1] * cos(potential[i]);
-            }
-            //Delete the border of the wavefunction horizontal
-            for(int i = 0; i < Resolutionx; i++) {
-                psi[i][0] = 0;
-                psi[i][1] = 0;
-                psi[i+1*Resolutionx][0] = 0;
-                psi[i+1*Resolutionx][1] = 0;
-                psi[i+2*Resolutionx][0] = 0;
-                psi[i+2*Resolutionx][1] = 0;
-                psi[i+3*Resolutionx][0] = 0;
-                psi[i+3*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 1)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 1)*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 2)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 2)*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 3)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 3)*Resolutionx][1] = 0;
-                psi[i + (Resolutiony - 4)*Resolutionx][0] = 0;
-                psi[i + (Resolutiony - 4)*Resolutionx][1] = 0;
-            }
-            //Delete the border of the wavefunction vertical
-            for(int i = 0; i < Resolutiony; i++) {
-                psi[1 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[1 + i * Resolutionx][1] = 0;
-                psi[2 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[2 + i * Resolutionx][1] = 0;
-                psi[3 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[3 + i * Resolutionx][1] = 0;
-                psi[4 + i * Resolutionx][0] = 0;//TODO problem for i=0?
-                psi[4 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 1 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 1 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 2 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 2 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 3 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 3 + i * Resolutionx][1] = 0;
-                psi[Resolutionx - 4 + i * Resolutionx][0] = 0;
-                psi[Resolutionx - 4 + i * Resolutionx][1] = 0;
-            }
-        }
+        }*/
 
-        if(simulation_state == simulation_state_measurement_animation) {
-            timerForBlink(1);
-            if(!AnimationStep) {
-                srand((long)(10000.0f * glfwGetTime()));
-                double random = (rand() % 1001) / 1000.0f;
-                double sum = 0;
-                double norm_sum = 0;
-                for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-                    norm_sum = norm_sum + (psi[i][0] * psi[i][0] + psi[i][1] * psi[i][1]);
-                }
-                for(pos = 0; pos < Resolutionx * Resolutiony; pos++) {
-                    sum = sum + ((psi[pos][0] * psi[pos][0] + psi[pos][1] * psi[pos][1]) / norm_sum);
-                    if(sum > random) {
-                        printf("Sum:  %f\n",sum);
-                        printf("Rand: %f\n",random);
-                        printf("Norm %f\n",norm_sum);
-                        break;
-                    }
-                }
-                if((pos%Resolutionx)>((VertMinX+0.5f)*Resolutionx)&&(pos%Resolutionx)<((VertMaxX+0.5f)*Resolutionx)&&(pos/Resolutiony)>((VertMinY+0.5f)*Resolutiony)&&(pos/Resolutiony)<((VertMaxY+0.5f)*Resolutiony)){
-                    ColorIntensity=1.99f;
-                    printf("HIT\n\n\n");
-                }
-                else{
-                    ColorIntensity=0.99f;
-                    printf("NO HIT\n\n\n");
-                }
-                //Animation for mess
-                for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
-                    animation_start[x][0]=psi_transform[x][0];
-                    animation_start[x][1]=psi_transform[x][1];
-                    if((((pos % Resolutionx) - x%Resolutionx) * ((pos % Resolutionx) - x%Resolutionx) + ((pos / Resolutiony) - x/Resolutiony) * ((pos / Resolutiony) - x/Resolutiony))<10.0f){
-                        psi[x][0]=1.0f;
-                    }else{
-                        psi[x][0]=0.0f;
-                    }
-                    psi[x][1]=0.0f;
-                }
-                fftw_execute(fft);
-                for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
-                    animation_end[x][0]=psi_transform[x][0];
-                    animation_end[x][1]=psi_transform[x][1];
-                }
-                AnimationStep=0;
-            }
-            for(int x = 0; x<(Resolutionx*Resolutiony-1);x++){
-                psi_transform[x][0]=animation_start[x][0]*(1.0f-AnimationStep/30.0f)+animation_end[x][0]*(AnimationStep/30.0f);
-                psi_transform[x][1]=animation_start[x][1]*(1.0f-AnimationStep/30.0f)+animation_end[x][1]*(AnimationStep/30.0f);
-            }
-            fftw_execute(ifft);
-            AnimationStep++;
-            if(AnimationStep == 30) {
-                AnimationStep = 0;
-                simulation_state = simulation_state_wait_for_restart;
-            }
-        }
 
         if(selectedGuiElement!= (-1)){
             switch(selectedGuiElement) {
             case GUI_SLIDER_SIZE:
             case GUI_SLIDER_WAVE_ROTATION:
-                draw_wave();
+                //draw_wave(selectedGuiElement);
                 break;
             case GUI_SLIDER_SPEED:
                 change_speed();
@@ -707,10 +743,10 @@ int main(int argc, char* argv[]) {
                 //rotate_camera(selectedGuiElement); Commented because the rotation would be faster if the gui element is moved slightly
                 break;
             case GUI_JOYSTICK_MOVEMENT:
-                move_camera(selectedGuiElement);
+                //move_camera(selectedGuiElement);
                 break;
             case GUI_JOYSTICK_WAVE_MOVE:
-                move_wave(selectedGuiElement);
+                //move_wave(selectedGuiElement);
                 break;
             default:
                 printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
@@ -718,19 +754,21 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        int biggest = 0;
+
+        //this probably takes ages
+        /*int biggest = 0;
         biggest = 0;
 
-        for(int i = 0; i < Resolutionx * Resolutiony; i++) {
+        for(int i = 0; i < sim_res_total; i++) {
             if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])
                 biggest = i;
         }
-
+        //FOR AUTOCENTERING
         float sum = 0;
         float weighted_sum_x = 0;
         float weighted_sum_y = 0;
 
-        for(int i = 0; i < Resolutionx * Resolutiony; i++) {
+        for(int i = 0; i < sim_res_total; i++) {
             if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > (psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])*0.9f){
                 sum = sum + (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
                 weighted_sum_x = weighted_sum_x + (float)(i % Resolutionx) * (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
@@ -749,8 +787,10 @@ int main(int argc, char* argv[]) {
         //disable_autocenter = 0;
 
         double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
-
-        for(int i = 0; i < Resolutionx * Resolutiony; i++) {
+        */
+        double norming = 1.0;
+         printf("433333333333333<s\n");
+        for(int i = 0; i < sim_res_total; i++) {
             speicher[i * 4 + 2] = (unsigned char)(0.5f * 255 * (psi[i][0] * norming + 1.0f));
             speicher[i * 4 + 1] = (unsigned char)(0.5f * 255 * (psi[i][1] * norming + 1.0f));
             speicher[i * 4 + 3] = pot[i * 4 + 1];
@@ -758,34 +798,8 @@ int main(int argc, char* argv[]) {
         //@@Graphics
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, psiTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Resolutionx, Resolutiony, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sim_res_x, sim_res_y, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, speicher);
         //Graphics@@
-
-
-        if(momentum_prop == 1) { //Because fft is shifted we need to calculate the propagator for each section
-            for(int y = 0; y < Resolutiony / 2; y++) {
-                for(int x = 0; x < Resolutionx / 2; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-x * x - y * y));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-x * x - y * y));
-                }
-                for(int x = Resolutionx / 2; x < Resolutionx; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-(x - Resolutionx) * (x - Resolutionx) - y * y));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-(x - Resolutionx) * (x - Resolutionx) - y * y));
-                }
-            }
-            for(int y = Resolutiony / 2; y < Resolutiony; y++) {
-                for(int x = 0; x < Resolutionx / 2; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-x * x - (y - Resolutiony) * (y - Resolutiony)));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-x * x - (y - Resolutiony) * (y - Resolutiony)));
-                }
-                for(int x = Resolutionx / 2; x < Resolutionx; x++) {
-                    prop[y * Resolutionx + x][0] = cos(dt * (-(x - Resolutionx) * (x - Resolutionx) - (y - Resolutiony) * (y - Resolutiony)));
-                    prop[y * Resolutionx + x][1] = sin(dt * (-(x - Resolutionx) * (x - Resolutionx) - (y - Resolutiony) * (y - Resolutiony)));
-                }
-            }
-            momentum_prop = 0;
-        }
-
         //camera projection an transformation matrix calculation
         JoystickControll();
         /*eye_vec[0] = 1.5f * sin(rotation_left_right) * cos(atan(rotation_up_down));
@@ -825,7 +839,7 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-        drawTargetBox(G_OBJECT_DRAW,mvp4x4,ColorIntensity);//,sin(glfwGetTime()*3.0));
+        //drawTargetBox(G_OBJECT_DRAW,mvp4x4,ColorIntensity);//,sin(glfwGetTime()*3.0));
 
         drawTrackPoint(G_OBJECT_DRAW,mvp4x4,0,0);
         drawGui(G_OBJECT_DRAW,0);
@@ -836,8 +850,6 @@ int main(int argc, char* argv[]) {
         glfwPollEvents();
     }
     glfwTerminate();
-    fftw_destroy_plan(fft);
-    fftw_free(psi);
     return 0;
 }
 typedef vec2 mat2x2[2];
@@ -851,27 +863,28 @@ static inline void mat2x2_mul_vec2(vec2 r, mat2x2 M, vec2 v)
 	}
 }
 
-#define HalbeSchlaegerbreiteY 0.05f/2.f
+#define HalbeSchlaegerbreiteY 0.1f/2.f
 
 void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
     static vec2 posOld;
     static vec2 tempNewIn;
+    vec2 SubVec;
     tempNewIn[0]=posNewIn[0];
     tempNewIn[1]=posNewIn[1];
     if(C_OBJECT_STATE==C_OBJECT_INIT){
         posOld[0]=posNewIn[0];
         posOld[1]=posNewIn[1];
     }else{
-        vec2 wavePos={wave_offset_x/Resolutionx,wave_offset_y/Resolutiony};
+        vec2 wavePos={last_meas_pos_in_grid_coordinates[0]/sim_res_x,last_meas_pos_in_grid_coordinates[1]/sim_res_y};
         //printf("wavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
         //printf("oldPosraw: %f, %f\n",posOld[0],posOld[1]);
         //printf("newPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
         vec2_sub(wavePos,wavePos,posOld);
-        vec2_sub(posNewIn,posNewIn,posOld);
+        vec2_sub(SubVec,posNewIn,posOld);
         //printf("subwavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
         //printf("subnewPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
 
-        float angle=atan2(posNewIn[1],posNewIn[0]);
+        float angle=atan2(SubVec[1],SubVec[0]);
 
         float c=cosf(-angle);
         float s=sinf(-angle);
@@ -882,23 +895,26 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
         vec2 wavePosRot,posNewInRot;
         //printf("Matrix%f,%f\n       %f,%f\n", Rot[0][0],Rot[0][1],Rot[1][0],Rot[1][1]);
         mat2x2_mul_vec2(wavePosRot,Rot,wavePos);
-        mat2x2_mul_vec2(posNewInRot,Rot,posNewIn);
+        mat2x2_mul_vec2(posNewInRot,Rot,SubVec);
        // printf("NewPos: %f, %f\n",posNewInRot[0],posNewInRot[1]);
        // printf("wavPos: %f, %f\n",wavePosRot[0],wavePosRot[1]);
         if(wavePosRot[1]<HalbeSchlaegerbreiteY&&wavePosRot[1]>-HalbeSchlaegerbreiteY){
             if(wavePosRot[0]>0&&wavePosRot[0]<posNewInRot[0]){
-                //printf("Debug: Collision----------------------------------\n");
-                if(simulation_state=simulation_state_create_and_wait_for_start){
-                    printf("angle %f\n", angle*180.f/M_PI);
-                    angle=angle-M_PI/2.0f;
-                    if(angle<0){
-                        angle=2.0f*M_PI-angle;
-                    }
-
-                    guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x=angle/2.0f/M_PI;
-                    draw_new_wave=1;
-                    simulation_state=simulation_state_simulate;
+                printf("TODO MOMENTUM\n");
+                if(!simulation_redraw_wave((int)last_meas_pos_in_grid_coordinates[0],(int)last_meas_pos_in_grid_coordinates[1],angle,posNewInRot[0]/CAMERA_SPEED_MULTI,wave_gauss_width)){
+                    simulation_unpause();
+                    guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_MESS;
+                    GUI_refresh();
                 }
+
+                /*printf("angle %f\n", angle*180.f/M_PI);
+                angle=angle-M_PI/2.0f;
+                if(angle<0){
+                    angle=2.0f*M_PI-angle;
+                }
+                guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x=angle/2.0f/M_PI;
+                */
+
             }
         }
         posOld[0]=tempNewIn[0];
@@ -952,7 +968,7 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
     }
 }
 
-void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
+/*void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
     static GLuint vboTargetBoxID=0;
     static GLuint targetShaderID=0;
     static GLuint IntensityFloatUniform = 0;
@@ -968,17 +984,7 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
         IntensityFloatUniform = glGetUniformLocation(targetShaderID, "Intensity");
         glGenBuffers(1,&vboTargetBoxID);
-        float VertexData[]={/*
-            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
-            VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,
-            VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,//face 3
-            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,
-            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,//face 4
-            VertMinX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,
-            VertMinX,VertMinY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,//topface
-            VertMaxX,VertMinY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ*/
+        float VertexData[]={
             VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
             VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
             VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
@@ -1016,7 +1022,7 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
         //glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
     }
-}
+}*/
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4) {
     //3d object info
     //uses Texture0 which is constantly updated
@@ -1654,91 +1660,90 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     //atan(rotation_up_down);
     if(key == GLFW_KEY_D) {
-        if(rotation_left_right > (-PI)) {
+        if(rotation_left_right > (-M_PI)) {
             rotation_left_right = rotation_left_right - delta_time;
         } else {
-            rotation_left_right = PI;
+            rotation_left_right = M_PI;
         }
     }
     if(key == GLFW_KEY_A) {
-        if(rotation_left_right < PI) {
+        if(rotation_left_right < M_PI) {
             rotation_left_right = rotation_left_right + delta_time;
         } else {
-            rotation_left_right = -PI;
+            rotation_left_right = -M_PI;
         }
     }
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(MainWindow, 1);
     }
     if(key == GLFW_KEY_M && action == GLFW_PRESS) {
-        if(simulation_state == simulation_state_simulate){
-            simulation_state = simulation_state_measurement_animation;
+        if(42!=simulation_measurement(glfwGetTime(), last_meas_pos_in_grid_coordinates)){
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_RESET;
         }
+        //TODO redraw gui
     }
-    if(simulation_state == simulation_state_create_and_wait_for_start) {
-        if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-            simulation_state = simulation_state_simulate;
-            guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_MESS;
-        }
-        if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-            wave_offset_x = wave_offset_x + Offset_change;
-            draw_new_wave = 1;
-        }
-        if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-            wave_offset_x = wave_offset_x - Offset_change;
-            draw_new_wave = 1;
-        }
-        if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
-            wave_offset_y = wave_offset_y + Offset_change;
-            draw_new_wave = 1;
-        }
-        if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-            wave_offset_y = wave_offset_y - Offset_change;
-            draw_new_wave = 1;
-        }
-        if(key == GLFW_KEY_R && action == GLFW_PRESS) {
-            wave_offset_x = offset_x_start;
-            wave_offset_y = offset_y_start;
-            guiElementsStorage[GUI_SLIDER_SIZE].position_x = SLIDER_SIZE_START;
-            guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
-            dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
-            momentum_prop = 1;
-            draw_new_wave = 1;
-        }
-        if(key == GLFW_KEY_O && action == GLFW_PRESS) {
-            if(guiElementsStorage[GUI_SLIDER_SIZE].position_x > Diameter_change) {
-                guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x - Diameter_change;
-                draw_new_wave = 1;
-            }
-        }
-        if(key == GLFW_KEY_P && action == GLFW_PRESS) {
-            if(guiElementsStorage[GUI_SLIDER_SIZE].position_x < 1.0f - Diameter_change) {
-                guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x + Diameter_change;
-                draw_new_wave = 1;
-            }
+
+    if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+        //TODO set simulation running
+        guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_MESS;
+    }
+    if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
+        wave_offset_x+= Offset_change;
+        standard_draw();
+    }
+    if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+        wave_offset_x-=Offset_change;
+        standard_draw();
+    }
+    if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
+        wave_offset_y += Offset_change;
+        standard_draw();
+    }
+    if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
+        wave_offset_y -=Offset_change;
+        standard_draw();
+    }
+    if(key == GLFW_KEY_R && action == GLFW_PRESS) {
+            //Reset
+            //TODO redraw wave
+        /*wave_offset_x = offset_x_start;
+        wave_offset_y = offset_y_start;
+        guiElementsStorage[GUI_SLIDER_SIZE].position_x = SLIDER_SIZE_START;
+        guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
+        dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
+        momentum_prop = 1;
+        draw_new_wave = 1;*/
+    }
+    if(key == GLFW_KEY_O && action == GLFW_PRESS) {
+        if(guiElementsStorage[GUI_SLIDER_SIZE].position_x > Diameter_change) {
+            guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x - Diameter_change;
+            standard_draw();
         }
     }
-    if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
+    if(key == GLFW_KEY_P && action == GLFW_PRESS) {
+        if(guiElementsStorage[GUI_SLIDER_SIZE].position_x < 1.0f - Diameter_change) {
+            guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x + Diameter_change;
+            //TODO redraw wave
+        }
+    }
+    /*if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
         if(key == GLFW_KEY_N && action == GLFW_PRESS) {
             ColorIntensity=2.99f;
             draw_new_wave = 1;
             simulation_state = simulation_state_create_and_wait_for_start;
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_START;
         }
-    }
+    }*/
     if(key == GLFW_KEY_X && action == GLFW_PRESS) {
         if(guiElementsStorage[GUI_SLIDER_SPEED].position_x < 1.0f - Speed_change) {
             guiElementsStorage[GUI_SLIDER_SPEED].position_x += Speed_change;
-            dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
-            momentum_prop = 1;
+            dt = mapValue(type_wave_dt,guiElementsStorage[GUI_SLIDER_SPEED].position_x);
         }
     }
     if(key == GLFW_KEY_Y && action == GLFW_PRESS) {
         if(guiElementsStorage[GUI_SLIDER_SPEED].position_x > Speed_change) {
             guiElementsStorage[GUI_SLIDER_SPEED].position_x -= Speed_change;
-            dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
-            momentum_prop = 1;
+            dt = mapValue(type_wave_dt,guiElementsStorage[GUI_SLIDER_SPEED].position_x);
         }
     }
     if(key == GLFW_KEY_Q && action == GLFW_PRESS) {
@@ -1758,7 +1763,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             jerk_for_autocenter=jerk_for_autocenter-0.1f;
         }
     }
-    refereshGUI();
+    if(key == GLFW_KEY_C && action == GLFW_PRESS) {
+        if(jerk_for_autocenter>0.2f){
+            jerk_for_autocenter=jerk_for_autocenter-0.1f;
+        }
+    }
+    GUI_refresh();
 }
 
 //XYZ
@@ -1800,28 +1810,20 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 printf("BUTTON PUSHED\n\n\n");
                 if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_CONTROL){
                     if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
-                        if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
-                            ColorIntensity=2.99f;
-                            draw_new_wave = 1;
-                            simulation_state = simulation_state_create_and_wait_for_start;
-                            AnimationStep = 0;
-                            guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
-                            drawGui(G_OBJECT_UPDATE, width / (float)height);
-                        }
+                        standard_draw();
+                        printf("TODO BLINK\n");
+                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
+                        last_meas_pos_in_grid_coordinates[0]=wave_offset_x;
+                        last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
+                        GUI_refresh();
                         return;
                     }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
-                        if(simulation_state == simulation_state_create_and_wait_for_start) {
-                            simulation_state = simulation_state_simulate;
-                            guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
-                            drawGui(G_OBJECT_UPDATE, width / (float)height);
-                        }
+                        simulation_unpause();
+                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
+                        GUI_refresh();
                         return;
                     }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
-                        if(simulation_state == simulation_state_simulate) {
-                            simulation_state = simulation_state_measurement_animation;
-                            guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_RESET;
-                            drawGui(G_OBJECT_UPDATE, width / (float)height);
-                        }
+                        Measurement();
                         return;
                     }
                 }else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_POTENTIAL){
@@ -1838,6 +1840,28 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             drawGui(G_OBJECT_UPDATE, width / (float)height);
         }
         selectedGuiElement = -1; //Deselect all gui elements (tracking for the dragged object like slider or joystick)
+    }
+}
+
+void Measurement(){
+    switch(simulation_measurement(glfwGetTime(),last_meas_pos_in_grid_coordinates)){
+        case meas_hit:
+            ShotCount=MaxShot;
+            break;
+        case meas_no_hit:
+            ShotCount++;
+            if(ShotCount<MaxShot){//New Shot possible at measured Position
+                simulation_redraw_wave(last_meas_pos_in_grid_coordinates[0],last_meas_pos_in_grid_coordinates[1],wave_angle,wave_momentum,wave_gauss_width);
+            }
+            break;
+        case meas_blocked:
+            break;
+    }
+    guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_RESET;
+    GUI_refresh();
+    if(ShotCount==MaxShot){
+        last_meas_pos_in_grid_coordinates[0]=wave_offset_x;//includes Offset Shift
+        last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
     }
 }
 
@@ -1866,15 +1890,20 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
         set_xy_position_joystick(selectedGuiElement, xpos, ypos);
     }
-    /*switch(selectedGuiElement) {
+    switch(selectedGuiElement) {
     case GUI_SLIDER_SIZE:
+        wave_gauss_width=mapValue(type_wave_gauss_width,guiElementsStorage[selectedGuiElement].position_x);
+        standard_draw();
+        break;
     case GUI_SLIDER_WAVE_ROTATION:
-        draw_wave();
+        wave_angle=mapValue(type_wave_angle,guiElementsStorage[selectedGuiElement].position_x);
+        standard_draw();
         break;
     case GUI_SLIDER_SPEED:
-        change_speed();
+        wave_momentum=mapValue(type_wave_momentum,guiElementsStorage[selectedGuiElement].position_x);
+        standard_draw();
         break;
-    case GUI_JOYSTICK_ROTATION:
+    /*case GUI_JOYSTICK_ROTATION:
         //rotate_camera(selectedGuiElement); Commented because the rotation would be faster if the gui element is moved slightly
         break;
     case GUI_JOYSTICK_MOVEMENT:
@@ -1882,11 +1911,11 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         break;
     case GUI_JOYSTICK_WAVE_MOVE:
         move_wave(selectedGuiElement);
-        break;
+        break;*/
     default:
         printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
         break;
-    }*/
+    }
     drawGui(G_OBJECT_UPDATE, width / (float)height);
 }
 
@@ -1906,10 +1935,10 @@ void JoystickControll(){   //Benötigt, da sonst keine Rotation bei hover on joys
         rotate_camera(selectedGuiElement);
         break;
     case GUI_JOYSTICK_MOVEMENT:
-        move_camera(selectedGuiElement);
+        //move_camera(selectedGuiElement);
         break;
     case GUI_JOYSTICK_WAVE_MOVE:
-        move_wave(selectedGuiElement);
+        //move_wave(selectedGuiElement);
         break;
     default:
         //printf("No Joystick there\n");
@@ -1961,14 +1990,14 @@ void rotate_camera(int selectedGuiElement){
     } else if(rotation_up_down < 0.0f) {
         rotation_up_down = 0.0f;
     }
-    if(rotation_left_right < (-PI)) {
-        rotation_left_right = PI;
-    } else if(rotation_left_right > PI) {
-        rotation_left_right = (-PI);
+    if(rotation_left_right < (-M_PI)) {
+        rotation_left_right = M_PI;
+    } else if(rotation_left_right > M_PI) {
+        rotation_left_right = (-M_PI);
     }
 }
 
-void move_camera(int selectedGuiElement){
+/*void move_camera(int selectedGuiElement){
     position_x_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
     position_y_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
     if(position_x_axis>MovementBorderCamera){
@@ -1983,23 +2012,21 @@ void move_camera(int selectedGuiElement){
     }
 }
 
-void move_wave(int selectedGuiElement){
-    if(simulation_state==simulation_state_create_and_wait_for_start){
-        wave_offset_x += (Resolutionx*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
-        wave_offset_y += (Resolutiony*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
-        if(wave_offset_x>(Resolutionx*0.9f)){
-            wave_offset_x=Resolutionx*0.9f;
-        }else if(wave_offset_x<(Resolutionx*0.1f)){
-            wave_offset_x=(Resolutionx*0.1f);
-        }
-        if(wave_offset_y>Resolutiony*0.15f){
-            wave_offset_y=Resolutiony*0.15f;
-        }else if(wave_offset_y<(Resolutiony*0.05f)){
-            wave_offset_y=Resolutiony*0.05f;
-        }
-        draw_new_wave = 1;
+void draw_wave(int selectedGuiElement){
+    wave_offset_x += (sim_res_x*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
+    wave_offset_y += (sim_res_y*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
+    if(wave_offset_x>(sim_res_x*0.9f)){
+        wave_offset_x=sim_res_x*0.9f;
+    }else if(wave_offset_x<(sim_res_x*0.1f)){
+        wave_offset_x=(sim_res_x*0.1f);
     }
-}
+    if(wave_offset_y>sim_res_y*0.15f){
+        wave_offset_y=sim_res_y*0.15f;
+    }else if(wave_offset_y<(sim_res_y*0.05f)){
+        wave_offset_y=sim_res_y*0.05f;
+    }
+    simulation_redraw_wave(wave_offset_x,wave_offset_y,wave_angle,wave_momentum,wave_gauss_width);
+}*/
 
 void joystick_reset(int selectedGuiElement){
     guiElementsStorage[selectedGuiElement].position_x = 0.0f;
@@ -2007,17 +2034,8 @@ void joystick_reset(int selectedGuiElement){
     printf("Debug: Reset Pos of Joystick %d\n", selectedGuiElement);
 }
 
-void draw_wave(){
-    if(simulation_state == simulation_state_create_and_wait_for_start) {
-        draw_new_wave = 1;
-    }
-}
-
 void change_speed(){
-    dt = guiElementsStorage[selectedGuiElement].position_x * SPEED_MULTI;
-    if(simulation_state == simulation_state_simulate) {
-        momentum_prop = 1;
-    }
+    dt = mapValue(type_wave_dt,guiElementsStorage[selectedGuiElement].position_x);
 }
 
 //Shader
@@ -2110,171 +2128,9 @@ void drop_file_callback(GLFWwindow* window, int count, const char** paths) {
     }
 }
 
-//Read and write files
 
-unsigned int read_uint_from_endian_file(FILE* file) {
-    unsigned char data[4];
-    unsigned int data_return_int;
-    if(fread(data, 1, 4, file) < 4) {     //total number of read elements is less than 4
-        return 0;
-    }
-    //little endian
-    data_return_int = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
-    //big endian (comment out and comment little endian if needed)
-    //data_return_int=(data[0]<<24)|(data[1]<<16)|(data[2]<<8)|data[3];
-    return data_return_int;
-}
-
-unsigned short read_short_from_endian_file(FILE* file) {
-    //http://cpansearch.perl.org/src/DHUNT/PDL-Planet-0.05/libimage/bmp.c
-    unsigned char data[2];
-    unsigned short data_return_short;
-    if(fread(data, 1, 2, file) < 2) {     //total number of read elements is less than 4
-        return 0;
-    }
-    //little endian
-    data_return_short = (data[1] << 8) | data[0];
-    //big endian (comment out and comment little endian if needed)
-    //data_return_short=(data[0]<<8)|data[1];
-    return data_return_short;
-}
-
-unsigned char* read_bmp(char* filepath) {
-    //source https://github.com/ndd314/sjsu_cmpe295_cuda_fft_opengl/blob/master/opengl/plane/readBMPV2.c#L50
-    //https://stackoverflow.com/questions/7990273/converting-256-color-bitmap-to-rgba-bitmap
-    FILE *filepointer = fopen(filepath, "rb");
-
-    if(filepointer == NULL) {
-        printf("Error: File :%s could not be found\n", filepath);
-        fclose(filepointer);
-        return 0;
-    }
-
-    fseek(filepointer, 0, SEEK_SET);   //Jump to beginning of file
-    if(read_short_from_endian_file(filepointer) != 0x4D42) {     // (equals BM in ASCII)
-        fclose(filepointer);
-        printf("Error: File :%s is not an BMP\n", filepath);
-        return 0;
-    }
-
-    fseek(filepointer, 10, SEEK_SET);
-    unsigned int BitmapOffset = read_uint_from_endian_file(filepointer);
-    printf("Info: BMP data offset:%d\n", BitmapOffset);
-
-    if(read_uint_from_endian_file(filepointer) != 124) {
-        printf("Error: BitmapHeader is not BITMAPV5HEADER / 124 \n");
-        fclose(filepointer);
-        return 0;
-    }
-    unsigned int BitmapWidth = read_uint_from_endian_file(filepointer);
-    printf("Info: BitmapWidth is %d.\n", BitmapWidth);
-
-    unsigned int BitmapHeight = read_uint_from_endian_file(filepointer);
-    printf("Info: BitmapHeight is %d.\n", BitmapHeight);
-
-    if(read_short_from_endian_file(filepointer) != 1) {
-        printf("Error: Unsupported plane count\n");
-        return 0;
-    }
-
-    unsigned int BitmapColorDepth = read_short_from_endian_file(filepointer);
-    printf("Info: BMP color depth:%d", BitmapColorDepth);
-    unsigned int BitmapSizeCalculated = (BitmapColorDepth / 8) * (BitmapWidth + (BitmapWidth % 4)) * BitmapWidth;
-
-    unsigned int BitmapCompression = read_uint_from_endian_file(filepointer);
-    switch(BitmapCompression) {
-    case 0:
-        printf("Error: Compression type: none/BI_RGB\n");
-        fclose(filepointer);
-        return 0; //TODO add support
-        break;
-    case 3:
-        printf("Info: Compression type: Bitfields/BI_BITFIELDS\n");
-        break;
-    default:
-        printf("Error: Unsupported compression %d\n", BitmapCompression);
-        fclose(filepointer);
-        return 0;
-        break;
-    }
-    unsigned int BitmapImageSize = read_uint_from_endian_file(filepointer);
-    if(BitmapImageSize != BitmapSizeCalculated) {
-        printf("Error: Reading image size: Calculated Image Size: %d.\nRead Image size: %d\n", BitmapSizeCalculated, BitmapImageSize);
-        fclose(filepointer);
-        return 0;
-    }
-    printf("Info: Image Size:%d\n", BitmapSizeCalculated);
-    /*unsigned int BitmapXPpM=*/read_uint_from_endian_file(filepointer);
-    /*unsigned int BitmapYPpM=*/read_uint_from_endian_file(filepointer);
-    unsigned int BitmapColorsInPalette = read_uint_from_endian_file(filepointer);
-    printf("Info: Colors in palette: %d.\n", BitmapColorsInPalette);
-    fseek(filepointer, 4, SEEK_CUR);   //skip over important color count
-    if(BitmapCompression == 3) {
-        unsigned char RGBA_mask[4];
-        for(unsigned int color_channel = 0; color_channel < 4; color_channel++) {
-            unsigned int color_channel_mask = read_uint_from_endian_file(filepointer);
-            switch(color_channel_mask) {   //read shift value for color_channel
-            case 0xFF000000:
-                RGBA_mask[color_channel] = 3;
-                break;
-            case 0x00FF0000:
-                RGBA_mask[color_channel] = 2;
-                break;
-            case 0x0000FF00:
-                RGBA_mask[color_channel] = 1;
-                break;
-            case 0x000000FF:
-                RGBA_mask[color_channel] = 0;
-                break;
-            default:
-                printf("Error: Invalid BITMASK. Value: %x!\n", color_channel_mask);
-                fclose(filepointer);
-                return 0;
-                break;
-            }
-        }
-        //TODO implement swapping routine if brga!=[3,2,1,0]
-        printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n", RGBA_mask[0], RGBA_mask[1], RGBA_mask[2], RGBA_mask[3]);
-        uint8_t* imageData = malloc(BitmapSizeCalculated);
-        printf("Info: BMOFFST: %d\n", BitmapOffset);
-        fseek(filepointer, BitmapOffset, SEEK_SET);   //jump to pixel data
-        printf("Info: Calsize: %d\n", BitmapSizeCalculated);
-        if(fread(imageData, BitmapSizeCalculated, 1, filepointer) == 0) {
-            printf("Error: Reading failed!");
-        }
-        fclose(filepointer);
-        return imageData;
-    }
-    printf("Error: Currently not implemented!");
-    fclose(filepointer);
-    return 0;
-}
-
-void write_bmp(char* filepath, unsigned int width, unsigned int height) {
-    FILE* filepointer = fopen(filepath, "wb");
-    //bytes_per_line=(3*(width+1)/4)*4;
-    const char* String_to_write = "BMP";
-    fwrite(&String_to_write, sizeof(char), 3, filepointer);
-    return;
-}
-
-//window size
-
-void windows_size_callback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-    //Refresh lower GUI Border
-    guiElementsStorage[GUI_BUTTON_CONTROL].top_left_y = (height / (float)width) - guiElementsStorage[GUI_BUTTON_CONTROL].percentOfWidth * 0.25f;
-    guiElementsStorage[GUI_BUTTON_POTENTIAL].top_left_y = ((height / (float)width) - guiElementsStorage[GUI_BUTTON_POTENTIAL].percentOfWidth * 0.25f) -0.06f; //-0.1f because button should be on top of other button
-    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth;
-    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth;
-    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].percentOfWidth;
-    drawGui(G_OBJECT_UPDATE, width / (float)height);
-}
-
-//Potential
-
-void update_potential(){
-    static uint8_t SelectedPotential=0;
+void update_potential(unsigned char* graphic_local_texture){
+    static unsigned int SelectedPotential=0;
     char PotentialSourceFile[256];
     PotentialSourceFile[0]=0;
     strcat(PotentialSourceFile,filepath_potentials);
@@ -2295,25 +2151,66 @@ void update_potential(){
         pot = read_bmp(PotentialSourceFile);
     }*/
     pot=read_bmp(PotentialSourceFile);
-    for(int i = 0; i < Resolutionx * Resolutiony; i++) {
-        potential[i] = (255 - pot[4 * i + 1]) / 255.0f;
-    }
+    simulation_load_potential(pot);
     if((++SelectedPotential)==CountOfPotentialFiles){
         SelectedPotential=0;
     }
     //TODO update buttons
     guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
-    refereshGUI();
-    simulation_state = simulation_state_create_and_wait_for_start; //reinitialize TODO? is this right
-    draw_new_wave=1;
+    GUI_refresh();
+    standard_draw();
     ColorIntensity=2.9f;
 }
 
-//GUI
+void standard_draw(){
+    if(!simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,wave_angle,wave_momentum,wave_gauss_width)){
+        guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
+        GUI_refresh();
+    }
+}
 
-void refereshGUI(){
+//window size
+void windows_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+    //Refresh lower GUI Border
+    guiElementsStorage[GUI_BUTTON_CONTROL].top_left_y = (height / (float)width) - guiElementsStorage[GUI_BUTTON_CONTROL].percentOfWidth * 0.25f;
+    guiElementsStorage[GUI_BUTTON_POTENTIAL].top_left_y = ((height / (float)width) - guiElementsStorage[GUI_BUTTON_POTENTIAL].percentOfWidth * 0.25f) -0.06f; //-0.1f because button should be on top of other button
+    guiElementsStorage[GUI_JOYSTICK_MOVEMENT].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_MOVEMENT].percentOfWidth;
+    guiElementsStorage[GUI_JOYSTICK_ROTATION].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_ROTATION].percentOfWidth;
+    guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].top_left_y = (height / (float)width) - guiElementsStorage[GUI_JOYSTICK_WAVE_MOVE].percentOfWidth;
+    drawGui(G_OBJECT_UPDATE, width / (float)height);
+}
+
+float mapValue(int type,float input){
+    float output;
+    switch(type){
+        case type_wave_momentum:
+            output=input+1.0f;
+            break;
+        case type_wave_gauss_width:
+            output=SIZE_MULTI*input+2.0f;
+            break;
+        case type_wave_dt:
+            output=SPEED_MULTI*input+0.00001f;
+            break;
+        case type_wave_angle:
+            output=-M_PI*2*input-M_PI/2;
+            break;
+        default:
+            printf("ERROR: NO SUCH TYPE!!");
+            output=-1.0f;
+            break;
+    }
+    return output;
+
+
+}
+
+//GUI
+void GUI_refresh(){
     int width=0;
     int height=0;
     glfwGetWindowSize(MainWindow,&width,&height);
     windows_size_callback(MainWindow,width,height);
+    drawGui(G_OBJECT_DRAW, width/(float)height);
 }
