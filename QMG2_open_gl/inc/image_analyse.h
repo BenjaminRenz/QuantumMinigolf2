@@ -1,5 +1,5 @@
 #include "camera_dshow.h"
-#define camera_big_grid_points_x 600 //The y gridpoints will be calculated based on the aspect ratio
+#define camera_big_grid_points_x 300 //The y gridpoints will be calculated based on the aspect ratio
 #define camera_testspots 1
 
 HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called will set smp==0 and recieve a inputForBrightspotfinder Sruct to sore camera resolution and pointer for bright spot coordinates

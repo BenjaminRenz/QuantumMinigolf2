@@ -2,6 +2,7 @@
 #define SIMULATION_H_INCLUDED
 #include "fftw3.h"
 #include <stdint.h>
+#include <linmath.h>
 int sim_res_x;
 int sim_res_y;
 int sim_res_total;
@@ -17,8 +18,8 @@ void simulation_unpause();
 int simulation_redraw_wave(int offset_x,int offset_y,float angle,float momentum,float gauss_width);
 int simulation_run(float dt);
 
-enum {meas_hit,meas_no_hit};
-int simulation_measurement(double glfwTime);
+enum {meas_hit,meas_no_hit,meas_blocked};
+int simulation_measurement(double glfwTime,vec2 meas_pos_in_grid_coordinates);
 void simulation_load_potential(uint8_t* pot);
 
 #endif

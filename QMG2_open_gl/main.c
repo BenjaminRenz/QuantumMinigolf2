@@ -294,6 +294,10 @@ uint8_t* pot;
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
+#define MaxShot 6
+int ShotCount=0;
+vec2 last_meas_pos_in_grid_coordinates={wave_offset_x_start,wave_offset_y_start};
+
 
 enum {cal_init,cal_left_bottom,cal_left_top,cal_right_bottom,cal_right_top,cal_deinit};
 float* iscalibrated(int mouseClicked,volatile int* OneTimeInCamXpos,volatile int* OneTimeInCamYpos){
@@ -313,7 +317,7 @@ float* iscalibrated(int mouseClicked,volatile int* OneTimeInCamXpos,volatile int
             CamXpos=OneTimeInCamXpos;
             CamYpos=OneTimeInCamYpos;
             glfwSetMouseButtonCallback(MainWindow, mouse_button_callback_calibrate);
-            calibArray=malloc(8*sizeof(float));
+            calibArray=calloc(8,sizeof(float));
             texture_for_arrows = (unsigned char*) calloc(sim_res_total * 4, sizeof(unsigned char));
             texture_for_arrows_from_file=read_bmp(filepath_calibration_lb);
             for(int i = 0; i < sim_res_total; i++) {
@@ -423,8 +427,8 @@ float* iscalibrated(int mouseClicked,volatile int* OneTimeInCamXpos,volatile int
         case cal_deinit:
             if(!mouseClicked){
                 free(texture_for_arrows);
-                printf("TE %d",calibArray);
-                printf("TS %f",calibArray[0]);
+                printf("TE %d\n",calibArray);
+                printf("TS %f\n",calibArray[0]);
                 return calibArray;
             }
             return NULL;
@@ -547,6 +551,7 @@ int main(int argc, char* argv[]) {
     const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
     //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetMonitors(NULL)[0], NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -676,15 +681,23 @@ int main(int argc, char* argv[]) {
         delta_time = update_delta_time();
         //Check for Camera frame update
         if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
-            printf("122222222222222\n");
             //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
             vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
             camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-            //printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
+            printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
             drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
             CamYpos=CamXpos=-1;
             camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
-            printf("133333333333333<s\n");
+            printf("Brightspot: %f, %f\n",BrighspotMapped[0],BrighspotMapped[1]);
+            if(BrighspotMapped[1]>1.0f){
+                Measurement();
+            }
+            if(ShotCount==MaxShot){//TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                if(BrighspotMapped[1]<0.0f){
+                    standard_draw();
+                    ShotCount=0;
+                }
+            }
         }else{
             //printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
         }
@@ -855,22 +868,23 @@ static inline void mat2x2_mul_vec2(vec2 r, mat2x2 M, vec2 v)
 void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
     static vec2 posOld;
     static vec2 tempNewIn;
+    vec2 SubVec;
     tempNewIn[0]=posNewIn[0];
     tempNewIn[1]=posNewIn[1];
     if(C_OBJECT_STATE==C_OBJECT_INIT){
         posOld[0]=posNewIn[0];
         posOld[1]=posNewIn[1];
     }else{
-        vec2 wavePos={wave_offset_x/sim_res_x,wave_offset_y/sim_res_y};
+        vec2 wavePos={last_meas_pos_in_grid_coordinates[0]/sim_res_x,last_meas_pos_in_grid_coordinates[1]/sim_res_y};
         //printf("wavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
         //printf("oldPosraw: %f, %f\n",posOld[0],posOld[1]);
         //printf("newPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
         vec2_sub(wavePos,wavePos,posOld);
-        vec2_sub(posNewIn,posNewIn,posOld);
+        vec2_sub(SubVec,posNewIn,posOld);
         //printf("subwavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
         //printf("subnewPosraw: %f, %f\n",posNewIn[0],posNewIn[1]);
 
-        float angle=atan2(posNewIn[1],posNewIn[0]);
+        float angle=atan2(SubVec[1],SubVec[0]);
 
         float c=cosf(-angle);
         float s=sinf(-angle);
@@ -881,13 +895,13 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
         vec2 wavePosRot,posNewInRot;
         //printf("Matrix%f,%f\n       %f,%f\n", Rot[0][0],Rot[0][1],Rot[1][0],Rot[1][1]);
         mat2x2_mul_vec2(wavePosRot,Rot,wavePos);
-        mat2x2_mul_vec2(posNewInRot,Rot,posNewIn);
+        mat2x2_mul_vec2(posNewInRot,Rot,SubVec);
        // printf("NewPos: %f, %f\n",posNewInRot[0],posNewInRot[1]);
        // printf("wavPos: %f, %f\n",wavePosRot[0],wavePosRot[1]);
         if(wavePosRot[1]<HalbeSchlaegerbreiteY&&wavePosRot[1]>-HalbeSchlaegerbreiteY){
             if(wavePosRot[0]>0&&wavePosRot[0]<posNewInRot[0]){
                 printf("TODO MOMENTUM\n");
-                if(!simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,angle,posNewInRot[0]/CAMERA_SPEED_MULTI,wave_gauss_width)){
+                if(!simulation_redraw_wave((int)last_meas_pos_in_grid_coordinates[0],(int)last_meas_pos_in_grid_coordinates[1],angle,posNewInRot[0]/CAMERA_SPEED_MULTI,wave_gauss_width)){
                     simulation_unpause();
                     guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_MESS;
                     GUI_refresh();
@@ -1663,7 +1677,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(MainWindow, 1);
     }
     if(key == GLFW_KEY_M && action == GLFW_PRESS) {
-        if(42!=simulation_measurement(glfwGetTime())){
+        if(42!=simulation_measurement(glfwGetTime(), last_meas_pos_in_grid_coordinates)){
             guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_RESET;
         }
         //TODO redraw gui
@@ -1799,6 +1813,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         standard_draw();
                         printf("TODO BLINK\n");
                         guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
+                        last_meas_pos_in_grid_coordinates[0]=wave_offset_x;
+                        last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
                         GUI_refresh();
                         return;
                     }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
@@ -1807,10 +1823,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         GUI_refresh();
                         return;
                     }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
-                        if(42!=simulation_measurement(glfwGetTime())){
-                            guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_RESET;
-                            GUI_refresh();
-                        }
+                        Measurement();
                         return;
                     }
                 }else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_POTENTIAL){
@@ -1827,6 +1840,28 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             drawGui(G_OBJECT_UPDATE, width / (float)height);
         }
         selectedGuiElement = -1; //Deselect all gui elements (tracking for the dragged object like slider or joystick)
+    }
+}
+
+void Measurement(){
+    switch(simulation_measurement(glfwGetTime(),last_meas_pos_in_grid_coordinates)){
+        case meas_hit:
+            ShotCount=MaxShot;
+            break;
+        case meas_no_hit:
+            ShotCount++;
+            if(ShotCount<MaxShot){//New Shot possible at measured Position
+                simulation_redraw_wave(last_meas_pos_in_grid_coordinates[0],last_meas_pos_in_grid_coordinates[1],wave_angle,wave_momentum,wave_gauss_width);
+            }
+            break;
+        case meas_blocked:
+            break;
+    }
+    guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_RESET;
+    GUI_refresh();
+    if(ShotCount==MaxShot){
+        last_meas_pos_in_grid_coordinates[0]=wave_offset_x;//includes Offset Shift
+        last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
     }
 }
 
@@ -2128,7 +2163,10 @@ void update_potential(unsigned char* graphic_local_texture){
 }
 
 void standard_draw(){
-    simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,wave_angle,wave_momentum,wave_gauss_width);
+    if(!simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,wave_angle,wave_momentum,wave_gauss_width)){
+        guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
+        GUI_refresh();
+    }
 }
 
 //window size

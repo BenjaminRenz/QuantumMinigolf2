@@ -171,11 +171,12 @@ int simulation_run(float dt){
     return 0;
 }
 
-int simulation_measurement(double glfwTime){
+int simulation_measurement(double glfwTime,vec2 meas_pos_in_grid_coordinates){
     if(simulation_state!=simulation_state_simulate){
-        return 42;
+        return meas_blocked;
     }
     simulation_pause();
+    simulation_state=simulation_state_wait_for_restart;
     //Internal variable which holds information of what part of the animation will get executed in this frame
     srand((long)(10000.0f * glfwTime));
     double random = (rand() % 1001) / 1000.0f;
@@ -195,25 +196,53 @@ int simulation_measurement(double glfwTime){
         }
     }
     memset(&(psi[0][0]),0,sim_res_total*4*sizeof(float));
-    int meas_x=meas_pos%sim_res_x;
-    int meas_y=meas_pos/sim_res_y;
-    int meas_x_hole_dist_sqr=(meas_x-Meas_hole_x)*(meas_x-Meas_hole_x);
-    int meas_y_hole_dist_sqr=(meas_y-Meas_hole_y)*(meas_y-Meas_hole_y);
-    simulation_pause();
-    simulation_state=simulation_state_wait_for_restart;
+    //Pixel
+    float meas_x=(meas_pos%sim_res_x)/(float)sim_res_x;
+    float meas_y=(meas_pos/sim_res_x)/(float)sim_res_y;
+    float meas_x_hole_dist_sqr=(meas_x-Meas_hole_x)*(meas_x-Meas_hole_x);
+    float meas_y_hole_dist_sqr=(meas_y-Meas_hole_y)*(meas_y-Meas_hole_y);
+    printf("Distxsq %f Distysq %f \n",meas_x_hole_dist_sqr,meas_y_hole_dist_sqr);
     if((meas_x_hole_dist_sqr+meas_y_hole_dist_sqr)<Meas_hole_rad*Meas_hole_rad){
         printf("Inside hole.\n");
+        meas_pos_in_grid_coordinates[0]=(float)(meas_pos%sim_res_x);
+        meas_pos_in_grid_coordinates[1]=(float)(meas_pos/sim_res_x);
         psi[meas_pos][0]=1.0f;
         psi[meas_pos+1][0]=1.0f;
+        psi[meas_pos+2][0]=1.0f;
+        psi[meas_pos+3][0]=1.0f;
         psi[meas_pos+sim_res_x][0]=1.0f;
         psi[meas_pos+sim_res_x+1][0]=1.0f;
+        psi[meas_pos+sim_res_x+2][0]=1.0f;
+        psi[meas_pos+sim_res_x+3][0]=1.0f;
+        psi[meas_pos+sim_res_x*2][0]=1.0f;
+        psi[meas_pos+sim_res_x*2+1][0]=1.0f;
+        psi[meas_pos+sim_res_x*2+2][0]=1.0f;
+        psi[meas_pos+sim_res_x*2+3][0]=1.0f;
+        psi[meas_pos+sim_res_x*3][0]=1.0f;
+        psi[meas_pos+sim_res_x*3+1][0]=1.0f;
+        psi[meas_pos+sim_res_x*3+2][0]=1.0f;
+        psi[meas_pos+sim_res_x*3+3][0]=1.0f;
         return meas_hit;
     }else{
         printf("Outside hole.\n");
-        psi[meas_pos][1]=0.0f;
+        meas_pos_in_grid_coordinates[0]=(float)(meas_pos%sim_res_x);
+        meas_pos_in_grid_coordinates[1]=(float)(meas_pos/sim_res_x);
+        psi[meas_pos][1]=1.0f;
         psi[meas_pos+1][1]=1.0f;
+        psi[meas_pos+2][1]=1.0f;
+        psi[meas_pos+3][1]=1.0f;
         psi[meas_pos+sim_res_x][1]=1.0f;
         psi[meas_pos+sim_res_x+1][1]=1.0f;
+        psi[meas_pos+sim_res_x+2][1]=1.0f;
+        psi[meas_pos+sim_res_x+3][1]=1.0f;
+        psi[meas_pos+sim_res_x*2][1]=1.0f;
+        psi[meas_pos+sim_res_x*2+1][1]=1.0f;
+        psi[meas_pos+sim_res_x*2+2][1]=1.0f;
+        psi[meas_pos+sim_res_x*2+3][1]=1.0f;
+        psi[meas_pos+sim_res_x*3][1]=1.0f;
+        psi[meas_pos+sim_res_x*3+1][1]=1.0f;
+        psi[meas_pos+sim_res_x*3+2][1]=1.0f;
+        psi[meas_pos+sim_res_x*3+3][1]=1.0f;
         return meas_no_hit;
     }
 
