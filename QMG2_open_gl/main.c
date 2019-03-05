@@ -66,8 +66,6 @@ void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void windows_size_callback(GLFWwindow* window, int width, int height);
 void glfw_error_callback(int error, const char* description);
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
-unsigned char* read_bmp(char* filepath);
-void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 float timerForBlink(int restart);
 void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
@@ -182,8 +180,10 @@ void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action,
 #define UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_X   (1024.0f/1024.0f)
 #define UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_Y   ( 740.0f/1024.0f)
 
-
-
+#define UV_TARGET_TOP_LEFT_X    (520.0f/1024.0f)
+#define UV_TARGET_TOP_LEFT_Y    (592.0f/1024.0f)
+#define UV_TARGET_DOWN_RIGHT_X  (780.0f/1024.0f)
+#define UV_TARGET_DOWN_RIGHT_Y  (332.0f/1024.0f)
 //Instantiated GUI_elements
 //Slider x
 #define SLIDER_X_NUMBER 3
@@ -294,7 +294,7 @@ uint8_t* pot;
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
-#define MaxShot 6
+#define MaxShot 1
 int ShotCount=0;
 vec2 last_meas_pos_in_grid_coordinates={wave_offset_x_start,wave_offset_y_start};
 
@@ -642,7 +642,7 @@ int main(int argc, char* argv[]) {
     drawPlaneAndGrid(G_OBJECT_INIT, PlaneRes, GridRes, NULL);   //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
     //Init target box
-    //drawTargetBox(G_OBJECT_INIT,0,0.0f);
+    drawTargetBox(G_OBJECT_INIT,0,0.0f);
     drawTrackPoint(G_OBJECT_INIT,0,0.0f,0.0f);
     //end Graphics@@
 
@@ -839,7 +839,19 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-        //drawTargetBox(G_OBJECT_DRAW,mvp4x4,ColorIntensity);//,sin(glfwGetTime()*3.0));
+
+        mat4x4 tempScaleMat;
+        mat4x4 tempTransMat;
+        mat4x4_identity(tempScaleMat);
+        mat4x4_scale_aniso(tempScaleMat,tempScaleMat,Meas_hole_rad,Meas_hole_rad,1.f);
+        mat4x4_translate(tempTransMat,Meas_hole_x-0.5f,Meas_hole_y-0.5f,0.f);
+        mat4x4 tempScaleTransMat;
+        mat4x4_mul(tempScaleTransMat,tempTransMat,tempScaleMat);
+        mat4x4 tempTargetCombined;
+        mat4x4_mul(tempTargetCombined,mvp4x4,tempScaleTransMat);
+
+
+        drawTargetBox(G_OBJECT_DRAW,tempTargetCombined,ColorIntensity);
 
         drawTrackPoint(G_OBJECT_DRAW,mvp4x4,0,0);
         drawGui(G_OBJECT_DRAW,0);
@@ -922,7 +934,7 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
     }
 }
 
-void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
+void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float xpos, float ypos){
     static GLuint trackShaderID=0;
     static GLuint vertexBufferID=0;
     float data[18];
@@ -954,7 +966,7 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
         glEnableVertexAttribArray(0);   //x,y
         //Enabler Shader
         glUseProgram(trackShaderID);
-        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
         //Set Shader Uniforms to render Grid
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
@@ -968,7 +980,7 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
     }
 }
 
-/*void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float Intensity){
     static GLuint vboTargetBoxID=0;
     static GLuint targetShaderID=0;
     static GLuint IntensityFloatUniform = 0;
@@ -979,23 +991,45 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
         glAttachShader(targetShaderID, CompileShaderFromFile(filepath_shader_vertex_target, GL_VERTEX_SHADER));       //attach vertex shader to new program
         glAttachShader(targetShaderID, CompileShaderFromFile(filepath_shader_fragment_target, GL_FRAGMENT_SHADER));      //attach fragment shader to new program
         glLinkProgram(targetShaderID);
+
+/*      glActiveTexture(GL_TEXTURE2);
+        glGenTextures(1, &textureId);
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        void* tempClientGuiTexture = read_bmp("");
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, tempClientGuiTexture);
+        free(tempClientGuiTexture);
+*/
+        glUseProgram(targetShaderID);
+        glUniform1i(glGetUniformLocation(targetShaderID, "texture1"), 1); //Hack, set to the same texture as the gui
         //Get Shader Variables
         glUseProgram(targetShaderID);
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
         IntensityFloatUniform = glGetUniformLocation(targetShaderID, "Intensity");
         glGenBuffers(1,&vboTargetBoxID);
         float VertexData[]={
-            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
-            VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,
-            VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,//face 3
-            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,
-            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,//face 4
-            VertMinX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,
-            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMinZ,//bottomface inverted (normal inward)
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ
-            //no bottomface
+            -1.0,-1.0,
+            1.0,-1.0,
+            -1.0,1.0,
+            1.0,-1.0,
+            -1.0,1.0,
+            1.0,1.0,
+
+            /*0.0,0.0,
+            1.0,0.0,
+            0.0,1.0,
+            1.0,0.0,
+            0.0,1.0,
+            1.0,1.0*/
+            UV_TARGET_TOP_LEFT_X  ,UV_TARGET_DOWN_RIGHT_Y,
+            UV_TARGET_DOWN_RIGHT_X,UV_TARGET_DOWN_RIGHT_Y,
+            UV_TARGET_TOP_LEFT_X  ,UV_TARGET_TOP_LEFT_Y  ,
+            UV_TARGET_DOWN_RIGHT_X,UV_TARGET_DOWN_RIGHT_Y,
+            UV_TARGET_TOP_LEFT_X  ,UV_TARGET_TOP_LEFT_Y  ,
+            UV_TARGET_DOWN_RIGHT_X,UV_TARGET_TOP_LEFT_Y
         };
         printf("DEBUG: sizeof: %d\n",sizeof(VertexData));
         glBindBuffer(GL_ARRAY_BUFFER,vboTargetBoxID);
@@ -1004,26 +1038,30 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
         //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         glBindBuffer(GL_ARRAY_BUFFER, vboTargetBoxID);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(0);   //x,y
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 12));
+        glEnableVertexAttribArray(0);   //x,y,z
+        glEnableVertexAttribArray(1);
         //Enabler Shader
         glUseProgram(targetShaderID);
         //Set Shader Uniforms to render Grid
-        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
-        glUniform1f(IntensityFloatUniform,Intensity);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
+        //glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
-        //glDisable(GL_DEPTH_TEST);
-        glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
+        glDisable(GL_DEPTH_TEST);
+        //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        //glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
         glDrawArrays(GL_TRIANGLES,0,6);
-        glDrawArrays(GL_TRIANGLES,6,6);
-        glDrawArrays(GL_TRIANGLES,12,6);
-        glDrawArrays(GL_TRIANGLES,18,6); //12-2 because bottom face is missing
+        glEnable(GL_CULL_FACE);
+        //12-2 because bottom face is missing
         //glDrawArrays(GL_TRIANGLES,24,6);
         //glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
     }
-}*/
-void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4) {
+}
+void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4_local) {
     //3d object info
     //uses Texture0 which is constantly updated
     static GLint maxSupportedIndices = 0;
@@ -1191,7 +1229,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
         //Enabler Shader
         glUseProgram(gridAndPlaneShaderID);
         //Set Shader Uniforms to render Grid
-        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
         glUniform1f(renderGridOrPlaneUniform, 1.0f);
         unsigned int buffernumber;
         //Smooth lines?
