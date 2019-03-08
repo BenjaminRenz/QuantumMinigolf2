@@ -92,7 +92,6 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras)  //TODO change 
 
 struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem* CameraInList)
 {
-    int hr=0;
     struct CameraStorageObject* CameraOut=(struct CameraStorageObject*) malloc(sizeof(struct CameraStorageObject));
 
     //Create Graph and Filter
@@ -105,7 +104,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     //Create Filter
     IBaseFilter* CameraFilter=NULL;
     IBindCtx* myBindContext=NULL;
-    CreateBindCtx(0,&myBindContext);//TODO TEST
+    CreateBindCtx(0,&myBindContext);
     CameraInList->MonikerPointer->lpVtbl->BindToObject(CameraInList->MonikerPointer,NULL,NULL,&IID_IBaseFilter,(void **)&CameraFilter); //Do not swap this and the line below, it will not work!
     CameraOut->_CameraGraph->lpVtbl->AddFilter(CameraOut->_CameraGraph, CameraFilter, L"Capture Source");
     IEnumPins* CameraOutputPins=0;
@@ -136,7 +135,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     byte* pUnusedSSC=(byte*) malloc(sizeof(byte)*sizeOfCFGStructureInByte);
     //get VideoSteamConfigSturcure
     CameraOut->_amMediaPointerArray=(AM_MEDIA_TYPE**) malloc(sizeof(AM_MEDIA_TYPE)*numberOfPossibleRes);
-    unsigned long** resolutionPointerArray=(unsigned long**) malloc((2*sizeof(long)+sizeof(long*))*numberOfPossibleRes); //we create an array for x,y resolution (sizeof(long)*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (size_t size of general pointer)
+    unsigned int** resolutionPointerArray=(unsigned int**) malloc((2*sizeof(int)+sizeof(int*))*numberOfPossibleRes); //we create an array for x,y resolution (sizeof(long)*2) which contains pointers to the first location of every pair to be accessed as regular 2d array (size_t size of general pointer)
     for(int numOfRes=0; numOfRes<numberOfPossibleRes; numOfRes++)
     {
         AM_MEDIA_TYPE* pAmMedia=NULL;
@@ -146,7 +145,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
         if(pAmMedia->formattype.Data1==FORMAT_VideoInfo.Data1 && (pAmMedia->cbFormat >= sizeof(VIDEOINFOHEADER)) && pAmMedia->pbFormat!=NULL)  //Check if right format, If the space at pointer location is valid memory and if the pointer is actually filled with something
         {
             VIDEOINFOHEADER* pVideoInfoHead=(VIDEOINFOHEADER*) pAmMedia->pbFormat; //Get video info header
-            resolutionPointerArray[numOfRes]=((unsigned long*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2); //point to the first element of the resolution tuples stored after the pointer table
+            resolutionPointerArray[numOfRes]=((unsigned int*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2); //point to the first element of the resolution tuples stored after the pointer table
             resolutionPointerArray[numOfRes][0]=pVideoInfoHead->bmiHeader.biWidth;
             resolutionPointerArray[numOfRes][1]=pVideoInfoHead->bmiHeader.biHeight;
             printf("Info width:%d\n",resolutionPointerArray[numOfRes][0]);
@@ -155,7 +154,7 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
         else
         {
             printf("Warn: unusable format, resolution won't be extracted!\n");
-            resolutionPointerArray[numOfRes]=((long*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2);
+            resolutionPointerArray[numOfRes]=((unsigned int*)(resolutionPointerArray+numberOfPossibleRes))+(numOfRes*2);
             resolutionPointerArray[numOfRes][0]=0;
             resolutionPointerArray[numOfRes][1]=0;
         }
@@ -190,10 +189,10 @@ struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem*
     return CameraOut;
 }
 
-int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer) //selected resolution is position in array
+int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,HRESULT (*callbackForGraphviewFuncPointer) (void*, IMediaSample*) ) //selected resolution is position in array
 {
     DWORD no;
-    INT_PTR* p=0; //will be pointer to the input function of the render filter
+    INT_PTR* p=NULL; //will be pointer to the input function of the render filter
     CameraIn->_StreamCfg->lpVtbl->SetFormat(CameraIn->_StreamCfg,(CameraIn->_amMediaPointerArray[selectedResolution]));
     //Free unused formats
     for(int formatIter=0; formatIter<CameraIn->numberOfSupportedResolutions; formatIter++)
@@ -224,12 +223,12 @@ int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedReso
     IMemInputPin* myMemoryInputPin=NULL;
     myRenderPin->lpVtbl->QueryInterface(myRenderPin,&IID_IMemInputPin,(void**)&myMemoryInputPin);
     p=6+*(INT_PTR**)myMemoryInputPin; //Get the function pointer for Recieve() of myRenderPin which we will use later to "inject" out own function pointer to redirect the output of the previous filter
-    printf("Debug: callback address location: %x\n",p);
-    printf("Debug: address before change: %x\n",*p);
+    //printf("Debug: callback address location: %llux\n",(uint64_t)p);
+    //printf("Debug: address before change: %llux\n",(uint64_t)*p);
     VirtualProtect(p,4,PAGE_EXECUTE_READWRITE,&no);//To allow the write from our thread because the graph lives in a separate thread
     //Hide the (now empty/black) popup window
     IVideoWindow* myVideoWindow=NULL;
-    CameraIn->_CameraGraph->lpVtbl->QueryInterface(CameraIn->_CameraGraph,&IID_IVideoWindow,&myVideoWindow);
+    CameraIn->_CameraGraph->lpVtbl->QueryInterface(CameraIn->_CameraGraph,&IID_IVideoWindow,(void*)&myVideoWindow);
     CameraIn->_MediaControl->lpVtbl->Pause(CameraIn->_MediaControl); //do this to make return of run dependent on if the camera is already in use
     if(S_OK!=CameraIn->_MediaControl->lpVtbl->Run(CameraIn->_MediaControl)){
         printf("Alert camera already in use abort!\n");
@@ -238,7 +237,7 @@ int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedReso
         printf("Debug: Camera not in use, continue\n");
     }
     myVideoWindow->lpVtbl->put_Visible(myVideoWindow,0);
-    *p=callbackForGraphviewFPointer;
-    printf("Debug: address after change: %x\n",*p);
+    *p=(INT_PTR)callbackForGraphviewFuncPointer;
+    //printf("Debug: address after change: %lx\n",*p);
     return S_OK;
 }

@@ -11,8 +11,8 @@
 
 struct inputForBrightspotfinder
 {
-    float* cam_current_xpos;
-    float* cam_current_ypos;
+    int* cam_current_xpos; //used from main to get values out of other thread
+    int* cam_current_ypos;
     int xres;
     int yres;
 };
@@ -33,7 +33,7 @@ struct CameraStorageObject
     IMediaControl* _MediaControl;
     IAMCameraControl* _CameraControl;
     unsigned int numberOfSupportedResolutions;
-    unsigned long** resolutionsXYPointer;  //treat as if it would be a 2d array e.g.: resolutionsXYPointer[resolutionNum][0] for width ... [width=0,height=1]
+    unsigned int** resolutionsXYPointer;  //treat as if it would be a 2d array e.g.: resolutionsXYPointer[resolutionNum][0] for width ... [width=0,height=1]
     AM_MEDIA_TYPE** _amMediaPointerArray;
     IAMStreamConfig* _StreamCfg;
     IPin* _outputpinPointer;
@@ -55,5 +55,5 @@ struct CameraListItem* getCameras(unsigned int* numberOfCameras);
 
 
 struct CameraStorageObject* getAvailableCameraResolutions(struct CameraListItem* CameraInList);
-int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,INT_PTR* callbackForGraphviewFPointer);  //selected resolution is position in array
+int registerCameraCallback(struct CameraStorageObject* CameraIn,int selectedResolution,HRESULT (*callbackForGraphviewFuncPointer) (void*, IMediaSample*) );  //selected resolution is position in array
 #endif

@@ -3,10 +3,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define Meas_hole_rad 0.15f
-#define Meas_hole_x 0.5f
-#define Meas_hole_y 0.8f
-
 enum {simulation_state_not_allocated,simulation_state_simulate,simulation_state_measurement_animation,simulation_state_created_and_wait_for_start,simulation_state_wait_for_restart};
 
 int simulation_state=simulation_state_not_allocated;

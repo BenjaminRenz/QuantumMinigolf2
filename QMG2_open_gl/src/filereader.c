@@ -104,16 +104,16 @@ unsigned char* read_bmp(char* filepath) {
             unsigned int color_channel_mask = read_uint_from_endian_file(filepointer);
             switch(color_channel_mask) {   //read shift value for color_channel
             case 0xFF000000:
-                RGBA_mask[color_channel] = 3;
+                RGBA_mask[color_channel] = 3; //transparency
                 break;
             case 0x00FF0000:
-                RGBA_mask[color_channel] = 2;
+                RGBA_mask[color_channel] = 2; //b
                 break;
             case 0x0000FF00:
-                RGBA_mask[color_channel] = 1;
+                RGBA_mask[color_channel] = 1; //g
                 break;
             case 0x000000FF:
-                RGBA_mask[color_channel] = 0;
+                RGBA_mask[color_channel] = 0; //r
                 break;
             default:
                 printf("Error: Invalid BITMASK. Value: %x!\n", color_channel_mask);
@@ -122,7 +122,6 @@ unsigned char* read_bmp(char* filepath) {
                 break;
             }
         }
-        //TODO implement swapping routine if brga!=[3,2,1,0]
         printf("Info: Shifting value for R:%d G:%d B:%d A:%d\n", RGBA_mask[0], RGBA_mask[1], RGBA_mask[2], RGBA_mask[3]);
         uint8_t* imageData = malloc(BitmapSizeCalculated);
         printf("Info: BMOFFST: %d\n", BitmapOffset);
@@ -130,6 +129,16 @@ unsigned char* read_bmp(char* filepath) {
         printf("Info: Calsize: %d\n", BitmapSizeCalculated);
         if(fread(imageData, BitmapSizeCalculated, 1, filepointer) == 0) {
             printf("Error: Reading failed!");
+        }
+        int colorOrder[4]={3,2,1,0};
+        for(int i=0;i<(BitmapSizeCalculated/4);i++){
+            uint32_t imageDataTemp=0;
+            for(int colorchannel=0;colorchannel<4;colorchannel++){
+                int shiftlength_old=(RGBA_mask[colorchannel]*8);
+                int shiftlenght_new=(colorOrder[colorchannel]*8);
+                imageDataTemp+=((((uint32_t*)imageData)[i]&(0xFF<<shiftlength_old))>>shiftlength_old)<<shiftlenght_new;
+            }
+            ((uint32_t*)imageData)[i]=imageDataTemp;
         }
         fclose(filepointer);
         return imageData;

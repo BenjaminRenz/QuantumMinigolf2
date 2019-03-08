@@ -1,10 +1,9 @@
 #define STRSAFE_NO_DEPRECATE //allow use of strcpy and strcat
 
 #define GLEW_STATIC
-#include "libraries/GLEW_2.1.0/include/glew.h"
-#include "libraries/GLFW_3.2.1/include/glfw3.h"
-#include "libraries/LINMATH/include/linmath.h"
-
+#include "glew.h"
+#include "glfw3.h"
+#include "linmath.h"
 //Functions to correct for perspective
 #include "map_camera_plane.h"
 //Functions to get raw data from camera
@@ -15,7 +14,10 @@
 #include "simulation.h"
 //Functions for file handling
 #include "filereader.h"
+//Operation mode for calibration
+#include "calibration_mode.h"
 
+#include "gl_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,13 +34,7 @@
 
 #ifdef _WIN32
  #define filepath_potentials ".\\res\\potentials"
- #define filepath_calibration_lb ".\\res\\calib\\lb.bmp"
- #define filepath_calibration_lt ".\\res\\calib\\lt.bmp"
- #define filepath_calibration_rb ".\\res\\calib\\rb.bmp"
- #define filepath_calibration_rt ".\\res\\calib\\rt.bmp"
-
  #define filepath_gui_bmp ".\\res\\textures\\GUI2.bmp"  //CHANGED!!!
- #define filepath_potential_bmp ".\\res\\potentials\\double_slit512.bmp"
  #define filepath_shader_vertex_gui ".\\res\\shaders\\vertex_gui.glsl"
  #define filepath_shader_fragment_gui ".\\res\\shaders\\fragment_gui.glsl"
  #define filepath_shader_vertex_graph ".\\res\\shaders\\vertex_graph.glsl"
@@ -48,7 +44,6 @@
 #elif __linux__
  #define filepath_potentials "./res/potentials"
  #define filepath_gui_bmp "./res/textures/GUI2.bmp"
- //#define filepath_potential_bmp "./res/potentials/double_slit512.bmp"
  #define filepath_shader_vertex_gui "./res/shaders/vertex_gui.glsl"
  #define filepath_shader_fragment_gui "./res/shaders/fragment_gui.glsl"
  #define filepath_shader_vertex_graph "./res/shaders/vertex_graph.glsl"
@@ -66,15 +61,12 @@ void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 void windows_size_callback(GLFWwindow* window, int width, int height);
 void glfw_error_callback(int error, const char* description);
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
-unsigned char* read_bmp(char* filepath);
-void write_bmp(char* filepath, unsigned int width, unsigned int height);
 float update_delta_time();
 float timerForBlink(int restart);
 void APIENTRY openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
 void drawGui(int G_OBJECT_STATE, float aspectRatio);
 void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp,float xpos, float ypos);
 void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4);
-GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType);
 void JoystickControll();
 void joystick_reset(int selectedGuiElement);
 void set_x_position_slider(int selectedGuiElement, double xpos);
@@ -182,8 +174,10 @@ void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action,
 #define UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_X   (1024.0f/1024.0f)
 #define UV_GUI_JOYSTICK_BORDER_DOWN_RIGHT_Y   ( 740.0f/1024.0f)
 
-
-
+#define UV_TARGET_TOP_LEFT_X    (520.0f/1024.0f)
+#define UV_TARGET_TOP_LEFT_Y    (592.0f/1024.0f)
+#define UV_TARGET_DOWN_RIGHT_X  (780.0f/1024.0f)
+#define UV_TARGET_DOWN_RIGHT_Y  (332.0f/1024.0f)
 //Instantiated GUI_elements
 //Slider x
 #define SLIDER_X_NUMBER 3
@@ -294,171 +288,10 @@ uint8_t* pot;
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
-#define MaxShot 6
+#define MaxShot 1
 int ShotCount=0;
 vec2 last_meas_pos_in_grid_coordinates={wave_offset_x_start,wave_offset_y_start};
 
-
-enum {cal_init,cal_left_bottom,cal_left_top,cal_right_bottom,cal_right_top,cal_deinit};
-float* iscalibrated(int mouseClicked,volatile int* OneTimeInCamXpos,volatile int* OneTimeInCamYpos){
-    #define maxNumMeasPoints 5
-    static float* calibArray;
-    uint8_t* texture_for_arrows_from_file;
-    static unsigned int calibrationstate=cal_init;
-    static unsigned char* texture_for_arrows;
-    static unsigned int numMeasPoints;
-    static unsigned int aquisition_running;
-    static volatile int* CamXpos;
-    static volatile int* CamYpos;
-    mat4x4 mvp4x4;
-    switch(calibrationstate){
-        case cal_init:
-            printf("Debug: Calibration Init\n");
-            CamXpos=OneTimeInCamXpos;
-            CamYpos=OneTimeInCamYpos;
-            glfwSetMouseButtonCallback(MainWindow, mouse_button_callback_calibrate);
-            calibArray=calloc(8,sizeof(float));
-            texture_for_arrows = (unsigned char*) calloc(sim_res_total * 4, sizeof(unsigned char));
-            texture_for_arrows_from_file=read_bmp(filepath_calibration_lb);
-            for(int i = 0; i < sim_res_total; i++) {
-                texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
-                texture_for_arrows[i * 4 + 2] = 128;
-                texture_for_arrows[i * 4 + 1] = 128;
-            }
-            free(texture_for_arrows_from_file);
-            calibrationstate=cal_left_bottom;
-            aquisition_running=0;
-            numMeasPoints=0;
-            break;
-        case cal_left_bottom:
-            printf("Debug: Calibration lb\n");
-            if(numMeasPoints<maxNumMeasPoints){
-                if(mouseClicked&&!aquisition_running){ //for the first frame
-                    aquisition_running=1;
-                }
-                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
-                    calibArray[0]+=(float) *CamXpos;
-                    calibArray[1]+=(float) *CamYpos;
-                    *CamYpos=*CamXpos=-1;
-                    numMeasPoints++;
-                }
-            }else{
-                calibArray[0]/=maxNumMeasPoints;
-                calibArray[1]/=maxNumMeasPoints;
-                texture_for_arrows_from_file=read_bmp(filepath_calibration_rb);
-                for(int i = 0; i < sim_res_total; i++) {
-                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
-                }
-                free(texture_for_arrows_from_file);
-                calibrationstate=cal_right_bottom;
-                aquisition_running=0;
-                numMeasPoints=0;
-            }
-            break;
-        case cal_right_bottom:
-            printf("Debug: Calibration rb\n");
-            if(numMeasPoints<maxNumMeasPoints){
-                if(mouseClicked&&!aquisition_running){ //for the first frame
-                    aquisition_running=1;
-                }
-                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
-                    calibArray[2]+=(float) *CamXpos;
-                    calibArray[3]+=(float) *CamYpos;
-                    *CamYpos=*CamXpos=-1;
-                    numMeasPoints++;
-                }
-            }else{
-                calibArray[2]/=maxNumMeasPoints;
-                calibArray[3]/=maxNumMeasPoints;
-                texture_for_arrows_from_file=read_bmp(filepath_calibration_rt);
-                for(int i = 0; i < sim_res_total; i++) {
-                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
-                }
-                free(texture_for_arrows_from_file);
-                calibrationstate=cal_right_top;
-                aquisition_running=0;
-                numMeasPoints=0;
-            }
-            break;
-        case cal_right_top:
-            printf("Debug: Calibration rt\n");
-            if(numMeasPoints<maxNumMeasPoints){
-                if(mouseClicked&&!aquisition_running){ //for the first frame
-                    aquisition_running=1;
-                }
-                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
-                    calibArray[4]+=(float) *CamXpos;
-                    calibArray[5]+=(float) *CamYpos;
-                    *CamYpos=*CamXpos=-1;
-                    numMeasPoints++;
-                }
-            }else{
-                calibArray[4]/=maxNumMeasPoints;
-                calibArray[5]/=maxNumMeasPoints;
-                texture_for_arrows_from_file=read_bmp(filepath_calibration_lt);
-                for(int i = 0; i < sim_res_total; i++) {
-                    texture_for_arrows[i * 4 + 3] = texture_for_arrows_from_file[i * 4 + 1];
-                }
-                free(texture_for_arrows_from_file);
-                calibrationstate=cal_left_top;
-                aquisition_running=0;
-                numMeasPoints=0;
-            }
-            break;
-        case cal_left_top:
-            printf("Debug: Calibration rt\n");
-            if(numMeasPoints<maxNumMeasPoints){
-                if(mouseClicked&&!aquisition_running){ //for the first frame
-                    aquisition_running=1;
-                }
-                if((*CamXpos!=-1)&&(*CamYpos!=-1)&&aquisition_running){ //for every arrived Frame arrived
-                    calibArray[6]+=(float) *CamXpos;
-                    calibArray[7]+=(float) *CamYpos;
-                    *CamYpos=*CamXpos=-1;
-                    numMeasPoints++;
-                }
-            }else{
-                calibArray[6]/=maxNumMeasPoints;
-                calibArray[7]/=maxNumMeasPoints;
-                printf("TEESSSSTTTT %f\n",calibArray[7]);
-                calibrationstate=cal_deinit;
-            }
-            break;
-        case cal_deinit:
-            if(!mouseClicked){
-                free(texture_for_arrows);
-                printf("TE %d\n",calibArray);
-                printf("TS %f\n",calibArray[0]);
-                return calibArray;
-            }
-            return NULL;
-    }
-    //@@Graphics
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, psiTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sim_res_x, sim_res_y, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_for_arrows);
-
-    int width=0;
-    int height=0;
-    glfwGetWindowSize(MainWindow, &width, &height);
-    glViewport(0, 0, width, height);
-    printf("windows size: %d, %d",width,height);
-    mat4x4_ortho(mvp4x4, -0.55f*width/height, 0.55f*width/height, -0.55f, 0.55f, -1.0f, 5.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-    //Swap Buffers
-    glFinish();
-    glfwSwapBuffers(MainWindow);
-    //Process Events
-    glfwPollEvents();
-    return NULL;
-}
-
-void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods){
-    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        iscalibrated(1,NULL,NULL);
-    }
-}
 
 int main(int argc, char* argv[]) {
     //@Simulation
@@ -546,12 +379,15 @@ int main(int argc, char* argv[]) {
     //Set window creation hints
     //glfwWindowHint(GLFW_RESIZABLE,GL_FALSE); //Uncomment to disable resizing
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-
+    int numberOfMonitors=0;
+    GLFWmonitor** Monitors=glfwGetMonitors(&numberOfMonitors);
+    GLFWmonitor* MonitorInUse=Monitors[numberOfMonitors-1];
     //window creation
-    const GLFWvidmode* VideoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
+    const GLFWvidmode* VideoMode = glfwGetVideoMode(MonitorInUse);
+    printf("Videomode %d %d\n",VideoMode->width, VideoMode->height);
+    //MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
     //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
-    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetMonitors(NULL)[0], NULL); //Fullscreen
+    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", MonitorInUse, NULL); //Fullscreen
     if(!MainWindow) {
         glfwTerminate();
         return -1;
@@ -642,30 +478,15 @@ int main(int argc, char* argv[]) {
     drawPlaneAndGrid(G_OBJECT_INIT, PlaneRes, GridRes, NULL);   //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
     //Init target box
-    //drawTargetBox(G_OBJECT_INIT,0,0.0f);
+    drawTargetBox(G_OBJECT_INIT,0,0.0f);
     drawTrackPoint(G_OBJECT_INIT,0,0.0f,0.0f);
     //end Graphics@@
 
-    //begin Camera@@
-    volatile int CamXpos=-1;
-    volatile int CamYpos=-1;
 
-    IMediaControl* MediaControl=getPositionPointer(&CamXpos,&CamYpos);
 
-    MediaControl->lpVtbl->Run(MediaControl); //set only once, will start the graph and capture frames
+    //set only once, will start the graph and capture frames
     //float CalibPoints[8]={580.f,880.f, 1200.f,880.f, 1150.f,330.f, 630.f,370.f};
-    mat3x3 CalibData;
     vec2 BrighspotMapped;
-
-    //Register Callbacks for user input
-    iscalibrated(0,&CamXpos,&CamYpos);
-    float* CalibrationRawData;
-    do{
-        CalibrationRawData=iscalibrated(0,NULL,NULL);
-    }while(!CalibrationRawData);
-    printf("Got Points: %f, %f, %f, %f, %f, %f, %f, %f\n",CalibrationRawData[0],CalibrationRawData[1],CalibrationRawData[2],CalibrationRawData[3],CalibrationRawData[4],CalibrationRawData[5],CalibrationRawData[6],CalibrationRawData[7]);
-    camera_perspec_calibrating(CalibData,CalibrationRawData);
-    free(CalibrationRawData);
     //Register Callbacks for user input
     glfwSetKeyCallback(MainWindow, key_callback);
     glfwSetMouseButtonCallback(MainWindow, mouse_button_callback);
@@ -676,34 +497,33 @@ int main(int argc, char* argv[]) {
 
 
     standard_draw();
+    int already_calibrated=0;
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         simulation_run(dt);
         delta_time = update_delta_time();
         //Check for Camera frame update
-        if((CamXpos!=-1)&&(CamYpos!=-1)){ //Got Frame update
-            //printf("Debug: Cam RawXY: %d, %d\n\n",CamXpos,CamYpos);
-            vec2 CurrentPos={(float) CamXpos, (float)CamYpos};
-            camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-            printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
-            drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
-            CamYpos=CamXpos=-1;
-            camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
-            printf("Brightspot: %f, %f\n",BrighspotMapped[0],BrighspotMapped[1]);
-            if(BrighspotMapped[1]>1.0f){
-                Measurement();
-            }
-            if(ShotCount==MaxShot){//TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                if(BrighspotMapped[1]<0.0f){
-                    standard_draw();
-                    ShotCount=0;
+        enter_calibration_mode();
+        if(already_calibrated){
+            int* BrightSpot=getBrightspot(brightspot_get);
+            if(BrightSpot){
+                vec2 CurrentPos={(float) BrightSpot[0], (float)BrightSpot[1]};
+                camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
+                printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
+                drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
+                camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
+                printf("Brightspot: %f, %f\n",BrighspotMapped[0],BrighspotMapped[1]);
+                //GUI Input with golfclub
+                if(BrighspotMapped[1]>1.0f){ //externalize as function
+                    Measurement();
+                }
+                if(ShotCount==MaxShot){
+                    if(BrighspotMapped[1]<0.0f){
+                        standard_draw();
+                        ShotCount=0;
+                    }
                 }
             }
-        }else{
-            //printf("Debug: ++++++++++++++++++++++++++++++++++++++Frameskip of camera\n");
         }
-        //Camera
-
-
         /*if(timerForBlink(0)>5.0f){
             //Same as Reset Button
             if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation||simulation_state==simulation_state_create_and_wait_for_start){
@@ -839,7 +659,19 @@ int main(int argc, char* argv[]) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         drawPlaneAndGrid(G_OBJECT_DRAW, PlaneRes, GridRes, mvp4x4);
-        //drawTargetBox(G_OBJECT_DRAW,mvp4x4,ColorIntensity);//,sin(glfwGetTime()*3.0));
+
+        mat4x4 tempScaleMat;
+        mat4x4 tempTransMat;
+        mat4x4_identity(tempScaleMat);
+        mat4x4_scale_aniso(tempScaleMat,tempScaleMat,Meas_hole_rad,Meas_hole_rad,1.f);
+        mat4x4_translate(tempTransMat,Meas_hole_x-0.5f,Meas_hole_y-0.5f,0.f);
+        mat4x4 tempScaleTransMat;
+        mat4x4_mul(tempScaleTransMat,tempTransMat,tempScaleMat);
+        mat4x4 tempTargetCombined;
+        mat4x4_mul(tempTargetCombined,mvp4x4,tempScaleTransMat);
+
+
+        drawTargetBox(G_OBJECT_DRAW,tempTargetCombined,ColorIntensity);
 
         drawTrackPoint(G_OBJECT_DRAW,mvp4x4,0,0);
         drawGui(G_OBJECT_DRAW,0);
@@ -922,7 +754,7 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
     }
 }
 
-void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
+void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float xpos, float ypos){
     static GLuint trackShaderID=0;
     static GLuint vertexBufferID=0;
     float data[18];
@@ -954,7 +786,7 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
         glEnableVertexAttribArray(0);   //x,y
         //Enabler Shader
         glUseProgram(trackShaderID);
-        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
         //Set Shader Uniforms to render Grid
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
@@ -968,7 +800,7 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
     }
 }
 
-/*void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity){
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float Intensity){
     static GLuint vboTargetBoxID=0;
     static GLuint targetShaderID=0;
     static GLuint IntensityFloatUniform = 0;
@@ -979,23 +811,45 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
         glAttachShader(targetShaderID, CompileShaderFromFile(filepath_shader_vertex_target, GL_VERTEX_SHADER));       //attach vertex shader to new program
         glAttachShader(targetShaderID, CompileShaderFromFile(filepath_shader_fragment_target, GL_FRAGMENT_SHADER));      //attach fragment shader to new program
         glLinkProgram(targetShaderID);
+
+/*      glActiveTexture(GL_TEXTURE2);
+        glGenTextures(1, &textureId);
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        void* tempClientGuiTexture = read_bmp("");
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, tempClientGuiTexture);
+        free(tempClientGuiTexture);
+*/
+        glUseProgram(targetShaderID);
+        glUniform1i(glGetUniformLocation(targetShaderID, "texture1"), 1); //Hack, set to the same texture as the gui
         //Get Shader Variables
         glUseProgram(targetShaderID);
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
         IntensityFloatUniform = glGetUniformLocation(targetShaderID, "Intensity");
         glGenBuffers(1,&vboTargetBoxID);
         float VertexData[]={
-            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,//face 1
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,VertMinX,VertMinY,VertMaxZ,
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMinY,VertMaxZ,//face 2
-            VertMaxX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,VertMaxX,VertMinY,VertMaxZ,
-            VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ,VertMaxX,VertMaxY,VertMaxZ,//face 3
-            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,VertMaxX,VertMaxY,VertMaxZ,
-            VertMinX,VertMaxY,VertMinZ,VertMinX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMaxZ,//face 4
-            VertMinX,VertMinY,VertMinZ,VertMinX,VertMinY,VertMaxZ,VertMinX,VertMaxY,VertMaxZ,
-            VertMinX,VertMinY,VertMinZ,VertMaxX,VertMinY,VertMinZ,VertMinX,VertMaxY,VertMinZ,//bottomface inverted (normal inward)
-            VertMaxX,VertMinY,VertMinZ,VertMaxX,VertMaxY,VertMinZ,VertMinX,VertMaxY,VertMinZ
-            //no bottomface
+            -1.0,-1.0,
+            1.0,-1.0,
+            -1.0,1.0,
+            1.0,-1.0,
+            -1.0,1.0,
+            1.0,1.0,
+
+            /*0.0,0.0,
+            1.0,0.0,
+            0.0,1.0,
+            1.0,0.0,
+            0.0,1.0,
+            1.0,1.0*/
+            UV_TARGET_TOP_LEFT_X  ,UV_TARGET_DOWN_RIGHT_Y,
+            UV_TARGET_DOWN_RIGHT_X,UV_TARGET_DOWN_RIGHT_Y,
+            UV_TARGET_TOP_LEFT_X  ,UV_TARGET_TOP_LEFT_Y  ,
+            UV_TARGET_DOWN_RIGHT_X,UV_TARGET_DOWN_RIGHT_Y,
+            UV_TARGET_TOP_LEFT_X  ,UV_TARGET_TOP_LEFT_Y  ,
+            UV_TARGET_DOWN_RIGHT_X,UV_TARGET_TOP_LEFT_Y
         };
         printf("DEBUG: sizeof: %d\n",sizeof(VertexData));
         glBindBuffer(GL_ARRAY_BUFFER,vboTargetBoxID);
@@ -1004,26 +858,30 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4,float xpos, float ypos){
         //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         glBindBuffer(GL_ARRAY_BUFFER, vboTargetBoxID);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(0);   //x,y
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 12));
+        glEnableVertexAttribArray(0);   //x,y,z
+        glEnableVertexAttribArray(1);
         //Enabler Shader
         glUseProgram(targetShaderID);
         //Set Shader Uniforms to render Grid
-        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
-        glUniform1f(IntensityFloatUniform,Intensity);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
+        //glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
-        //glDisable(GL_DEPTH_TEST);
-        glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
+        glDisable(GL_DEPTH_TEST);
+        //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        //glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
         glDrawArrays(GL_TRIANGLES,0,6);
-        glDrawArrays(GL_TRIANGLES,6,6);
-        glDrawArrays(GL_TRIANGLES,12,6);
-        glDrawArrays(GL_TRIANGLES,18,6); //12-2 because bottom face is missing
+        glEnable(GL_CULL_FACE);
+        //12-2 because bottom face is missing
         //glDrawArrays(GL_TRIANGLES,24,6);
         //glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
     }
-}*/
-void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4) {
+}
+void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned int GridResolution, mat4x4 mvp4x4_local) {
     //3d object info
     //uses Texture0 which is constantly updated
     static GLint maxSupportedIndices = 0;
@@ -1191,7 +1049,7 @@ void drawPlaneAndGrid(int G_OBJECT_STATE, unsigned int PlaneResolution, unsigned
         //Enabler Shader
         glUseProgram(gridAndPlaneShaderID);
         //Set Shader Uniforms to render Grid
-        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4);
+        glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
         glUniform1f(renderGridOrPlaneUniform, 1.0f);
         unsigned int buffernumber;
         //Smooth lines?
@@ -2040,44 +1898,6 @@ void change_speed(){
 
 //Shader
 
-GLuint CompileShaderFromFile(char FilePath[], GLuint shaderType) {
-    //read from file into heap memory
-    FILE* filepointer = fopen(FilePath, "rb");               //open specified file in read only mode
-    if(filepointer == NULL) {
-        printf("Error: Filepointer to shaderfile at %s of type %d could not be loaded.", FilePath, shaderType);
-        //return;
-    }
-    fseek(filepointer, 0, SEEK_END);                        //shift filePointer to EndOfFile Position to get filelength
-    long filelength = ftell(filepointer);                   //get filePointer position
-    fseek(filepointer, 0, SEEK_SET);                        //move file Pointer back to first line of file
-    char* filestring = (char*)malloc(filelength + 1);       //
-    if(fread(filestring, sizeof(char), filelength, filepointer) != filelength) {
-        printf("Error: Missing characters in input string");
-        //return;
-    }
-    if(filestring[0] == 0xEF && filestring[1] == 0xBB && filestring[2] == 0xBF) {   //Detect if file is utf8 with bom
-        printf("Error: Remove the bom from your utf8 shader file");
-    }
-    filestring[filelength] = 0;                           //Set end of string
-    fclose(filepointer);                                  //Close File
-    const char* ConstFilePointer = filestring;            //opengl wants const pointer
-    //compile shader with opengl
-    GLuint ShaderId = glCreateShader(shaderType);
-    glShaderSource(ShaderId, 1, &ConstFilePointer, NULL);
-    glCompileShader(ShaderId);
-    GLint compStatus = 0;
-    glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &compStatus);
-    if(compStatus != GL_TRUE) {
-        printf("Error: Compilation of shader %d from %s failed!\n", ShaderId, FilePath);
-        //TODO free resources
-        //return;
-    }
-    printf("Info: Shader %d sucessfully compiled.\n", ShaderId);
-    free(filestring);                                   //Delete Shader string from heap
-    fclose(filepointer);
-    return ShaderId;
-}
-
 void glfw_error_callback(int error, const char* description) {
     printf("Error: GLFW-Error type: %d occurred.\nDescription: %s\n", error, description);
 }
@@ -2155,7 +1975,6 @@ void update_potential(unsigned char* graphic_local_texture){
     if((++SelectedPotential)==CountOfPotentialFiles){
         SelectedPotential=0;
     }
-    //TODO update buttons
     guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
     GUI_refresh();
     standard_draw();

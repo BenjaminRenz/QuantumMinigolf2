@@ -3,6 +3,12 @@
 #include "fftw3.h"
 #include <stdint.h>
 #include <linmath.h>
+
+#define Meas_hole_rad 0.15f
+#define Meas_hole_x 0.5f
+#define Meas_hole_y 0.8f
+
+//TODO change on simulation_load_potential depening on image reaolution
 int sim_res_x;
 int sim_res_y;
 int sim_res_total;
