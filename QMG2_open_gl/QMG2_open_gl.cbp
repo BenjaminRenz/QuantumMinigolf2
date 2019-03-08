@@ -59,8 +59,10 @@
 			<Add directory="libraries/FFTW_3.3.5/lib_mingw_64" />
 			<Add directory="../../../../Software/msys2/mingw64/x86_64-w64-mingw32/lib" />
 		</Linker>
+		<Unit filename="inc/calibration_mode.h" />
 		<Unit filename="inc/camera_dshow.h" />
 		<Unit filename="inc/filereader.h" />
+		<Unit filename="inc/gl_utils.h" />
 		<Unit filename="inc/image_analyse.h" />
 		<Unit filename="inc/linmath.h" />
 		<Unit filename="inc/map_camera_plane.h" />
@@ -69,17 +71,30 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="res/potentials/double_slit512.bmp" />
+		<Unit filename="res/shaders/fragment_calib.glsl" />
 		<Unit filename="res/shaders/fragment_graph.glsl" />
 		<Unit filename="res/shaders/fragment_gui.glsl" />
 		<Unit filename="res/shaders/fragment_target.glsl" />
+		<Unit filename="res/shaders/fragment_track.glsl" />
+		<Unit filename="res/shaders/vertex_calib.glsl" />
 		<Unit filename="res/shaders/vertex_graph.glsl" />
 		<Unit filename="res/shaders/vertex_gui.glsl" />
 		<Unit filename="res/shaders/vertex_target.glsl" />
+		<Unit filename="res/shaders/vertex_track.glsl" />
 		<Unit filename="res/textures/GUI2.bmp" />
+		<Unit filename="src/calibration_mode.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src/camera_dshow.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/filereader.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/gl_utils.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/image_analyse.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/map_camera_plane.c">

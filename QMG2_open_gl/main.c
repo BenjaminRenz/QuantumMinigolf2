@@ -52,7 +52,7 @@
  #define filepath_shader_fragment_target "./res/shaders/fragment_target.glsl"
 #endif
 enum {C_OBJECT_INIT,C_OBJECT_UPDATE};
-enum {G_OBJECT_INIT,G_OBJECT_DRAW,G_OBJECT_UPDATE};
+enum {G_OBJECT_INIT,G_OBJECT_DRAW,G_OBJECT_UPDATE,G_OBJECT_DEINIT};
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -77,7 +77,7 @@ void rotate_camera(int selectedGuiElement);
 void change_speed();
 //void draw_wave();
 void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos);
-void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,float Intensity);
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4,int MeasCol);
 void update_potential();
 void GUI_refresh();
 void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn);
@@ -292,6 +292,7 @@ float jerk_for_autocenter = 0.15f;
 int ShotCount=0;
 vec2 last_meas_pos_in_grid_coordinates={wave_offset_x_start,wave_offset_y_start};
 
+int already_calibrated=0;
 
 int main(int argc, char* argv[]) {
     //@Simulation
@@ -385,13 +386,13 @@ int main(int argc, char* argv[]) {
     //window creation
     const GLFWvidmode* VideoMode = glfwGetVideoMode(MonitorInUse);
     printf("Videomode %d %d\n",VideoMode->width, VideoMode->height);
-    //MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
+    MainWindow = glfwCreateWindow(1280, 720, "Quantum Minigolf 2.0", NULL, NULL);   //Windowed hd ready
     //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", glfwGetPrimaryMonitor(), NULL); //Fullscreen
-    MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", MonitorInUse, NULL); //Fullscreen
-    if(!MainWindow) {
+    //MainWindow = glfwCreateWindow(VideoMode->width, VideoMode->height, "Quantum Minigolf 2.0", MonitorInUse, NULL); //Fullscreen
+    /*if(!MainWindow) {
         glfwTerminate();
         return -1;
-    }
+    }*/
     glfwMakeContextCurrent(MainWindow);
     //GLEW init
     glewExperimental = GL_TRUE;
@@ -455,8 +456,6 @@ int main(int argc, char* argv[]) {
     vec3 up_vec = {0.0f, 0.0f, 1.0f};
     //GUI
     //Init gui
-    drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
-    GUI_refresh();
     printf("Info: Generation of gui successfull!\n");
     //Potential loading
     unsigned char* speicher = calloc(sim_res_total * 4, sizeof(unsigned char));
@@ -478,7 +477,7 @@ int main(int argc, char* argv[]) {
     drawPlaneAndGrid(G_OBJECT_INIT, PlaneRes, GridRes, NULL);   //mvp4x4 useless here
     printf("Info: Generation of plane and grid successfull!\n");
     //Init target box
-    drawTargetBox(G_OBJECT_INIT,0,0.0f);
+    drawTargetBox(G_OBJECT_INIT,0,2);
     drawTrackPoint(G_OBJECT_INIT,0,0.0f,0.0f);
     //end Graphics@@
 
@@ -497,12 +496,14 @@ int main(int argc, char* argv[]) {
 
 
     standard_draw();
-    int already_calibrated=0;
+    drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
+    GUI_refresh();
     while(!glfwWindowShouldClose(MainWindow)) { //Main Programm loop
         simulation_run(dt);
         delta_time = update_delta_time();
         //Check for Camera frame update
-        enter_calibration_mode();
+
+
         if(already_calibrated){
             int* BrightSpot=getBrightspot(brightspot_get);
             if(BrightSpot){
@@ -671,7 +672,7 @@ int main(int argc, char* argv[]) {
         mat4x4_mul(tempTargetCombined,mvp4x4,tempScaleTransMat);
 
 
-        drawTargetBox(G_OBJECT_DRAW,tempTargetCombined,ColorIntensity);
+        drawTargetBox(G_OBJECT_DRAW,tempTargetCombined,MeasColorBySim);
 
         drawTrackPoint(G_OBJECT_DRAW,mvp4x4,0,0);
         drawGui(G_OBJECT_DRAW,0);
@@ -800,11 +801,11 @@ void drawTrackPoint(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float xpos, float ypo
     }
 }
 
-void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float Intensity){
+void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4_local,int MeasCol){
     static GLuint vboTargetBoxID=0;
     static GLuint targetShaderID=0;
-    static GLuint IntensityFloatUniform = 0;
     static GLuint mvpMatrixUniform = 0; //How is the Uniform variable called in the compiled shader
+    static GLuint MeasColID=0;
     if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shaders
         targetShaderID = glCreateProgram();              //create program to run on GPU
@@ -825,10 +826,10 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float Intensity){
 */
         glUseProgram(targetShaderID);
         glUniform1i(glGetUniformLocation(targetShaderID, "texture1"), 1); //Hack, set to the same texture as the gui
+        MeasColID=glGetUniformLocation(targetShaderID, "colorMeas");
         //Get Shader Variables
         glUseProgram(targetShaderID);
         mvpMatrixUniform = glGetUniformLocation(targetShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
-        IntensityFloatUniform = glGetUniformLocation(targetShaderID, "Intensity");
         glGenBuffers(1,&vboTargetBoxID);
         float VertexData[]={
             -1.0,-1.0,
@@ -866,6 +867,7 @@ void drawTargetBox(int G_OBJECT_STATE,mat4x4 mvp4x4_local,float Intensity){
         glUseProgram(targetShaderID);
         //Set Shader Uniforms to render Grid
         glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, (GLfloat*)mvp4x4_local);
+        glUniform1i(MeasColID,MeasCol);
         //glUniform1f(IntensityFloatUniform,Intensity);
         glEnable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
@@ -1474,6 +1476,9 @@ void drawGui(int G_OBJECT_STATE, float aspectRatio) {
         glBindVertexArray(0);
         free(GUI_positions_and_uv);
         free(GUI_indices);
+    }else if(G_OBJECT_STATE==G_OBJECT_DEINIT){
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glDeleteTextures(1,&textureId);
     }
 }
 
@@ -1622,9 +1627,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
     }
     if(key == GLFW_KEY_C && action == GLFW_PRESS) {
-        if(jerk_for_autocenter>0.2f){
-            jerk_for_autocenter=jerk_for_autocenter-0.1f;
-        }
+        drawGui(G_OBJECT_DEINIT,0);
+        enter_calibration_mode();
+        already_calibrated=1;
+        drawGui(G_OBJECT_INIT, 0);   //Initialize Gui with GL_OBJECT_INIT,aspect ratio
     }
     GUI_refresh();
 }

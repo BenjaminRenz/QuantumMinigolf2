@@ -75,6 +75,8 @@ int simulation_redraw_wave(int offset_x,int offset_y,float angle,float momentum,
         printf("Error: not restarted yet!\n");
         return 3;
     }*/
+    MeasColorBySim=Meas_yellow;
+
     //for gauss function will be cut off to increase performance at redraw
     int cutSquareHalf=(int)(gauss_width*gauss_width*10.f);
     memset(&(psi[0][0]),0,sim_res_total*4*sizeof(float));
@@ -200,6 +202,7 @@ int simulation_measurement(double glfwTime,vec2 meas_pos_in_grid_coordinates){
     printf("Distxsq %f Distysq %f \n",meas_x_hole_dist_sqr,meas_y_hole_dist_sqr);
     if((meas_x_hole_dist_sqr+meas_y_hole_dist_sqr)<Meas_hole_rad*Meas_hole_rad){
         printf("Inside hole.\n");
+        MeasColorBySim=Meas_green;
         meas_pos_in_grid_coordinates[0]=(float)(meas_pos%sim_res_x);
         meas_pos_in_grid_coordinates[1]=(float)(meas_pos/sim_res_x);
         psi[meas_pos][0]=1.0f;
@@ -221,6 +224,7 @@ int simulation_measurement(double glfwTime,vec2 meas_pos_in_grid_coordinates){
         return meas_hit;
     }else{
         printf("Outside hole.\n");
+        MeasColorBySim=Meas_red;
         meas_pos_in_grid_coordinates[0]=(float)(meas_pos%sim_res_x);
         meas_pos_in_grid_coordinates[1]=(float)(meas_pos/sim_res_x);
         psi[meas_pos][1]=1.0f;

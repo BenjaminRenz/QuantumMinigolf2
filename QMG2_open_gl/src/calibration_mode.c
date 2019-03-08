@@ -42,6 +42,7 @@ float* iscalibrated(int mouseClicked){
     static unsigned char* texture_for_arrows;
     static unsigned int numMeasPoints;
     static unsigned int aquisition_running;
+    static int camera_already_started=0;
     mat4x4 mvp4x4;
     switch(calibrationstate){
         case cal_init:
@@ -54,7 +55,13 @@ float* iscalibrated(int mouseClicked){
             glfwSetWindowSizeCallback(MainWindow, NULL);
             glfwSetCursorPosCallback(MainWindow, NULL);
 
+            //Start data aquisition
+            if(!camera_already_started){
+                getBrightspot(brightspot_init);
+                camera_already_started=1;
+            }
             calibArray=calloc(8,sizeof(float));
+            drawCalibPicture(G_OBJECT_INIT,NULL,NULL);
             drawCalibPicture(G_OBJECT_UPDATE,NULL,read_bmp(filepath_calibration_lb));
             calibrationstate=cal_left_bottom;
             aquisition_running=0;
@@ -171,6 +178,7 @@ float* iscalibrated(int mouseClicked){
     glViewport(0, 0, width, height);
     printf("windows size: %d, %d",width,height);
     mat4x4_ortho(mvp4x4, -0.55f*width/height, 0.55f*width/height, -0.55f, 0.55f, -1.0f, 5.0f);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     drawCalibPicture(G_OBJECT_DRAW, mvp4x4, NULL);
     //Swap Buffers
@@ -191,8 +199,8 @@ void drawCalibPicture(int G_OBJECT_STATE,mat4x4 mvp4x4_local,uint8_t* texture_if
     if(G_OBJECT_STATE==G_OBJECT_INIT){
         //Compile Shaders
         PictureShaderID = glCreateProgram();              //create program to run on GPU
-        glAttachShader(PictureShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_gui.glsl", GL_VERTEX_SHADER));       //attach vertex shader to new program
-        glAttachShader(PictureShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_gui.glsl", GL_FRAGMENT_SHADER));      //attach fragment shader to new program
+        glAttachShader(PictureShaderID, CompileShaderFromFile(".\\res\\shaders\\vertex_calib.glsl", GL_VERTEX_SHADER));       //attach vertex shader to new program
+        glAttachShader(PictureShaderID, CompileShaderFromFile(".\\res\\shaders\\fragment_calib.glsl", GL_FRAGMENT_SHADER));      //attach fragment shader to new program
         glLinkProgram(PictureShaderID);
 
 /*      glActiveTexture(GL_TEXTURE2);
@@ -213,12 +221,12 @@ void drawCalibPicture(int G_OBJECT_STATE,mat4x4 mvp4x4_local,uint8_t* texture_if
         mvpMatrixUniform = glGetUniformLocation(PictureShaderID, "MVPmatrix");   //only callable after glUseProgramm has been called once
         glGenBuffers(1,&vboPictureID);
         float VertexData[]={
-            -1.0,-1.0,
-            1.0,-1.0,
-            -1.0,1.0,
-            1.0,-1.0,
-            -1.0,1.0,
-            1.0,1.0,
+            -0.5,-0.5,
+            0.5,-0.5,
+            -0.5,0.5,
+            0.5,-0.5,
+            -0.5,0.5,
+            0.5,0.5,
 
             0.0,0.0,
             1.0,0.0,
@@ -232,12 +240,12 @@ void drawCalibPicture(int G_OBJECT_STATE,mat4x4 mvp4x4_local,uint8_t* texture_if
         glBufferData(GL_ARRAY_BUFFER,sizeof(VertexData),VertexData,GL_STATIC_DRAW);//sizeof
 
         glActiveTexture(GL_TEXTURE0+PICTURE_USE_TEXTURE);
+        glGenTextures(1, &PictureTextureID);
         glBindTexture(GL_TEXTURE_2D, PictureTextureID);
-
-
-
-        //
-        //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }else if(G_OBJECT_STATE==G_OBJECT_DRAW){
         glBindBuffer(GL_ARRAY_BUFFER, vboPictureID);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
@@ -275,6 +283,7 @@ void drawCalibPicture(int G_OBJECT_STATE,mat4x4 mvp4x4_local,uint8_t* texture_if
 
 void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods){
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        printf("Clicked\n");
         iscalibrated(1);
     }
 }

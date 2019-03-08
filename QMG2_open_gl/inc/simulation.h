@@ -13,6 +13,8 @@ int sim_res_x;
 int sim_res_y;
 int sim_res_total;
 
+int MeasColorBySim;
+enum{Meas_green=0,Meas_red=1,Meas_yellow=2};
 fftw_complex *psi;
 
 void simulation_alloc(); //Needs to be called before any aanimation can start.
