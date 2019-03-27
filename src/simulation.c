@@ -163,7 +163,7 @@ int simulation_run(float dt){
         psi[i][0]/=norm;
         psi[i][1]/=norm;
     }
-    printf("Debug %f %f %f\n",norm,psi[biggest][0],psi[biggest][1]);
+    //printf("Debug Norming %f %f %f\n",norm,psi[biggest][0],psi[biggest][1]);
 
     simulation_state=simulation_state_simulate;
     return 0;

@@ -17,16 +17,16 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
 
         current_xpos=((struct inputForBrightspotfinder*)inst)->cam_current_xpos;
         current_ypos=((struct inputForBrightspotfinder*)inst)->cam_current_ypos;
-        printf("Got initialize add %d,%d, val %d,%d\n",(int)current_xpos,(int)current_ypos,*current_xpos,*current_ypos);
+        //printf("Got initialize add %d,%d, val %d,%d\n",(int)current_xpos,(int)current_ypos,*current_xpos,*current_ypos);
         /*xsteps=camera_big_grid_points_x;
         ysteps=(int)(camera_big_grid_points_x/(((float)xres)/yres));
         */
         //get aspect ratio in float and calculate the int value for the numer of grid points in y direction
         xstepwidth=xres/camera_big_grid_points_x;
         ystepwidth=yres/((int)(camera_big_grid_points_x/(((float)xres)/yres)));
-        printf("Debug: xres: %d, yres %d\n",xres,yres);
+        //printf("Debug: xres: %d, yres %d\n",xres,yres);
         //printf("Debug: xsteps: %d, ysetps %d\n",xsteps,ysteps);
-        printf("Debug: xsteps: %d, ysetps %d\n",xstepwidth,ystepwidth);
+        //printf("Debug: xsteps: %d, ysetps %d\n",xstepwidth,ystepwidth);
         return S_OK;
     }
     else
@@ -60,7 +60,7 @@ HRESULT callbackForGraphview(void* inst, IMediaSample* smp) //when first called 
 
         }
 
-        printf("Image thread: %d\t%d\t%d\n",BrightSpots[0]%xres,BrightSpots[0]/xres,BrightSpots[1]);
+        //printf("Image thread: %d\t%d\t%d\n",BrightSpots[0]%xres,BrightSpots[0]/xres,BrightSpots[1]);
 
         /*int* BrightSpots=(int*)malloc(2*sizeof(int)*camera_testspots); //first val is coordinate as x_coord+y_coord*xres, second is brightness val, 0 index is the brightest, 1 index the second brightest and so on
         memset(BrightSpots,0,2*sizeof(int)*camera_testspots);

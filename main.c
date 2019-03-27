@@ -87,6 +87,7 @@ enum {type_wave_gauss_width,type_wave_momentum,type_wave_angle,type_wave_dt};
 float mapValue(int type,float input);
 void mouse_button_callback_calibrate(GLFWwindow* window, int button, int action, int mods);
 void Reset();
+void Measurement();
 /*UV COORDINATES FOR GUI
  Y
  ^
@@ -186,7 +187,7 @@ void Reset();
 #define GUI_SLIDER_SIZE 0
 #define SLIDER_SIZE_START 0.5f
 #define GUI_SLIDER_SPEED 1
-#define SLIDER_SPEED_START 0.8f
+#define SLIDER_SPEED_START 1.4f
 #define GUI_SLIDER_WAVE_ROTATION 2
 //Slider y
 #define SLIDER_Y_NUMBER 0
@@ -265,9 +266,9 @@ int draw_new_wave = 1; //render next frame?
 //Wave Parameters
 float dt = SLIDER_SPEED_START * SPEED_MULTI;
 #define wave_offset_x_start (512*0.5f)
-float wave_offset_x = wave_offset_x_start; //offset for particle
+float initial_wave_offset_x = wave_offset_x_start; //offset for particle
 #define wave_offset_y_start (512*0.10f)
-float wave_offset_y = wave_offset_y_start; //offset for particle
+float initial_wave_offset_y = wave_offset_y_start; //offset for particle
 float wave_angle= M_PI / 2.0f;
 float wave_momentum=1.0f; //TODO initialize properly
 float wave_gauss_width=10.0f;
@@ -289,11 +290,14 @@ uint8_t* pot;
 int disable_autocenter = 1;
 float jerk_for_autocenter = 0.15f;
 
-#define MaxShot 5
-int ShotCount=0;
 vec2 last_meas_pos_in_grid_coordinates={wave_offset_x_start,wave_offset_y_start};
 
 int already_calibrated=0;
+
+#define MaxShot 5
+int ShotCount=0;
+enum {GameStateWaitForStart,GameStateWaitForMeas,GameStateWaitForReset};
+int GameState=GameStateWaitForStart;
 
 int main(int argc, char* argv[]) {
     //@Simulation
@@ -510,47 +514,14 @@ int main(int argc, char* argv[]) {
             if(BrightSpot){
                 vec2 CurrentPos={(float) BrightSpot[0], (float)BrightSpot[1]};
                 camera_perspec_map_point(BrighspotMapped,CalibData,CurrentPos);
-                printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
+                //printf("Debug: x,%f y%f\n",BrighspotMapped[0],BrighspotMapped[1]);
                 drawTrackPoint(G_OBJECT_UPDATE,0,(BrighspotMapped[0]-0.5f),(BrighspotMapped[1]-0.5f));
                 camera_collider(C_OBJECT_UPDATE ,BrighspotMapped);
-                printf("Brightspot: %f, %f\n",BrighspotMapped[0],BrighspotMapped[1]);
-                //GUI Input with golfclub
-                /*if(BrighspotMapped[1]>1.0f){ //externalize as function
-                    Measurement();
-                }
-                if(ShotCount==MaxShot){
-                    if(BrighspotMapped[1]<0.0f){
-                        standard_draw();
-                        ShotCount=0;
-                    }
-                }*/
+                //printf("Brightspot: %f, %f\n",BrighspotMapped[0],BrighspotMapped[1]);
             }
         }
-        /*if(timerForBlink(0)>5.0f){
-            //Same as Reset Button
-            if(simulation_state==simulation_state_wait_for_restart||simulation_state==simulation_state_measurement_animation||simulation_state==simulation_state_create_and_wait_for_start){
-                draw_new_wave = 1;
-                guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
-                GUI_refresh();
-                simulation_state = 2;
-                rotation_left_right = PI;
-                rotation_up_down = PI/3;
-                position_x_axis = 0;
-                position_y_axis = 0;
-            }
-            guiElementsStorage[GUI_SLIDER_SIZE].position_x = 0.5f;
-            guiElementsStorage[GUI_SLIDER_SPEED].position_x = 0.5f;
-            guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x = 0.5f;
-            GUI_refresh();
 
-            //Animation Only
-            ColorIntensity=0.4f*cos(((BlinkStep++)*PI/50.0f))+2.5f;
-            if(BlinkStep>100){
-                BlinkStep=1;
-            }
-            //TODO RESET
-        }*/
-        if(timerForBlink(guiElementsStorage[GUI_BUTTON_CONTROL].position_x == GUI_STATE_BUTTON1_RESET)>30.0f){
+        if(timerForBlink(GameState==GameStateWaitForReset)>30.0f){ //Keep timer counting when GameState is WaitForRestart else reset
             Reset();
         }
 
@@ -580,39 +551,7 @@ int main(int argc, char* argv[]) {
         }
 
 
-        //this probably takes ages
-        /*int biggest = 0;
-        biggest = 0;
 
-        for(int i = 0; i < sim_res_total; i++) {
-            if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])
-                biggest = i;
-        }
-        //FOR AUTOCENTERING
-        float sum = 0;
-        float weighted_sum_x = 0;
-        float weighted_sum_y = 0;
-
-        for(int i = 0; i < sim_res_total; i++) {
-            if(psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1] > (psi[biggest][0]*psi[biggest][0] + psi[biggest][1]*psi[biggest][1])*0.9f){
-                sum = sum + (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
-                weighted_sum_x = weighted_sum_x + (float)(i % Resolutionx) * (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
-                weighted_sum_y = weighted_sum_y + (float)(i / Resolutiony) * (psi[i][0]*psi[i][0] + psi[i][1]*psi[i][1]);
-            }
-        }
-
-        float weight_x = ((weighted_sum_x/sum)-(((float)Resolutionx)/2.0f))/((float)Resolutionx);
-        float weight_y = ((weighted_sum_y/sum)-(((float)Resolutiony)/2.0f))/((float)Resolutiony);
-
-        //printf("%f,%f,%f,%f\n\n\n",position_x_axis,position_x_axis + (weight_x-position_x_axis)*0.5f,position_y_axis,position_y_axis + (weight_y-position_y_axis)*0.5f);
-        if(!disable_autocenter){
-            position_x_axis = position_x_axis + (weight_x-position_x_axis)*jerk_for_autocenter;
-            position_y_axis = position_y_axis + (weight_y-position_y_axis)*jerk_for_autocenter;
-        }
-        //disable_autocenter = 0;
-
-        double norming = sqrt(1.0f / (psi[biggest][0] * psi[biggest][0] + psi[biggest][1] * psi[biggest][1]));
-        */
         double norming = 1.0;
         for(int i = 0; i < sim_res_total; i++) {
             speicher[i * 4 + 2] = (unsigned char)(0.5f * 255 * (psi[i][0] * norming + 1.0f));
@@ -712,6 +651,11 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
         posOld[0]=posNewIn[0];
         posOld[1]=posNewIn[1];
     }else{
+        if(GameState==GameStateWaitForReset){
+                printf("wait\n");
+            return;
+        }
+
         vec2 wavePos={last_meas_pos_in_grid_coordinates[0]/sim_res_x,last_meas_pos_in_grid_coordinates[1]/sim_res_y};
         //printf("wavPosraw: %f, %f\n",wavePos[0],wavePos[1]);
         //printf("oldPosraw: %f, %f\n",posOld[0],posOld[1]);
@@ -737,21 +681,13 @@ void camera_collider(int C_OBJECT_STATE ,vec2 posNewIn){
        // printf("wavPos: %f, %f\n",wavePosRot[0],wavePosRot[1]);
         if(wavePosRot[1]<HalbeSchlaegerbreiteY&&wavePosRot[1]>-HalbeSchlaegerbreiteY){
             if(wavePosRot[0]>0&&wavePosRot[0]<posNewInRot[0]){
-                printf("TODO MOMENTUM\n");
                 if(!simulation_redraw_wave((int)last_meas_pos_in_grid_coordinates[0],(int)last_meas_pos_in_grid_coordinates[1],angle,posNewInRot[0]/CAMERA_SPEED_MULTI,wave_gauss_width)){
+                    //Blocked when point is visible (aimation) or simulation is still running
+                    printf("Info: Abschlag erfolgreich\n");
                     simulation_unpause();
-                    guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_MESS;
+                    GameState = GameStateWaitForMeas;
                     GUI_refresh();
                 }
-
-                /*printf("angle %f\n", angle*180.f/M_PI);
-                angle=angle-M_PI/2.0f;
-                if(angle<0){
-                    angle=2.0f*M_PI-angle;
-                }
-                guiElementsStorage[GUI_SLIDER_WAVE_ROTATION].position_x=angle/2.0f/M_PI;
-                */
-
             }
         }
         posOld[0]=tempNewIn[0];
@@ -1513,124 +1449,6 @@ float timerForBlink(int not_restart) {             //Get the current time with g
 
 //VWX
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    /*if(key == GLFW_KEY_W) {
-        if(rotation_up_down < (3.0)) {
-            rotation_up_down = rotation_up_down + delta_time;
-        }
-    }
-    if(key == GLFW_KEY_S) {
-        if(rotation_up_down > (-0.0)) {
-            rotation_up_down = rotation_up_down - delta_time;
-        }
-        if(rotation_up_down < (-0.0)) {
-            rotation_up_down = 0.0;
-        }
-    }
-    //atan(rotation_up_down);
-    if(key == GLFW_KEY_D) {
-        if(rotation_left_right > (-M_PI)) {
-            rotation_left_right = rotation_left_right - delta_time;
-        } else {
-            rotation_left_right = M_PI;
-        }
-    }
-    if(key == GLFW_KEY_A) {
-        if(rotation_left_right < M_PI) {
-            rotation_left_right = rotation_left_right + delta_time;
-        } else {
-            rotation_left_right = -M_PI;
-        }
-    }
-    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(MainWindow, 1);
-    }
-    if(key == GLFW_KEY_M && action == GLFW_PRESS) {
-        if(42!=simulation_measurement(glfwGetTime(), last_meas_pos_in_grid_coordinates)){
-            guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_RESET;
-        }
-        //TODO redraw gui
-    }
-
-    if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-        //TODO set simulation running
-        guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_MESS;
-    }
-    if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-        wave_offset_x+= Offset_change;
-        standard_draw();
-    }
-    if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-        wave_offset_x-=Offset_change;
-        standard_draw();
-    }
-    if(key == GLFW_KEY_UP && action == GLFW_PRESS) {
-        wave_offset_y += Offset_change;
-        standard_draw();
-    }
-    if(key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-        wave_offset_y -=Offset_change;
-        standard_draw();
-    }
-    if(key == GLFW_KEY_R && action == GLFW_PRESS) {
-            //Reset
-            //TODO redraw wave
-        wave_offset_x = offset_x_start;
-        wave_offset_y = offset_y_start;
-        guiElementsStorage[GUI_SLIDER_SIZE].position_x = SLIDER_SIZE_START;
-        guiElementsStorage[GUI_SLIDER_SPEED].position_x = SLIDER_SPEED_START;
-        dt = guiElementsStorage[GUI_SLIDER_SPEED].position_x * SPEED_MULTI;
-        momentum_prop = 1;
-        draw_new_wave = 1;
-    }
-    if(key == GLFW_KEY_O && action == GLFW_PRESS) {
-        if(guiElementsStorage[GUI_SLIDER_SIZE].position_x > Diameter_change) {
-            guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x - Diameter_change;
-            standard_draw();
-        }
-    }
-    if(key == GLFW_KEY_P && action == GLFW_PRESS) {
-        if(guiElementsStorage[GUI_SLIDER_SIZE].position_x < 1.0f - Diameter_change) {
-            guiElementsStorage[GUI_SLIDER_SIZE].position_x = guiElementsStorage[GUI_SLIDER_SIZE].position_x + Diameter_change;
-            //TODO redraw wave
-        }
-    }
-    if((simulation_state == simulation_state_wait_for_restart || simulation_state == simulation_state_measurement_animation)&&(!AnimationStep)) {
-        if(key == GLFW_KEY_N && action == GLFW_PRESS) {
-            ColorIntensity=2.99f;
-            draw_new_wave = 1;
-            simulation_state = simulation_state_create_and_wait_for_start;
-            guiElementsStorage[2].position_x = GUI_STATE_BUTTON1_START;
-        }
-    }
-    if(key == GLFW_KEY_X && action == GLFW_PRESS) {
-        if(guiElementsStorage[GUI_SLIDER_SPEED].position_x < 1.0f - Speed_change) {
-            guiElementsStorage[GUI_SLIDER_SPEED].position_x += Speed_change;
-            dt = mapValue(type_wave_dt,guiElementsStorage[GUI_SLIDER_SPEED].position_x);
-        }
-    }
-    if(key == GLFW_KEY_Y && action == GLFW_PRESS) {
-        if(guiElementsStorage[GUI_SLIDER_SPEED].position_x > Speed_change) {
-            guiElementsStorage[GUI_SLIDER_SPEED].position_x -= Speed_change;
-            dt = mapValue(type_wave_dt,guiElementsStorage[GUI_SLIDER_SPEED].position_x);
-        }
-    }
-    if(key == GLFW_KEY_Q && action == GLFW_PRESS) {
-        if(disable_autocenter == 0){
-            disable_autocenter = 1;
-        }else if(disable_autocenter == 1){
-            disable_autocenter = 0;
-        }
-    }
-    if(key == GLFW_KEY_PERIOD && action == GLFW_PRESS) {
-        if(jerk_for_autocenter<1.0f){
-            jerk_for_autocenter=jerk_for_autocenter+0.1f;
-        }
-    }
-    if(key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
-        if(jerk_for_autocenter>0.2f){
-            jerk_for_autocenter=jerk_for_autocenter-0.1f;
-        }
-    }*/
     if(key == GLFW_KEY_C && action == GLFW_PRESS) {
         drawGui(G_OBJECT_DEINIT,0);
         enter_calibration_mode();
@@ -1650,106 +1468,33 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         else if(!track_toggle) track_toggle=1;
     }
     if(key == GLFW_KEY_SPACE && action == GLFW_PRESS){
-        simulation_unpause();
-        guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_MESS;
+        if(GameState==GameStateWaitForMeas){
+            simulation_unpause();
+            GameState = GameStateWaitForMeas;
+        }
     }
     GUI_refresh();
 }
 
 void Reset(){
-    standard_draw();
     printf("TODO BLINK\n");
-    guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
-    last_meas_pos_in_grid_coordinates[0]=wave_offset_x;
-    last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
+    GameState = GameStateWaitForStart;
+    last_meas_pos_in_grid_coordinates[0]=initial_wave_offset_x;
+    last_meas_pos_in_grid_coordinates[1]=initial_wave_offset_y;
+    standard_draw();
     ShotCount=0;
 }
 
 //XYZ
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    /*double xpos = 0;
-    double ypos = 0;
-    int width = 0;
-    int height = 0;
-    glfwGetCursorPos(MainWindow, &xpos, &ypos);
-    glfwGetWindowSize(MainWindow, &width, &height);
-    xpos /= width;
-    ypos /= width;*/
     if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        /*for(int gElmt = 0; gElmt < numberOfGuiElements; gElmt++) {
-            if(guiElementsStorage[gElmt].GUI_TYPE <= SLIDER_X_NUMBER && guiElementsStorage[gElmt].GUI_TYPE > 0) {
-                float x_offset = (guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * ((36.0f) + guiElementsStorage[gElmt].position_x * 440.0f) / 512.0f) - xpos;
-                float y_offset = (guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (32.0f / 512.0f)) - ypos;
-                if((x_offset * x_offset + y_offset * y_offset) < ((guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f) * (guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f))) {
-                    selectedGuiElement = gElmt;
-                    printf("Info: Grabbed on Slider x %d\n", selectedGuiElement);
-                    return;
-                }
-            }else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > SLIDER_X_NUMBER) {
-                float x_offset = (guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * (32.0f / 512.0f)) - xpos;
-                float y_offset = (guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * ((36.0f) + guiElementsStorage[gElmt].position_x * 440.0f) / 512.0f) - ypos;
-                if((x_offset * x_offset + y_offset * y_offset) < ((guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f) * (guiElementsStorage[gElmt].percentOfWidth * 32.0f / 512.0f))) {
-                    selectedGuiElement = gElmt;
-                    printf("Info: Grabbed on Slider y %d\n", selectedGuiElement);
-                    return;
-                }
-            }else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
-                float x_offset = guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_x) + 0.5f) - xpos; //Calculates the centere of the joystic and then calculates delta to pressed position
-                float y_offset = guiElementsStorage[gElmt].top_left_y + guiElementsStorage[gElmt].percentOfWidth * (((1 - GUI_JOYSTICK_PROPERTY_SCALE) * 0.5f * guiElementsStorage[gElmt].position_y) + 0.5f) - ypos;
-                if((x_offset * x_offset + y_offset * y_offset) < (0.25f * guiElementsStorage[gElmt].percentOfWidth * GUI_JOYSTICK_PROPERTY_SCALE * guiElementsStorage[gElmt].percentOfWidth * GUI_JOYSTICK_PROPERTY_SCALE)) { //if inside the tappable circle 0.25f because it is GUI_JOYSTICK_PROPERT_SCALE is the diameter->*0.5f = radius
-                    selectedGuiElement = gElmt;
-                    return;
-                }
-            }else if(guiElementsStorage[gElmt].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER+BUTTON_NUMBER) && guiElementsStorage[gElmt].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && (guiElementsStorage[gElmt].top_left_x < xpos && ((guiElementsStorage[gElmt].top_left_x + guiElementsStorage[gElmt].percentOfWidth) > xpos)) && (guiElementsStorage[gElmt].top_left_y < ypos && ((guiElementsStorage[gElmt].top_left_y + 0.25f * guiElementsStorage[gElmt].percentOfWidth) > ypos))) {
-                printf("BUTTON PUSHED\n\n\n");
-                if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_CONTROL){
-                    if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_RESET) {
-                        standard_draw();
-                        printf("TODO BLINK\n");
-                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_START;
-                        last_meas_pos_in_grid_coordinates[0]=wave_offset_x;
-                        last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
-                        GUI_refresh();
-                        return;
-                    }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_START) {
-                        simulation_unpause();
-                        guiElementsStorage[gElmt].position_x = GUI_STATE_BUTTON1_MESS;
-                        GUI_refresh();
-                        return;
-                    }else if(guiElementsStorage[gElmt].position_x == GUI_STATE_BUTTON1_MESS) {
-                        Measurement();
-                        return;
-                    }
-                }else if(guiElementsStorage[gElmt].GUI_TYPE == GUI_TYPE_BUTTON_POTENTIAL){
-                    printf("Debug: Should change potential\n");
-                    update_potential();
-                }
-            }
-        }
-        selectedGuiElement = -1;
-    }
-    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-        if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) { //recenter joystick after released
-            joystick_reset(selectedGuiElement);
-            drawGui(G_OBJECT_UPDATE, width / (float)height);
-        }
-        selectedGuiElement = -1; //Deselect all gui elements (tracking for the dragged object like slider or joystick)
-    }*/
-        /*if(guiElementsStorage[GUI_BUTTON_CONTROL].position_x == GUI_STATE_BUTTON1_RESET) {
-            standard_draw();
-            printf("TODO BLINK\n");
-            guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
-            last_meas_pos_in_grid_coordinates[0]=wave_offset_x;
-            last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
-            GUI_refresh();
+        if(GameState == GameStateWaitForStart) {
+            GameState = GameStateWaitForMeas;
             return;
-        }else */if(guiElementsStorage[GUI_BUTTON_CONTROL].position_x == GUI_STATE_BUTTON1_START) {
-            guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_MESS;
-            return;
-        }else if(guiElementsStorage[GUI_BUTTON_CONTROL].position_x == GUI_STATE_BUTTON1_MESS) {
+        }else if(GameState == GameStateWaitForMeas) {
             Measurement();
             return;
-        }else if(guiElementsStorage[GUI_BUTTON_CONTROL].position_x == GUI_STATE_BUTTON1_RESET) {
+        }else if(GameState == GameStateWaitForReset) {
             Reset();
             return;
         }
@@ -1759,106 +1504,34 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 void Measurement(){
     switch(simulation_measurement(glfwGetTime(),last_meas_pos_in_grid_coordinates)){
         case meas_hit:
-            ShotCount=MaxShot;
+            GameState = GameStateWaitForReset;
+            printf("HIT\n");
             break;
         case meas_no_hit:
             ShotCount++;
             if(ShotCount<MaxShot){//New Shot possible at measured Position
                 simulation_redraw_wave(last_meas_pos_in_grid_coordinates[0],last_meas_pos_in_grid_coordinates[1],wave_angle,wave_momentum,wave_gauss_width);
-                guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
+                GameState = GameStateWaitForStart;
+            }else{
+                last_meas_pos_in_grid_coordinates[0]=initial_wave_offset_x;//includes Offset Shift
+                last_meas_pos_in_grid_coordinates[1]=initial_wave_offset_y;
+                GameState = GameStateWaitForReset;
             }
             break;
         case meas_blocked:
+            printf("Meas Blocked\n");
             break;
     }
-    //guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_RESET;
     GUI_refresh();
-    if(ShotCount==MaxShot){
-        last_meas_pos_in_grid_coordinates[0]=wave_offset_x;//includes Offset Shift
-        last_meas_pos_in_grid_coordinates[1]=wave_offset_y;
-        guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_RESET;
-    }
 }
 
 void mouse_scroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
-    /*float temp_mouse_scroll = -0.02f * (float)yOffset;
-    if((FOV + temp_mouse_scroll < 1.0f) && (FOV + temp_mouse_scroll > 0.1f)) {
-        FOV += temp_mouse_scroll;
-    }else {
-    }*/
 }
 
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    /*timerForBlink(1);
-    if(selectedGuiElement == -1) { //directly leave this if there is no gui object to monitor (no dragged slider / joystick)
-        return;
-    }
-    int width = 0;
-    int height = 0;
-    glfwGetWindowSize(MainWindow, &width, &height);
-    xpos /= width; //xPos now aligned to local gui coordinates ranging from 0 - 1
-    ypos /= width; //ypos now aligned to local gui coordinates ranging from 0 - aspect ration 9/16 eg
-    if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= SLIDER_X_NUMBER && guiElementsStorage[selectedGuiElement].GUI_TYPE > 0) {
-        set_x_position_slider(selectedGuiElement, xpos);
-    }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > SLIDER_X_NUMBER) {
-        set_y_position_slider(selectedGuiElement, ypos);
-    }else if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
-        set_xy_position_joystick(selectedGuiElement, xpos, ypos);
-    }
-    switch(selectedGuiElement) {
-    case GUI_SLIDER_SIZE:
-        wave_gauss_width=mapValue(type_wave_gauss_width,guiElementsStorage[selectedGuiElement].position_x);
-        standard_draw();
-        break;
-    case GUI_SLIDER_WAVE_ROTATION:
-        wave_angle=mapValue(type_wave_angle,guiElementsStorage[selectedGuiElement].position_x);
-        standard_draw();
-        break;
-    case GUI_SLIDER_SPEED:
-        wave_momentum=mapValue(type_wave_momentum,guiElementsStorage[selectedGuiElement].position_x);
-        standard_draw();
-        break;
-    case GUI_JOYSTICK_ROTATION:
-        //rotate_camera(selectedGuiElement); Commented because the rotation would be faster if the gui element is moved slightly
-        break;
-    case GUI_JOYSTICK_MOVEMENT:
-        move_camera(selectedGuiElement);
-        break;
-    case GUI_JOYSTICK_WAVE_MOVE:
-        move_wave(selectedGuiElement);
-        break;
-    default:
-        printf("Error: cursor pos callback guiElementsStorage[selectedGuiElement].position_x seems to have logged unregistered GUI Element!\n");
-        break;
-    }
-    drawGui(G_OBJECT_UPDATE, width / (float)height);*/
 }
 
-void JoystickControll(){   //Benötigt, da sonst keine Rotation bei hover on joystick
-    /*double xpos=0.0;
-    double ypos=0.0;
-    int width=0;
-    glfwGetCursorPos(MainWindow,&xpos,&ypos);
-    glfwGetWindowSize(MainWindow,&width,NULL);
-    xpos/=width;
-    ypos/=width;
-    if(guiElementsStorage[selectedGuiElement].GUI_TYPE <= (SLIDER_X_NUMBER+SLIDER_Y_NUMBER+JOYSTICK_NUMBER) && guiElementsStorage[selectedGuiElement].GUI_TYPE > (SLIDER_X_NUMBER+SLIDER_Y_NUMBER)) {
-        set_xy_position_joystick(selectedGuiElement, xpos, ypos);
-    }
-    switch(selectedGuiElement){
-    case GUI_JOYSTICK_ROTATION:
-        rotate_camera(selectedGuiElement);
-        break;
-    case GUI_JOYSTICK_MOVEMENT:
-        //move_camera(selectedGuiElement);
-        break;
-    case GUI_JOYSTICK_WAVE_MOVE:
-        //move_wave(selectedGuiElement);
-        break;
-    default:
-        //printf("No Joystick there\n");
-        return;
-    }*/
+void JoystickControll(){   //Benötigt, da sonst keine Rotation bei hover on joystic
 }
 
 //Needed functions for mouse and joystick control
@@ -1897,60 +1570,12 @@ void set_xy_position_joystick(int selectedGuiElement, double xpos, double ypos){
 }
 
 void rotate_camera(int selectedGuiElement){
-    rotation_up_down -= delta_time * guiElementsStorage[selectedGuiElement].position_y;
-    rotation_left_right -= delta_time * guiElementsStorage[selectedGuiElement].position_x;
-    printf("Rotup: %f and %f\n",delta_time * guiElementsStorage[selectedGuiElement].position_y,delta_time * guiElementsStorage[selectedGuiElement].position_x);
-    if(rotation_up_down > 3.0f) {
-        rotation_up_down = 3.0f;
-    } else if(rotation_up_down < 0.0f) {
-        rotation_up_down = 0.0f;
-    }
-    if(rotation_left_right < (-M_PI)) {
-        rotation_left_right = M_PI;
-    } else if(rotation_left_right > M_PI) {
-        rotation_left_right = (-M_PI);
-    }
 }
-
-/*void move_camera(int selectedGuiElement){
-    position_x_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right));
-    position_y_axis += MovementBorderCamera*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right));
-    if(position_x_axis>MovementBorderCamera){
-        position_x_axis=MovementBorderCamera;
-    }else if(position_x_axis<(-MovementBorderCamera)){
-        position_x_axis=(-MovementBorderCamera);
-    }
-    if(position_y_axis>MovementBorderCamera){
-        position_y_axis=MovementBorderCamera;
-    }else if(position_y_axis<-MovementBorderCamera){
-        position_y_axis=-MovementBorderCamera;
-    }
-}
-
-void draw_wave(int selectedGuiElement){
-    wave_offset_x += (sim_res_x*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*-cos(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*sin(rotation_left_right)));
-    wave_offset_y += (sim_res_y*0.25f*delta_time*(guiElementsStorage[selectedGuiElement].position_x*sin(rotation_left_right)+guiElementsStorage[selectedGuiElement].position_y*cos(rotation_left_right)));
-    if(wave_offset_x>(sim_res_x*0.9f)){
-        wave_offset_x=sim_res_x*0.9f;
-    }else if(wave_offset_x<(sim_res_x*0.1f)){
-        wave_offset_x=(sim_res_x*0.1f);
-    }
-    if(wave_offset_y>sim_res_y*0.15f){
-        wave_offset_y=sim_res_y*0.15f;
-    }else if(wave_offset_y<(sim_res_y*0.05f)){
-        wave_offset_y=sim_res_y*0.05f;
-    }
-    simulation_redraw_wave(wave_offset_x,wave_offset_y,wave_angle,wave_momentum,wave_gauss_width);
-}*/
 
 void joystick_reset(int selectedGuiElement){
-    guiElementsStorage[selectedGuiElement].position_x = 0.0f;
-    guiElementsStorage[selectedGuiElement].position_y = 0.0f;
-    printf("Debug: Reset Pos of Joystick %d\n", selectedGuiElement);
 }
 
 void change_speed(){
-    //dt = mapValue(type_wave_dt,guiElementsStorage[selectedGuiElement].position_x);
 }
 
 //Shader
@@ -2032,15 +1657,15 @@ void update_potential(unsigned char* graphic_local_texture){
     if((++SelectedPotential)==CountOfPotentialFiles){
         SelectedPotential=0;
     }
-    guiElementsStorage[GUI_BUTTON_CONTROL].position_x=GUI_STATE_BUTTON1_START;
+    GameState=GUI_STATE_BUTTON1_START;
     GUI_refresh();
     standard_draw();
     ColorIntensity=2.9f;
 }
 
 void standard_draw(){
-    if(!simulation_redraw_wave((int)wave_offset_x,(int)wave_offset_y,wave_angle,wave_momentum,wave_gauss_width)){
-        guiElementsStorage[GUI_BUTTON_CONTROL].position_x = GUI_STATE_BUTTON1_START;
+    if(!simulation_redraw_wave((int)initial_wave_offset_x,(int)initial_wave_offset_y,wave_angle,wave_momentum,wave_gauss_width)){
+        GameState = GUI_STATE_BUTTON1_START;
         GUI_refresh();
     }
 }
