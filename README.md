@@ -1,4 +1,4 @@
-# QuantumMinigolf2
+# QuantumMinigolf3D
 Quantum Minigolf simulates a wave packet and displays the result in with 3d graphics.
 
 The current release is made for use with a touch screen display, so it is a bit impractical to use it with a mouse.
